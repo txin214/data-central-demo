@@ -1,0 +1,239 @@
+{% extends 'base.html' %}
+
+{% block extrahead %}
+<style>
+    .forms-section {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        padding: 0;
+        margin-bottom: 20px;
+    }
+    
+    .forms-section-header {
+        background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+        color: #000;
+        padding: 12px 20px;
+        border-radius: 8px 8px 0 0;
+        font-weight: bold;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .forms-list {
+        list-style: none;
+        padding: 20px;
+        margin: 0;
+    }
+    
+    .forms-list li {
+        padding: 10px 0;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        align-items: flex-start;
+    }
+    
+    .forms-list li:last-child {
+        border-bottom: none;
+    }
+    
+    .form-number {
+        font-weight: bold;
+        margin-right: 15px;
+        min-width: 20px;
+        flex-shrink: 0;
+    }
+    
+    .form-content {
+        flex: 1;
+    }
+    
+    .form-link {
+        color: #000;
+        text-decoration: underline;
+        font-size: 14px;
+    }
+    
+    .form-link:hover {
+        color: #0056b3;
+    }
+    
+    .form-note {
+        color: #6c757d;
+        font-size: 12px;
+        font-style: italic;
+        margin-top: 4px;
+        padding-left: 0;
+    }
+    
+    .text-messages-box {
+        background: #fff8dc;
+        border: 2px solid #d4af37;
+        border-radius: 6px;
+        padding: 15px;
+        margin-top: 8px;
+    }
+    
+    .text-message-content {
+        font-size: 13px;
+        line-height: 1.6;
+    }
+    
+    .text-message-example {
+        background: #f8f9fa;
+        padding: 8px 12px;
+        border-radius: 4px;
+        margin: 8px 0;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        color: #000;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Company Forms</h2>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Employee / Employment Section -->
+        <div class="col-md-4">
+            <div class="forms-section">
+                <div class="forms-section-header">
+                    EMPLOYEE / EMPLOYMENT
+                </div>
+                <ul class="forms-list">
+                    <li>
+                        <span class="form-number">1</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/application_employment.pdf" class="form-link" target="_blank">Application for Employment</a>
+                            <div class="form-note">(Print as 2 sided.)</div>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">2</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/carpenter_payroll.pdf" class="form-link" target="_blank">Carpenter Weekly Payroll Worksheet</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">3</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/daily_timesheets.pdf" class="form-link" target="_blank">Daily Time Sheets</a>
+                            <div class="form-note">(Print as 2 sided.)</div>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">4</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/expense_reimbursement.pdf" class="form-link" target="_blank">Expense Reimbursement</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">5</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/vacation_request.pdf" class="form-link" target="_blank">Vacation Request</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">6</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/employee_handbook.pdf" class="form-link" target="_blank">Employee Hand Book 2009</a>
+                            <div class="form-note">(Print as 2 sided.)</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Office - Acc - General Forms Section -->
+        <div class="col-md-4">
+            <div class="forms-section">
+                <div class="forms-section-header">
+                    OFFICE -ACC - GENERAL FORMS
+                </div>
+                <ul class="forms-list">
+                    <li>
+                        <span class="form-number">1</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/emergency_contacts.pdf" class="form-link" target="_blank">Emergency Contacts</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">2</span>
+                        <div class="form-content">
+                            <span style="color: #e9ecef;">-</span>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">3</span>
+                        <div class="form-content">
+                            <span style="color: #e9ecef;">-</span>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">4</span>
+                        <div class="form-content">
+                            <span style="color: #e9ecef;">-</span>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">5</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/dwelling_certification.pdf" class="form-link" target="_blank">Dwelling Contractor Certification.</a>
+                            <span style="color: #6c757d; font-size: 12px; margin-left: 5px;">PDF format for emailing.</span>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">6</span>
+                        <div class="form-content">
+                            <a href="#" class="form-link">Lead Checklist.</a>
+                            <span style="color: #6c757d; font-size: 12px; margin-left: 5px;">PDF Format. Also in all printer walkup document folders.</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Text Messages Section -->
+        <div class="col-md-4">
+            <div class="forms-section">
+                <div class="forms-section-header">
+                    TEXT messages
+                </div>
+                <ul class="forms-list">
+                    <li>
+                        <span class="form-number">1</span>
+                        <div class="form-content">
+                            <span style="color: #e9ecef;">-</span>
+                        </div>
+                    </li>
+                    <li style="border-bottom: none;">
+                        <span class="form-number">2</span>
+                        <div class="form-content">
+                            <div class="text-messages-box">
+                                <div class="text-message-content">
+                                    <strong>Text Messaging:</strong>
+                                    <div class="text-message-example">
+                                        [1234567890@email.uscc.net]
+                                    </div>
+                                    <div style="margin-top: 8px;">
+                                        where <strong>1234567890</strong> is the full phone number, 
+                                        <strong>no dashes, etc.</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

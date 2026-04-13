@@ -1,0 +1,22 @@
+.quote-row {
+    border: 1px solid #ddd;
+    padding: 10px;
+    margin-bottom: 15px;
+    display: flex;
+    flex-direction: column;
+}
+.quote-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.quote-buttons {
+    display: flex;
+    gap: 10px;
+}
+.quote-products {
+    margin-top: 10px;
+}
+.quote-product {
+    margin: 10px 0;
+}

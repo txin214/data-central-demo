@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Sitework Categories X{% endblock %}
+{% block content %}
+<!-- siteworkcat_list.html   Testing -->
+<div class="container text-center">
+    <div class="row align-items-start">
+      <div class="col-sm-4">
+        <div class="list-group">
+            {% for sw in siteworkcat_list %}
+            <li class="list-group-item lh-1 list-group-item-primary d-flex justify-content-between align-items-center" >
+              {% comment %} this href passes the selected category ID to the view {% endcomment %}
+              <a href="{% url 'sitework:subcat_detail' cat=sw.id %}" class="list-group-item list-group-item-action" aria-current="true">
+                {{  sw.name }}
+            </a>
+            {% comment %} adding count and color to the badges to simulate feedback {% endcomment %}
+            {% if "JOB PREPARATIONS" in sw.name %}
+              <span class="badge bg-primary rounded-pill">7</span>
+            {% elif "ROUGH PLUMBING" in sw.name %}
+              <span class="badge bg-primary rounded-pill">3</span>
+            {% else %} 
+              <span class="badge bg-secondary rounded-pill">0</span>
+            {% endif %} 
+            </li>
+          {% endfor %}
+          </div>
+    </div>
+      <div class="col-sm-8">
+        
+
+    </div>
+    </div>
+  </div>
+
+{% endblock content %}

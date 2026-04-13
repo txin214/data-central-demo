@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %} Sitework Home {% endblock %}
+{% block content %}
+<ul>
+    {% if user.is_authenticated %}
+    <li>
+        <a href="{% url 'sitework:list_url' %}">Quote List</a>
+    </li>
+    {% else %}          
+    <li><a  class="nav-link text-black" href="{% url 'login' %}">Login</a></li>
+    {% endif %}
+    
+</ul>
+
+
+{% endblock %}

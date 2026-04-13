@@ -1,0 +1,45 @@
+{% extends "sitework/base-reports.html" %}
+{% block title %}Customer Copy - {{ customer }} {{ customer2 }}{% endblock %}
+{% block content %}
+<!-- report_show_simple.html - Shows quantity and descriptions only, pricing at end -->
+<div class="container py-3">
+  <div class="row mb-3">
+    <div class="col-12">
+      Customer: <strong>{{ customer }}</strong><br>
+      <strong>{{ customer2 }}</strong>
+      Report Date: {% now "jS F Y" %}
+    </div>
+  </div>
+
+  {% for row in report_rows %}
+    {% if row.row_type == 'cat_header' %}
+      <div class="row border-bottom border-dark mt-3 mb-2">
+        <div class="col-12 fs-8 fw-bold">{{ row.text }}</div>
+      </div>
+      <div class="row mb-1">
+        <div class="col-12"><small>Description</small></div>
+      </div>
+
+    {% elif row.row_type == 'line_item' %}
+      <div class="row py-1">
+        <div class="col-12">{{ row.desc }}</div>
+      </div>
+      {% if row.note %}
+        <div class="row">
+          <div class="col-12 text-start fs-8"><small>{{ row.note }}</small></div>
+        </div>
+      {% endif %}
+
+    {% elif row.row_type == 'cat_subtotal' %}
+      <!-- No category subtotal shown in simple version -->
+      <div class="row mb-3"><div class="col-12">&nbsp;</div></div>
+    {% endif %}
+  {% endfor %}
+
+  
+  <div class="row bg-light mt-2 p-2">
+    <div class="col-8 text-end fs-6 fw-bold">Site Work Total:</div>
+    <div class="col-4 text-end fs-6 fw-bold">{{ total }}</div>
+  </div>
+</div>
+{% endblock %}

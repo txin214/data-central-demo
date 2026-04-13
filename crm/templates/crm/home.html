@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %} CRM Home {% endblock %}
+{% block content %}
+
+<ul>
+    <li>
+        <a href="{% url "crm:create_customer" %}">Create Customer</a>
+    </li>
+    <li>
+        <a href="{% url "crm:list_customer" %}">List Customers</a>
+    </li>
+</ul>
+{% endblock %}

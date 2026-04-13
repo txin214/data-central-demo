@@ -1,0 +1,111 @@
+{% extends 'job/base_job.html' %}
+{% load static %}
+
+{% block job_content %}
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.1">
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_forms.css' %}?v=1.0">
+
+    <div class="table-responsive mt-3">
+        <table class="table table-bordered table-hover align-middle mb-0">
+            <thead class="sticky-header">
+                <tr>
+                    <th>Date</th>
+                    <th>Account</th>
+                    <th>Discount</th>
+                    <th>Comment</th>
+                    <th>By</th>
+                    <th>Amount</th>
+                    <th class="text-center">Lien Waiver</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="border-top-0 border-bottom-0">
+                    <td colspan="5" class="border-top-0 border-bottom-0 border-end-0 py-2">
+                        <a href="{% url 'job:job_payment_create' job.id %}" class="btn btn-sm btn-success">
+                            <i class="fas fa-plus me-1"></i>
+                            Add Payment
+                        </a>
+                    </td>
+                    <td colspan="3" class="border-top-0 border-bottom-0 border-start-0 py-2 text-end">
+                    </td>
+                </tr>
+                {% for payment in payments %}
+                <tr>
+                    <td>{{ payment.date|date:"M d, Y" }}</td>
+                    <td>
+                        {% if payment.account_category %}
+                        {{ payment.account_category.description }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if payment.discount %}
+                        {{ payment.discount|floatformat:2 }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ payment.comment|truncatewords:15|default:"-" }}
+                    </td>
+                    <td>
+                        {% if payment.by %}
+                            {{ payment.by.first_name }} {{ payment.by.last_name }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ payment.amount|floatformat:2 }}</td>
+                    <td class="text-center">
+                        <a href="{% url 'job:job_payment_lien_waiver_pdf' job.id payment.id %}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Print Lien Waiver for Payment #{{ payment.id }}">
+                            <i class="fas fa-print"></i>
+                        </a>
+                    </td>
+                    <td>
+                        <div class="d-flex gap-2 justify-content-center">
+                            <a href="{% url 'job:job_payment_edit' job.id payment.id %}" class="btn btn-sm btn-outline-primary" title="Edit Payment #{{ payment.id }}">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="post" action="{% url 'job:job_payment_delete' job.id payment.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this payment?')" title="Delete Payment #{{ payment.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="text-center text-muted py-3">
+                        <i class="fas fa-money-bill-wave fa-2x text-muted mb-2"></i>
+                        <p class="text-muted small">No payments added to this job yet.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% if payments %}
+            <tfoot>
+                <tr>
+                    <td colspan="5" class="text-end"><strong>Total Paid:</strong></td>
+                    <td><strong>{{ total_payment_amount|floatformat:2 }}</strong></td>
+                    <td colspan="2"></td>
+                </tr>
+                <tr>
+                    <td colspan="5" class="text-end"><strong>Discounts:</strong></td>
+                    <td><strong>{{ total_discount|floatformat:2 }}</strong></td>
+                    <td colspan="2"></td>
+                </tr>
+                <tr>
+                    <td colspan="5" class="text-end"><strong>Total:</strong></td>
+                    <td><strong>{{ total|floatformat:2 }}</strong></td>
+                    <td colspan="2"></td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+
+{% endblock %}

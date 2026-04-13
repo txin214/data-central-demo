@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+{% extends "base.html" %}
+{% load static %}
+
+{% block extra_head %}
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% endblock %}
+
+{% block content %}
+<style>
+/* Ensure consistent margins and styling with productform3 */
+.container-fluid {
+    background-color: transparent !important;
+}
+
+body {
+    background-color: #f8f9fa !important;
+}
+
+/* Make ViewTable background white */
+.ViewTable {
+    background-color: white !important;
+}
+.ViewTable td {
+    background-color: white !important;
+}
+.ViewTable th {
+    background-color: white !important;
+}
+
+/* Template-specific styles only - responsive styles moved to responsive-forms.css */
+</style>
+
+<!-- Include shared responsive styles -->
+<link rel="stylesheet" href="{% static 'product/css/responsive-forms.css' %}">
+
+  <div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <div>
+        <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+        <h2 class="fw-bold mb-0" style="font-size: 2rem;">View Product</h2>
+      </div>
+    </div>
+    
+    <form name="myForm" method="post" enctype="multipart/form-data">
+      <table style="margin-bottom: -1px;border-collapse: collapse;border-radius: 10px 10px 0 0;overflow: hidden;width: 280px;height: 10px;">
+        <tr>
+          <td style="background-color: #e9ecef; color: black; text-align: center; vertical-align: middle;">{{product.part_no}}</td>
+        </tr>
+      </table>
+
+      <table class="TabTable">
+        <tr>
+          <td onclick="showTab('productTab')" class="CurrentTab" style="width: 16.67%;">Product</td>
+          <td onclick="showTab('componentsTab')" style="width: 16.67%;">Components</td>
+          <td onclick="showTab('costTab')" style="width: 16.67%;">Cost</td>
+          <td onclick="showTab('imagesTab')" style="width: 16.67%;">Images</td>
+        </tr>
+      </table>
+
+      <div class="table-responsive">
+        <table class="ViewTable">
+          <tr>
+            <td colspan="2">
+              <table class="ViewTable" style="border: none">
+              <tr style="border: none">
+                <td colspan="4" style="text-align: right; border: none; padding: 3px;">
+                  <button type="button" class="btn" onclick="window.print()" style="padding: 4px 12px; font-size: 12px; background-color: var(--bs-primary); color: white;" title="Print"><i class="fas fa-print"></i></button>
+                  <small style="font-size: 11px;">* Indicates a required field</small>
+                </td>
+              </tr>
+              <tr>
+                <td colspan="2">
+                  <div id="productTab" class="tab-content active ViewTable">
+                    <table class="ViewTable" style="border: none">                  
+                      <tr style="border: none">
+                        <td colspan="4" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="partNumber1" style="margin-right: 8px; flex-basis: 150px; text-align: right;">*Part Number:</label>
+                            <input type="text" id="partNumber1" name="partNumber1" class="form-control" style="width: 100%; max-width: 400px;" value="{{ product.part_no}}" readonly/>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="partNumber3" style="margin-right: 8px; flex-basis: 150px; text-align: right;">Part Label:</label>
+                            <input type="text" id="partNumber3" name="partNumber3" class="form-control" style="width: 100%; max-width: 400px;" value="{% if product.product_lbl %}{{ product.product_lbl }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="partNumber4" style="margin-right: 8px; flex-basis: 150px; text-align: right;">UPC:</label>
+                            <input type="text" id="partNumber4" name="partNumber4" class="form-control" style="width: 100%; max-width: 400px;" value="{% if product.upc %}{{ product.upc }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                      </tr>
+                      
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="description" style="margin-right: 8px; flex-basis: 150px; text-align: right;">*Description:</label>
+                            <input type="text" id="description" name="description" class="form-control" style="width: 100%; max-width: 400px;" value="{{ product.description}}" readonly/>
+                          </div>
+                        </td>
+
+                        {% if product.website %}
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="website" style="margin-right: 8px; flex-basis: 150px; text-align: right;">Website:</label>
+                            <a href="{{ product.website }}" target="_blank" class="btn btn-primary" style="height: 40px; width: 100%; max-width: 200px;">View Website</a>
+                          </div>
+                        </td>
+                        {% endif %}
+                      </tr>
+
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="category" style="margin-right: 8px; flex-basis: 150px; text-align: right;">*Category:</label>
+                            <select id="category" name="category" class="form-control" style="width: 100%; max-width: 250px;" disabled>
+                              <option value="{{ product.category }}" >
+                                {{ product.category }}
+                            </option>
+                            </select>
+                          </div>
+                        </td>
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="manufacturer" style="margin-right: 8px; flex-basis: 150px; text-align: right;">*Manufacturer:</label>
+                            <select id="manufacturer" name="manufacturer" class="form-control" style="width: 100%; max-width: 300px;" disabled>
+                              <option value="{{ product.manufacturer }}" >
+                                {{ product.manufacturer }}
+                            </option>
+                            </select>
+                          </div>
+                        </td>
+                      </tr>
+
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="subCat1" style="margin-right: 8px; flex-basis: 150px; text-align: right;">*Sub Cat1:</label>
+                            <select id="subCat1" name="subCat1" style="width: 250px; height: 30px;" disabled>
+                              <option value="{{ product.sub_category1 }}" >
+                                {{ product.sub_category1 }}
+                            </option>
+                            </select>
+                          </div>
+                        </td>
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="prefVendor" style="margin-right: 8px; flex-basis: 150px; text-align: right;">*Pref. Vendor:</label>
+                            <select id="prefVendor" name="prefVendor" style="width: 300px;height: 30px;" disabled>
+                              <option>
+                                {{ product.pref_vendor }}
+                            </option>
+                            </select>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="subCat2" style="margin-right: 8px; flex-basis: 150px; text-align: right;">Sub Cat2:</label>
+                            <select id="subCat2" name="subCat2" style="width: 250px;height: 30px;" disabled>
+                              <option>
+                                {{ product.sub_category2 }}
+                            </option>
+                            </select>
+                          </div>
+                        </td>
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="altVendor" style="margin-right: 8px; flex-basis: 150px; text-align: right;">Alt. Vendor:</label>
+                            <select id="altVendor" name="altVendor" style="width: 300px;height: 30px;" disabled>
+                              <option>
+                                {{ product.alt_vendor}}
+                            </option>
+                            </select>
+                          </div>
+                        </td>
+                      </tr>
+
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: center; height: 100%;">
+                            <label for="partNumber1" style="margin-right: 8px; flex-basis: 150px; text-align: right;">Glass Pattern:</label>
+                            <input type="text" id="glass_pattern" name="glass_pattern" style="width: 300px; height: 30px;" value="{% if product.glass_pattern %}{{ product.glass_pattern }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: center; height: 100%;">
+                            <label for="partNumber2" style="margin-right: 8px; flex-basis: 150px; text-align: right;">Date Entered:</label>
+                            <input type="text" id="partNumber2" name="partNumber2" style="width: 200px; height: 30px;" value="{% if product.date_entered %}{{ product.date_entered }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                      </tr>
+
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="subCat2" style="margin-right: 8px; flex-basis: 150px; text-align: right;">*Status:</label>
+                            <select id="subCat2" name="subCat2" style="width: 50px;height: 20px;" disabled>
+                              <option>
+                                {% if product.status %}
+                                    A
+                                {% else %}
+                                    I
+                                {% endif %}
+                            </option>
+                            </select>
+                          </div>
+                        </td>
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: center; height: 100%;">
+                            <label for="partNumber2" style="margin-right: 8px; flex-basis: 150px; text-align: right;">Date Updated:</label>
+                            <input type="text" id="partNumber2" name="partNumber2" style="width: 200px; height: 30px;" value="{% if product.date_updated %}{{ product.date_updated }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                      </tr>
+
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none; text-align: center;">
+                          <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                            <div>
+                              <input type="radio" id="product" name="product_type" value="product" {% if product.product_type == 'product' or not product.product_type %}checked{% endif %} disabled />
+                              <label for="product">Product</label>
+                              <input type="radio" id="assembly" name="product_type" value="assembly" {% if product.product_type == 'assembly' %}checked{% endif %} style="margin-left: 10px;" disabled />
+                              <label for="assembly">Assembly</label>
+                              <input type="radio" id="component" name="product_type" value="component" {% if product.product_type == 'component' %}checked{% endif %} style="margin-left: 10px;" disabled />
+                              <label for="component">Component</label>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td colspan="2" style="border: none; text-align: center;">
+                          <div style="display: flex; justify-content: center; align-items: center; height: 100%;">
+                            <div>
+                              <input type="radio" id="primary" name="component_level" value="1" {% if product.component_level == 1 or not product.component_level %}checked{% endif %} disabled />
+                              <label for="primary">Primary</label>
+                              <input type="radio" id="secondary" name="component_level" value="2" {% if product.component_level == 2 %}checked{% endif %} style="margin-left: 10px;" disabled />
+                              <label for="secondary">Secondary</label>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="minorder" style="margin-right: 8px; flex-basis: 150px; text-align: right;">Min Order:</label>
+                            <input type="text" id="description" name="description" style="width: 120px; height: 25px;" value="{% if product.min_order %}{{ product.min_order }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="minstock" style="margin-right: 8px; flex-basis: 150px; text-align: right;">Min Stock:</label>
+                            <input type="text" id="description" name="description" style="width: 120px; height: 25px;" value="{% if product.min_stock %}{{ product.min_stock }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                      </tr>
+
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="instock" style="margin-right: 8px; flex-basis: 150px; text-align: right;">In Stock:</label>
+                            <input type="text" id="description" name="description" style="width: 120px; height: 25px;" value="0" readonly />
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <table class="ViewTable" style="border: none">
+                      <tr style="height: 10px; background-color: transparent;">
+                        <td colspan="4" style="border: none; background-color: transparent;"></td>
+                      </tr>
+                      <tr style="border: none">
+                        <td colspan="4" class="table-title" style="border: none">Dimensions</td>
+                      </tr>
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="width" style="margin-right: 8px; flex-basis: 150px; text-align: right;">Width:</label>
+                            <input type="text" id="description" name="description" style="width: 80px; height: 25px;"  value="{% if product.width %}{{ product.width }}{% else %}""{% endif %}" readonly />
+                          </div>
+                        </td>
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="height" style="margin-right: 8px; flex-basis: 150px; text-align: right;" >Height:</label>
+                            <input type="text" id="description" name="description" style="width: 80px; height: 25px;"  value="{% if product.height %}{{ product.height }}{% else %}""{% endif %}" readonly />
+                          </div>
+                        </td>
+                      </tr>
+
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="depth" style="margin-right: 8px; flex-basis: 150px; text-align: right;">Depth:</label>
+                            <input type="text" id="description" name="description" style="width: 80px; height: 25px;" value="{% if product.depth %}{{ product.depth }}{% else %}""{% endif %}" readonly />
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+
+                  <div id="componentsTab" class="tab-content ViewTable">
+                    <table class="ViewTable" style="border: none">
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <table class="ViewTable" style="border: none">
+                      <tr style="border: none">
+                        <td colspan="4" class="table-title" style="border: none">Selected Components</td>
+                      </tr>
+                      <tr style="border: none">
+                        <td colspan="3" style="border: none"></td>
+                      </tr>
+                      {% if components %}
+                      <tr style="border: none">
+                        <td style="border: none"><b>Name</b></td>
+                        <td style="border: none"><b>Description</b></td>
+                        <td style="border: none"><b>Type</b></td>
+                        <td style="border: none"><b>Quantity</b></td>
+                        <td style="border: none"><b>Unit Cost</b></td>
+                      </tr>
+                      {% endif %}
+                      
+                      {% for component_rel in components %}
+                      <tr style="border: none">
+                          <td style="border: none">{{ component_rel.component.part_no }}</td>
+                          <td style="border: none">{{ component_rel.component.description }}</td>
+                          <td style="border: none">{{ component_rel.component.product_type }}</td>
+                          <td style="border: none">{{ component_rel.component_qty }}</td>
+                          <td style="border: none">
+                            {% if component_rel.component.unit_total_cost is not None %}
+                                ${{ component_rel.component.unit_total_cost|floatformat:2 }}
+                            {% else %}
+                                Not Available
+                            {% endif %}
+                        </td>      
+                      </tr>
+                      {% empty %}
+                      <tr style="border: none">
+                        <td colspan="5" class="table-title" style="border: none">No components were found.</td>
+                      </tr>
+                      {% endfor %}
+                      </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+
+                  <div id="costTab" class="tab-content ViewTable">
+                    <table class="ViewTable" style="border: none">
+                      <tr style="border: none">
+                        <td colspan="2" class="table-title" style="border: none; text-align: center;">Unit Cost</td>
+                        <td colspan="2" class="table-title" style="border: none; text-align: center;">Optional Bulk Cost</td>
+                      </tr>
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="width" style="margin-right: 8px; flex-basis: 250px; text-align: right;">Base Cost:</label>
+                            <input type="text" id="description" name="description" style="width: 200px;height: 30px;" value="{% if product.unit_base_cost %}{{ product.unit_base_cost }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="height" style="margin-right: 8px; flex-basis: 250px; text-align: right;">Material Cost:</label>
+                            <input type="text" id="description" name="description" style="width: 200px;height: 30px;"  value="{% if product.bulk_material_cost %}{{ product.bulk_material_cost }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                      </tr>
+
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="depth" style="margin-right: 8px; flex-basis: 250px; text-align: right;">*Material Cost:</label>
+                            <input type="text" id="description" name="description" style="width: 200px;height: 30px;"  value="{% if product.unit_material_cost %}{{ product.unit_material_cost }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="height" style="margin-right: 8px; flex-basis: 250px; text-align: right;">Material Cost:</label>
+                            <input type="text" id="description" name="description" style="width: 200px;height: 30px;"  value="{% if product.bulk_material_cost %}{{ product.bulk_material_cost }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                      </tr>
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="leadtime" style="margin-right: 8px; flex-basis: 250px; text-align: right;">Lead Time:</label>
+                            <select id="leadtime" name="subCat2" style="width: 200px;height: 30px;" disabled>
+                              {% if product.unit_lead_time %}
+                              <option value="{{ product.unit_lead_time }}">
+                                  {{ product.unit_lead_time }}
+                              </option>
+                          {% endif %}
+                            </select>
+                          </div>
+                        </td>
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="height" style="margin-right: 8px; flex-basis: 250px; text-align: right;">Quantity Of:</label>
+                            <input type="text" id="description" name="description" style="width: 200px; height: 30px;"  value="{% if product.bulk_qty %}{{ product.bulk_qty }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                      </tr>
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="height" style="margin-right: 8px; flex-basis: 250px; text-align: right;">Labor Minutes:</label>
+                              <input type="text" id="description" name="description" style="width: 200px; height: 30px;" value="{% if product.unit_labor_minutes %}{{ product.unit_labor_minutes }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="leadtime" style="margin-right: 8px; flex-basis: 250px; text-align: right;">Lead Time:</label>
+                            <select id="leadtime" name="subCat2" style="width: 200px;height: 30px;" disabled>
+                              {% if product.bulk_lead_time %}
+                              <option value="{{ product.bulk_lead_time }}">
+                                  {{ product.bulk_lead_time }}
+                              </option>
+                          {% endif %}
+                            </select>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="height" style="margin-right: 8px; flex-basis: 250px; text-align: right;">Top Install Minutes:</label>
+                            <input type="text" id="description" name="description" style="width: 200px; height: 30px;" value="{% if product.unit_top_install_minutes %}{{ product.unit_top_install_minutes }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="height" style="margin-right: 8px; flex-basis: 250px; text-align: right;">Labor Cost:</label>
+                            <input type="text" id="description" name="description" style="width: 200px; height: 30px;" value="{% if product.bulk_labor_cost %}{{ product.bulk_labor_cost }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                      </tr>
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="height" style="margin-right: 8px; flex-basis: 250px; text-align: right;">Labor Cost:</label>
+                            <input type="text" id="description" name="description" style="width: 200px; height: 30px;" value="{% if product.unit_labor_cost %}{{ product.unit_labor_cost }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="height" style="margin-right: 8px; flex-basis: 250px; text-align: right;">Total Cost:</label>
+                            <input type="text" id="description" name="description" style="width: 200px; height: 30px;" value="{% if product.bulk_total_cost %}{{ product.bulk_total_cost }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                      </tr>
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="height" style="margin-right: 8px; flex-basis: 250px; text-align: right;">Total Cost:</label>
+                            <input type="text" id="description" name="description" style="width: 200px; height: 30px;" value="{% if product.unit_total_cost %}{{ product.unit_total_cost }}{% endif %}" readonly />
+                          </div>
+                        </td>
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="height" style="margin-right: 8px; flex-basis: 250px; text-align: right;"></label>
+                            <input type="text" id="description" name="description" style="width: 200px; height: 30px;" readonly />
+                          </div>
+                        </td>
+                      </tr>
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="height" style="margin-right: 8px; flex-basis: 250px; text-align: right;">Retail Price:</label>
+                            <input type="text" id="description" name="description" style="width: 200px; height: 30px;" value="{% if product.retail_sell %}{{ product.retail_sell }}{% endif %}" readonly />
+                            <span style="margin-left: 5px;"><input type="text" value="{{ product.retail_sell_multiplier|default:"" }}" style="width: 50px; height: 30px;" readonly/></span>
+                          </div>
+                        </td>
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="height" style="margin-right: 8px; flex-basis: 250px; text-align: right;"></label>
+                            <input type="text" id="description" name="description" style="width: 200px; height: 30px;" readonly />
+                          </div>
+                        </td>
+                      </tr>
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="height" style="margin-right: 8px; flex-basis: 250px; text-align: right;">Builder Price:</label>
+                            <input type="text" id="description" name="description" style="width: 200px; height: 30px;" value="{% if product.builder_sell %}{{ product.builder_sell }}{% endif %}" readonly />
+                            <span style="margin-left: 5px;"><input type="text" value="{{ product.builder_sell_multiplier|default:"" }}" style="width: 50px; height: 30px;" readonly/></span>
+                          </div>
+                        </td>
+                      </tr>
+                      <tr style="border: none">
+                        <td colspan="2" style="border: none">
+                          <div style="display: flex; align-items: flex-start; height: 100%;">
+                            <label for="height" style="margin-right: 8px; flex-basis: 250px; text-align: right;">Surplus Price:</label>
+                            <input type="text" id="description" name="description" style="width: 200px; height: 30px;" value="{% if product.surplus_sell %}{{ product.surplus_sell }}{% endif %}" readonly />
+                            <span style="margin-left: 5px;"><input type="text" value="{{ product.surplus_sell_multiplier|default:"" }}" style="width: 50px; height: 30px;" readonly/></span>
+                          </div>
+                        </td>
+                        <td colspan="2" style="border: none; text-align: center;">
+                          <p>Red = Default Pricing &nbsp  Green = Pricing Pools</p>
+                        </td>
+                      </tr>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+
+
+                    <div id="imagesTab" class="tab-content ViewTable">
+                      <table class="ViewTable" style="border: none">
+                        <tr style="border: none">
+                          <td colspan="2" style="border: none">
+                            <table class="ViewTable" style="border: none">
+                        <tr style="border: none">
+                          <td colspan="4" class="table-title" style="border: none; font-weight: bold; font-size: 16px; color: navy;">Product Images</td>
+                        </tr>
+                        <tr style="border: none">
+                          <td colspan="4" style="border: none">
+                            {% if product.images.exists %}
+                              <div style="display: flex; flex-wrap: wrap; gap: 15px;">
+                                {% for image in product.images.all|dictsortreversed:"is_primary"|dictsortreversed:"is_spec" %}
+                                  <div style="position: relative; width: 180px; border: 1px solid #dee2e6; border-radius: 0px; padding: 10px; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                    <a href="{{ image.image.url }}" target="_blank" style="display: block; cursor: pointer;">
+                                      <img src="{{ image.image.url }}" alt="Product Image" style="width: 100%; height: 120px; object-fit: contain; border-radius: 0px; margin-bottom: 10px;">
+                                    </a>
+                                    
+                                    {% if image.is_primary %}
+                                      <span style="position: absolute; top: 5px; left: 5px; background-color: var(--bs-primary); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold;">Primary</span>
+                                    {% elif image.is_spec %}
+                                      <span style="position: absolute; top: 5px; left: 5px; background-color: #ffc107; color: #212529; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold;">Spec</span>
+                                    {% else %}
+                                      <span style="position: absolute; top: 5px; left: 5px; background-color: #6c757d; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold;">Other</span>
+                                    {% endif %}
+                                    
+                                  </div>
+                                {% endfor %}
+                              </div>
+                            {% else %}
+                              <div class="table-title" style="border: none; font-weight: bold; font-size: 16px; color: navy;">No images available</div>
+                            {% endif %}
+                          </td>
+                          </tr>
+                        </table>
+                        </td>
+                      </tr>
+                      </table>
+                    </div>
+                </td>
+              </tr>
+
+            </table>
+            <input type="hidden" name="txtPageName" value="AV-1.2SBT-A" />
+            <input type="hidden" name="txtPageKey" value="102" />
+          </td>
+        </tr>
+      </table>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    function showTab(tabId) {
+      // Hide all tab content
+      const tabs = document.querySelectorAll('.tab-content');
+      tabs.forEach(tab => tab.classList.remove('active'));
+
+      // Show the selected tab
+      const activeTab = document.getElementById(tabId);
+      activeTab.classList.add('active');
+
+      // Update tab button styles
+      const tabButtons = document.querySelectorAll('.TabTable td');
+      tabButtons.forEach(button => button.classList.remove('CurrentTab'));
+      document.querySelector(`.TabTable td[onclick="showTab('${tabId}')"]`).classList.add('CurrentTab');
+    }
+  </script>
+  <style>
+    /* Basic styles for layout and table formatting */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    .ContentBody {
+      padding: 20px;
+    }
+
+    .TabTable {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: -1px;
+    }
+
+    .TabTable td {
+      padding: 8px;
+      text-align: center;
+      border: 1px solid #000;
+      cursor: pointer;
+    }
+
+    .CurrentTab {
+      background-color: #0099ff; /* Background color */
+      color: white; /* Text color */
+    }
+
+    .ViewTable {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .ViewTable td {
+      padding: 8px;
+      border: 1px solid #000;
+    }
+
+    .ViewTable th {
+      background-color: #f2f2f2;
+    }
+
+    .ViewTable input[type="text"] {
+      width: 100%;
+      padding: 5px;
+      box-sizing: border-box;
+    }
+
+    .ViewTable input[readonly] {
+      background-color: #e9ecef;
+      color: #6c757d;
+      cursor: not-allowed;
+      border: 1px solid #ced4da;
+    }
+
+    .ViewTable a {
+      color: #0000ff;
+      text-decoration: none;
+    }
+
+    .ViewTable a:hover {
+      text-decoration: underline;
+    }
+
+    .ViewTable p {
+      margin: 0;
+      padding: 0;
+    }
+
+    .ViewTable small {
+      color: #ff0000;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      border-radius: 4px;
+      margin: 5px;
+    }
+
+    .btn:disabled {
+      background-color: #6c757d;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .btn.cancel {
+      background-color: #6c757d;
+    }
+
+    .btn:hover:not(:disabled) {
+      opacity: 0.8;
+    }
+
+    .btn.cancel:hover:not(:disabled) {
+      opacity: 0.8;
+    }
+
+    .table-title {
+      font-weight: bold;
+      font-size: 16px;
+      color: navy;
+    }
+
+    .align-left {
+      text-align: left;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: table;
+    }
+
+    select:disabled {
+      background-color: #e9ecef;
+      color: #6c757d;
+      cursor: not-allowed;
+    }
+
+    input[type="radio"]:disabled {
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    /* Override pf2.css styles that might interfere with Bootstrap */
+    .container-fluid {
+        font-family: var(--bs-body-font-family) !important;
+    }
+    .fw-bold {
+        font-weight: 700 !important;
+    }
+    .text-primary {
+        color: var(--bs-primary) !important;
+    }
+    h2.fw-bold {
+        font-family: var(--bs-body-font-family) !important;
+        font-weight: 700 !important;
+    }
+
+    /* Make tab list font match product list table headers */
+    .TabTable td {
+        font-family: var(--bs-body-font-family) !important;
+        font-size: 0.875rem !important;
+        font-weight: 600 !important;
+        vertical-align: middle !important;
+        padding: 0.5rem 0.75rem !important;
+    }
+
+    /* Change current tab background to match product list table header */
+    .CurrentTab {
+        background-color: #e9ecef !important;
+        color: black !important;
+    }
+
+    /* Make part number font match tab table button font */
+    table[style*="width: 280px"] td {
+        font-family: var(--bs-body-font-family) !important;
+        font-size: 0.875rem !important;
+        font-weight: 600 !important;
+        vertical-align: middle !important;
+    }
+
+    /* Make ViewTable background white */
+    .ViewTable {
+        background-color: white !important;
+    }
+    .ViewTable td {
+        background-color: white !important;
+    }
+    .ViewTable th {
+        background-color: white !important;
+    }
+
+    /* Use the same background as product list */
+    body {
+        background-color: #f8f9fa !important;
+    }
+    .container-fluid {
+        background-color: transparent !important;
+    }
+
+    /* Change table border colors to match product list styling */
+    .TabTable {
+        border-color: #dee2e6 !important;
+    }
+    .TabTable td {
+        border-color: #dee2e6 !important;
+    }
+    .ViewTable {
+        border-color: #dee2e6 !important;
+    }
+    .ViewTable td {
+        border-color: #dee2e6 !important;
+    }
+    .ViewTable th {
+        border-color: #dee2e6 !important;
+    }
+    .TabTable td[style*="border"],
+    .ViewTable td[style*="border"],
+    .ViewTable th[style*="border"] {
+        border-color: #dee2e6 !important;
+    }
+  </style>
+{% endblock %}

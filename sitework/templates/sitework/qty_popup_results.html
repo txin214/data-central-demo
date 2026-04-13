@@ -1,0 +1,13 @@
+<!-- qty_popup_results.html Production  after the edit-in-place, this shows the current value  -->
+<!-- <div class="billbutton"> -->
+   <button class="btn btn-light"
+                hx-get="{% url 'sitework:qty_popup' qte=q cat=c subcat=s quan=x %}"
+                hx-target="this" hx-swap="outerHTML">
+                {% if x < 1 %}
+                  --
+                {% else %}
+                  {{ x }}
+                {% endif %}
+              </div>
+            </button> 
+<!--          </div> -->

@@ -1,0 +1,312 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'product/css/form-table.css' %}">
+{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Vendors</h2>
+        </div>
+    </div>
+    
+    <div class="form-container">
+    <form method="POST">
+        {% csrf_token %}
+        <table class="costpool-form-table table table-bordered table-hover">
+            <tr>
+                <th colspan="2">
+                    {% if vendor.id %}
+                        {% if is_view_mode %}
+                            View Vendor: {{ vendor.vendor_name }}
+                        {% else %}
+                            Edit Vendor: {{ vendor.vendor_name }}
+                        {% endif %}
+                    {% else %}
+                        Please enter your Vendor information:
+                    {% endif %}
+                </th>
+            </tr>
+            
+            <tr>
+                <td>Vendor Name:</td>
+                <td>
+                    {{ form.vendor_name }}
+                    {% if form.vendor_name.errors %}
+                        <div class="error-message">{{ form.vendor_name.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Vendor Number:</td>
+                <td>
+                    {{ form.vendor_no }}
+                    {% if form.vendor_no.errors %}
+                        <div class="error-message">{{ form.vendor_no.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Address 1:</td>
+                <td>
+                    {{ form.address1 }}
+                    {% if form.address1.errors %}
+                        <div class="error-message">{{ form.address1.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Address 2:</td>
+                <td>
+                    {{ form.address2 }}
+                    {% if form.address2.errors %}
+                        <div class="error-message">{{ form.address2.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>City:</td>
+                <td>
+                    {{ form.city }}
+                    {% if form.city.errors %}
+                        <div class="error-message">{{ form.city.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>State:</td>
+                <td>
+                    {{ form.state }}
+                    {% if form.state.errors %}
+                        <div class="error-message">{{ form.state.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Zip:</td>
+                <td>
+                    {{ form.zip }}
+                    {% if form.zip.errors %}
+                        <div class="error-message">{{ form.zip.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Order Phone:</td>
+                <td>
+                    {{ form.order_phone }}
+                    {% if form.order_phone.errors %}
+                        <div class="error-message">{{ form.order_phone.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Contact Name:</td>
+                <td>
+                    {{ form.contact_name }}
+                    {% if form.contact_name.errors %}
+                        <div class="error-message">{{ form.contact_name.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Contact Phone:</td>
+                <td>
+                    {{ form.contact_phone }}
+                    {% if form.contact_phone.errors %}
+                        <div class="error-message">{{ form.contact_phone.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Contact Email:</td>
+                <td>
+                    {{ form.contact_email }}
+                    {% if form.contact_email.errors %}
+                        <div class="error-message">{{ form.contact_email.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Delivery Days:</td>
+                <td>
+                    {{ form.delivery_days }}
+                    {% if form.delivery_days.errors %}
+                        <div class="error-message">{{ form.delivery_days.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Delivery Charges:</td>
+                <td>
+                    {{ form.delivery_charges }}
+                    {% if form.delivery_charges.errors %}
+                        <div class="error-message">{{ form.delivery_charges.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Warehouse Address:</td>
+                <td>
+                    {{ form.warehouse_address }}
+                    {% if form.warehouse_address.errors %}
+                        <div class="error-message">{{ form.warehouse_address.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Warehouse City:</td>
+                <td>
+                    {{ form.warehouse_city }}
+                    {% if form.warehouse_city.errors %}
+                        <div class="error-message">{{ form.warehouse_city.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Warehouse State:</td>
+                <td>
+                    {{ form.warehouse_state }}
+                    {% if form.warehouse_state.errors %}
+                        <div class="error-message">{{ form.warehouse_state.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Warehouse Zip:</td>
+                <td>
+                    {{ form.warehouse_zip }}
+                    {% if form.warehouse_zip.errors %}
+                        <div class="error-message">{{ form.warehouse_zip.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Comments:</td>
+                <td>
+                    {{ form.comments }}
+                    {% if form.comments.errors %}
+                        <div class="error-message">{{ form.comments.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Website:</td>
+                <td>
+                    {{ form.website }}
+                    {% if form.website.errors %}
+                        <div class="error-message">{{ form.website.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>Status:</td>
+                <td>
+                    {{ form.status }}
+                    {% if form.status.errors %}
+                        <div class="error-message">{{ form.status.errors.0 }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+            
+            <tr>
+                <td>&nbsp;</td>
+                <td class="btn-container">
+                    {% if not is_view_mode %}
+                    <button type="submit" class="btn btn-primary">
+                        {% if vendor.id %}
+                            Save Changes
+                        {% else %}
+                            Create Vendor
+                        {% endif %}
+                    </button>
+                    {% else %}
+                    <a href="?mode=edit" class="btn btn-primary">
+                        Edit Vendor
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'product:vendors' %}" class="btn btn-light">
+                        Cancel
+                    </a>
+                </td>
+            </tr>
+        </table>
+    </form>
+</div>
+
+
+<script type="text/javascript">
+    var isViewMode = {% if is_view_mode %}true{% else %}false{% endif %};
+    var isCreateMode = {% if not vendor.id %}true{% else %}false{% endif %};
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Handle form fields in view mode - make them look the same but disabled
+    document.addEventListener('DOMContentLoaded', function() {
+        if (isViewMode) {
+            const formFields = document.querySelectorAll('input, select, textarea');
+            formFields.forEach(function(field) {
+                // Disable the field
+                field.disabled = true;
+                
+                // Keep the same visual appearance but make it clear it's read-only
+                field.style.backgroundColor = '#f8f9fa';
+                field.style.cursor = 'not-allowed';
+                field.style.opacity = '0.8';
+                
+                // Add a subtle visual indicator that it's read-only
+                field.style.borderColor = '#dee2e6';
+            });
+            
+            // Also disable the form submission
+            const form = document.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    return false;
+                });
+            }
+        }
+        
+        // Handle create mode - ensure all required fields are properly marked
+        if (isCreateMode) {
+            // Add any create-specific logic here if needed
+            console.log('Create vendor mode active');
+        }
+    });
+</script>
+{% endblock %}

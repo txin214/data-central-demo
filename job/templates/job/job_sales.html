@@ -1,0 +1,757 @@
+{% extends 'job/base_job.html' %}
+{% load static %}
+
+{% block job_content %}
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.1">
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_forms.css' %}?v=1.0">
+
+    <div class="table-responsive mt-3">
+        <table class="table table-bordered table-hover align-middle mb-0">
+            <thead class="sticky-header">
+                <tr>
+                    <th>Sale Date</th>
+                    <th>Product Code</th>
+                    <th>Sale Amount</th>
+                    <th>Tax</th>
+                    <th>Description</th>
+                    <th>Sold By</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="border-top-0 border-bottom-0">
+                    <td colspan="5" class="border-top-0 border-bottom-0 border-end-0 py-2">
+                        <a href="{% url 'job:job_sale_create' job.id %}" class="btn btn-sm btn-success">
+                            <i class="fas fa-plus me-1"></i>
+                            Add Sale
+                        </a>
+                    </td>
+                    <td colspan="2" class="border-top-0 border-bottom-0 border-start-0 py-2 text-end">
+                        <a href="{% url 'job:job_sales_invoice_pdf' job.id %}" target="_blank" class="btn btn-sm btn-primary">
+                            <i class="fas fa-print me-1"></i>Print Invoice
+                        </a>
+                    </td>
+                </tr>
+                {% for group in grouped_sales %}
+                {% if group.count > 1 %}
+                <!-- Grouped row with expand/collapse -->
+                <tr class="group-header" data-group-id="group-{{ forloop.counter }}">
+                    <td>
+                        <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none expand-btn" data-target="group-{{ forloop.counter }}">
+                            <i class="fas fa-chevron-right me-1"></i>
+                        </button>
+                        {{ group.sale_date|date:"M d, Y"|default:"-" }}
+                    </td>
+                    <td>
+                        {% if group.product_code %}
+                        {{ group.product_code.code }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <strong>{{ group.total|floatformat:2 }}</strong>
+                        <small class="text-muted d-block">({{ group.count }} items)</small>
+                    </td>
+                    <td>
+                        {{ group.tax|default:"-" }}
+                    </td>
+                    <td>
+                        {% if group.sales %}
+                            {% with first_sale=group.sales|first %}
+                                {% if first_sale.comment %}
+                                    {{ first_sale.comment }}
+                                {% elif group.product_code %}
+                                    {{ group.product_code.description|default:"-" }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% elif group.product_code %}
+                            {{ group.product_code.description|default:"-" }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if group.sales %}
+                            {% with first_sale=group.sales|first %}
+                                {% if first_sale.created_by %}
+                                    {{ first_sale.created_by.first_name }} {{ first_sale.created_by.last_name }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="d-flex gap-2 justify-content-center">
+                            <span class="text-muted small">Click to expand</span>
+                        </div>
+                    </td>
+                </tr>
+                <!-- Individual sales rows (collapsed by default) -->
+                {% for sale in group.sales %}
+                <tr class="group-item group-{{ forloop.parentloop.counter }}" style="display: none;">
+                    <td class="ps-4">
+                        <small class="text-muted">{{ sale.sale_date|date:"M d, Y"|default:"-" }}</small>
+                    </td>
+                    <td class="ps-4">
+                        <small class="text-muted">-</small>
+                    </td>
+                    <td class="ps-4">
+                        <small>{{ sale.sale_amount|floatformat:2 }}</small>
+                    </td>
+                    <td class="ps-4">
+                        <small>{{ sale.get_tax_display|default:"-" }}</small>
+                    </td>
+                    <td class="ps-4">
+                        {% if sale.comment %}
+                            <small>{{ sale.comment }}</small>
+                        {% elif sale.product_code %}
+                            <small>{{ sale.product_code.description|default:"-" }}</small>
+                        {% else %}
+                            <small>-</small>
+                        {% endif %}
+                    </td>
+                    <td class="ps-4">
+                        <small>
+                            {% if sale.created_by %}
+                                {{ sale.created_by.first_name }} {{ sale.created_by.last_name }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </small>
+                    </td>
+                    <td>
+                        <div class="d-flex gap-2 justify-content-center">
+                            <a href="{% url 'job:job_sale_edit' job.id sale.id %}" class="btn btn-sm btn-outline-primary" title="Edit Sale #{{ sale.id }}">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="post" action="{% url 'job:job_sale_delete' job.id sale.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this sale?')" title="Delete Sale #{{ sale.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <!-- Single sale row (no grouping needed) -->
+                <tr>
+                    <td>{{ group.sale_date|date:"M d, Y"|default:"-" }}</td>
+                    <td>
+                        {% if group.product_code %}
+                        {{ group.product_code.code }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <strong>{{ group.total|floatformat:2 }}</strong>
+                    </td>
+                    <td>
+                        {{ group.tax|default:"-" }}
+                    </td>
+                    <td>
+                        {% if group.sales %}
+                            {% with first_sale=group.sales|first %}
+                                {% if first_sale.comment %}
+                                    <small class="text-muted">{{ first_sale.comment }}</small>
+                                {% elif group.product_code %}
+                                    <small class="text-muted">{{ group.product_code.description|default:"-" }}</small>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% elif group.product_code %}
+                            <small class="text-muted">{{ group.product_code.description|default:"-" }}</small>
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if group.sales %}
+                            {% with first_sale=group.sales|first %}
+                                {% if first_sale.created_by %}
+                                    {{ first_sale.created_by.first_name }} {{ first_sale.created_by.last_name }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="d-flex gap-2 justify-content-center">
+                            {% for sale in group.sales %}
+                            <a href="{% url 'job:job_sale_edit' job.id sale.id %}" class="btn btn-sm btn-outline-primary" title="Edit Sale #{{ sale.id }}">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="post" action="{% url 'job:job_sale_delete' job.id sale.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this sale?')" title="Delete Sale #{{ sale.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                            {% endfor %}
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-3">
+                        <p class="text-muted small">No sales added to this job yet.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if grouped_sales %}
+    <div class="mt-3 d-flex justify-content-between align-items-center">
+        <div class="text-muted small">
+            Total: {{ grouped_sales|length }} product code{{ grouped_sales|length|pluralize }}
+        </div>
+        <div class="text-end">
+            <strong>Total Sales Amount: 
+                {{ total_sales_amount|floatformat:2 }}
+            </strong>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if job.sold and main_quote and grouped_products %}
+    <div class="mt-4">
+        <h5 class="mb-3">
+            Main Quote Products
+        </h5>
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle mb-0">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Product Code</th>
+                        <th>Tax</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for category, items, subtotal, category_tax, category_total in grouped_products %}
+                    <tr data-category="{{ category }}" data-total="{{ category_total|floatformat:2 }}">
+                        <td><strong>{{ category }}</strong></td>
+                        <td>
+                            <select class="form-control form-control-sm product-code-select">
+                                <option value="">Select Product Code</option>
+                                {% for product_code in product_codes %}
+                                <option value="{{ product_code.id }}" data-code="{{ product_code.code }}">{{ product_code.code }} - {{ product_code.description }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>
+                            <select class="form-control form-control-sm tax-select">
+                                <option value="EX">EX</option>
+                                <option value="ST">ST</option>
+                                <option value="UT" selected>UT</option>
+                                <option value="LB">LB</option>
+                                <option value="SU">SU</option>
+                            </select>
+                        </td>
+                        <td class="text-end"><strong>${{ category_total|floatformat:2 }}</strong></td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-primary add-sale-btn" data-category="{{ category }}" data-total="{{ category_total }}">
+                                <i class="fas fa-plus me-1"></i>Add
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if sitework_total > 0 %}
+                    <tr data-category="Sitework" data-total="{{ sitework_total|floatformat:2 }}">
+                        <td><strong>Sitework</strong></td>
+                        <td>
+                            <select class="form-control form-control-sm product-code-select">
+                                <option value="">Select Product Code</option>
+                                {% for product_code in product_codes %}
+                                <option value="{{ product_code.id }}" data-code="{{ product_code.code }}">{{ product_code.code }} - {{ product_code.description }}</option>
+                                {% endfor %}
+                            </select>
+                        </td>
+                        <td>
+                            <select class="form-control form-control-sm tax-select">
+                                <option value="EX">EX</option>
+                                <option value="ST">ST</option>
+                                <option value="UT" selected>UT</option>
+                                <option value="LB">LB</option>
+                                <option value="SU">SU</option>
+                            </select>
+                        </td>
+                        <td class="text-end"><strong>${{ sitework_total|floatformat:2 }}</strong></td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-sm btn-primary add-sale-btn" data-category="Sitework" data-total="{{ sitework_total }}">
+                                <i class="fas fa-plus me-1"></i>Add
+                            </button>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-3 text-end">
+            <button type="button" id="save-sales-btn" class="btn btn-success" disabled>
+                <i class="fas fa-save me-1"></i>Save Sales
+            </button>
+        </div>
+            </table>
+        </div>
+    </div>
+    {% elif job.sold and main_quote %}
+    <div class="mt-4">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Main quote found but has no products.
+        </div>
+    </div>
+    {% elif job.sold %}
+    <div class="mt-4">
+        <div class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            No primary product quote found for this job.
+        </div>
+    </div>
+    {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let pendingSales = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    const salesTableBody = document.querySelector('table tbody');
+    const saveBtn = document.getElementById('save-sales-btn');
+    
+    // Hide categories that have already been saved
+    const savedTotals = [{% for total in saved_totals %}{{ total }}{% if not forloop.last %}, {% endif %}{% endfor %}];
+    document.querySelectorAll('[data-category]').forEach(row => {
+        const total = parseFloat(row.dataset.total);
+        // Check if this total matches any saved total (with small tolerance for floating point)
+        const isSaved = savedTotals.some(saved => Math.abs(saved - total) < 0.01);
+        if (isSaved) {
+            row.style.display = 'none';
+        }
+    });
+    
+    // Handle Add button clicks
+    document.querySelectorAll('.add-sale-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const row = this.closest('tr');
+            const category = row.dataset.category;
+            const total = parseFloat(row.dataset.total);
+            const productCodeSelect = row.querySelector('.product-code-select');
+            const taxSelect = row.querySelector('.tax-select');
+            
+            const productCodeId = productCodeSelect.value;
+            const productCodeText = productCodeSelect.options[productCodeSelect.selectedIndex]?.dataset.code || '';
+            const tax = taxSelect.value;
+            
+            // Validation
+            if (!productCodeId) {
+                alert('Please select a Product Code');
+                return;
+            }
+            if (!tax) {
+                alert('Please select a Tax value');
+                return;
+            }
+            
+            // Get today's date
+            const today = new Date();
+            const saleDate = today.toISOString().split('T')[0];
+            const formattedDate = today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            
+            // Add to pending sales array
+            const saleData = {
+                category: category,
+                product_code_id: productCodeId,
+                product_code: productCodeText,
+                sale_amount: total,
+                tax: tax,
+                sale_date: saleDate,
+                categoryRow: row  // Store reference to the category row
+            };
+            pendingSales.push(saleData);
+            
+            // Hide the category row from Main Quote Products table
+            row.style.display = 'none';
+            row.dataset.pendingSaleIndex = pendingSales.length - 1;
+            
+            // Check if there's already a pending sale row with the same product code
+            const existingPendingGroup = Array.from(salesTableBody.querySelectorAll('.pending-sale-group')).find(r => {
+                return r.dataset.productCodeId === productCodeId;
+            });
+            
+            if (existingPendingGroup) {
+                // Add individual item row (hidden by default)
+                const groupId = existingPendingGroup.dataset.groupId;
+                const itemRow = document.createElement('tr');
+                itemRow.className = `pending-sale-item group-item group-${groupId}`;
+                itemRow.style.display = 'none';
+                itemRow.dataset.saleIndex = pendingSales.length - 1;
+                itemRow.dataset.productCodeId = productCodeId;
+                itemRow.dataset.category = category;
+                itemRow.innerHTML = `
+                    <td class="ps-4">
+                        <small class="text-muted">${formattedDate}</small>
+                    </td>
+                    <td class="ps-4">
+                        <small class="text-muted">-</small>
+                    </td>
+                    <td class="ps-4">
+                        <small>${total.toFixed(2)}</small>
+                    </td>
+                    <td class="ps-4">
+                        <small>${tax}</small>
+                    </td>
+                    <td class="ps-4">
+                        <small class="text-muted">${category}</small>
+                    </td>
+                    <td class="ps-4">
+                        <small class="text-muted">-</small>
+                    </td>
+                    <td>
+                        <div class="d-flex gap-2 justify-content-center">
+                            <a href="{% url 'job:job_sale_edit' job.id 0 %}" class="btn btn-sm btn-outline-primary" title="Edit Sale" style="display: none;">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-pending-item" data-index="${pendingSales.length - 1}" data-product-code-id="${productCodeId}" data-category="${category}">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                // Insert after the group header row
+                existingPendingGroup.after(itemRow);
+                
+                // Update group header - sum the amounts and update count
+                const amountCell = existingPendingGroup.querySelector('td:nth-child(3)');
+                const currentAmount = parseFloat(amountCell.querySelector('strong').textContent.replace(',', ''));
+                const newAmount = currentAmount + total;
+                const itemCount = parseInt(existingPendingGroup.dataset.itemCount || '1') + 1;
+                existingPendingGroup.dataset.itemCount = itemCount;
+                
+                // Update header row
+                if (itemCount > 1) {
+                    amountCell.innerHTML = `<strong>${newAmount.toFixed(2)}</strong><small class="text-muted d-block">(${itemCount} items)</small>`;
+                    // Ensure expand button exists
+                    const expandBtn = existingPendingGroup.querySelector('.expand-btn');
+                    if (!expandBtn) {
+                        const productCodeCell = existingPendingGroup.querySelector('td:nth-child(2)');
+                        const expandIcon = document.createElement('button');
+                        expandIcon.type = 'button';
+                        expandIcon.className = 'btn btn-sm btn-link p-0 me-2 expand-btn';
+                        expandIcon.dataset.target = `group-${groupId}`;
+                        expandIcon.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                        expandIcon.style.cursor = 'pointer';
+                        productCodeCell.insertBefore(expandIcon, productCodeCell.firstChild);
+                    }
+                } else {
+                    amountCell.innerHTML = `<strong>${newAmount.toFixed(2)}</strong>`;
+                }
+            } else {
+                // Create new group header row
+                const groupId = Date.now(); // Simple unique ID
+                const newRow = document.createElement('tr');
+                newRow.className = 'pending-sale-group';
+                newRow.dataset.groupId = groupId;
+                newRow.dataset.productCodeId = productCodeId;
+                newRow.dataset.itemCount = '1';
+                newRow.innerHTML = `
+                    <td>${formattedDate}</td>
+                    <td>
+                        ${productCodeText}
+                    </td>
+                    <td>
+                        <strong>${total.toFixed(2)}</strong>
+                    </td>
+                    <td>
+                        ${tax}
+                    </td>
+                    <td>
+                        <small class="text-muted">${category}</small>
+                    </td>
+                    <td>
+                        <span class="text-muted">-</span>
+                    </td>
+                    <td>
+                        <div class="d-flex gap-2 justify-content-center">
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-pending-sale" data-product-code-id="${productCodeId}">
+                                <i class="fas fa-times me-1"></i>Remove
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                // Insert before the "Add Sale" button row
+                const addButtonRow = salesTableBody.querySelector('tr.border-top-0');
+                salesTableBody.insertBefore(newRow, addButtonRow);
+                
+                // Create individual item row (hidden by default for single item, but structure allows expansion)
+                const itemRow = document.createElement('tr');
+                itemRow.className = `pending-sale-item group-item group-${groupId}`;
+                itemRow.style.display = 'none'; // Hidden by default for single item
+                itemRow.dataset.saleIndex = pendingSales.length - 1;
+                itemRow.dataset.productCodeId = productCodeId;
+                itemRow.dataset.category = category;
+                itemRow.innerHTML = `
+                    <td class="ps-4">
+                        <small class="text-muted">${formattedDate}</small>
+                    </td>
+                    <td class="ps-4">
+                        <small class="text-muted">-</small>
+                    </td>
+                    <td class="ps-4">
+                        <small>${total.toFixed(2)}</small>
+                    </td>
+                    <td class="ps-4">
+                        <small>${tax}</small>
+                    </td>
+                    <td class="ps-4">
+                        <small class="text-muted">${category}</small>
+                    </td>
+                    <td class="ps-4">
+                        <small class="text-muted">-</small>
+                    </td>
+                    <td>
+                        <div class="d-flex gap-2 justify-content-center">
+                            <a href="{% url 'job:job_sale_edit' job.id 0 %}" class="btn btn-sm btn-outline-primary" title="Edit Sale" style="display: none;">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button type="button" class="btn btn-sm btn-outline-danger remove-pending-item" data-index="${pendingSales.length - 1}" data-product-code-id="${productCodeId}" data-category="${category}">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                
+                // Insert after the group header row
+                newRow.after(itemRow);
+            }
+            
+            // Enable save button
+            saveBtn.disabled = false;
+        });
+    });
+    
+    // Handle remove pending sale (entire group)
+    salesTableBody.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-pending-sale')) {
+            const btn = e.target.closest('.remove-pending-sale');
+            const productCodeId = btn.dataset.productCodeId;
+            const groupRow = btn.closest('.pending-sale-group');
+            
+            // Find all pending sales with this product code
+            const salesToRemove = pendingSales.filter(s => s.product_code_id === productCodeId);
+            
+            // Restore all category rows for this product code
+            salesToRemove.forEach(saleData => {
+                if (saleData && saleData.categoryRow) {
+                    saleData.categoryRow.style.display = '';
+                    delete saleData.categoryRow.dataset.pendingSaleIndex;
+                }
+            });
+            
+            // Remove from array
+            pendingSales = pendingSales.filter(s => s.product_code_id !== productCodeId);
+            
+            // Remove group header and all item rows
+            const groupId = groupRow.dataset.groupId;
+            const itemRows = salesTableBody.querySelectorAll(`.group-item.group-${groupId}`);
+            itemRows.forEach(row => row.remove());
+            groupRow.remove();
+            
+            // Disable save button if no pending sales
+            if (pendingSales.length === 0) {
+                saveBtn.disabled = true;
+            }
+        }
+        
+        // Handle remove individual pending item
+        if (e.target.closest('.remove-pending-item')) {
+            const btn = e.target.closest('.remove-pending-item');
+            const saleIndex = parseInt(btn.dataset.index);
+            const productCodeId = btn.dataset.productCodeId;
+            const category = btn.dataset.category;
+            const itemRow = btn.closest('tr');
+            const groupRow = salesTableBody.querySelector(`.pending-sale-group[data-product-code-id="${productCodeId}"]`);
+            
+            // Find and remove the specific sale from array
+            const saleToRemove = pendingSales.find((s, idx) => idx === saleIndex && s.category === category);
+            if (saleToRemove && saleToRemove.categoryRow) {
+                saleToRemove.categoryRow.style.display = '';
+                delete saleToRemove.categoryRow.dataset.pendingSaleIndex;
+            }
+            
+            // Remove from array
+            pendingSales = pendingSales.filter((s, idx) => !(idx === saleIndex && s.category === category));
+            
+            // Remove the item row
+            itemRow.remove();
+            
+            // Update group header
+            const remainingSales = pendingSales.filter(s => s.product_code_id === productCodeId);
+            if (remainingSales.length === 0) {
+                // Remove entire group if no items left
+                groupRow.remove();
+            } else {
+                // Update group totals
+                const total = remainingSales.reduce((sum, s) => sum + s.sale_amount, 0);
+                const amountCell = groupRow.querySelector('td:nth-child(3)');
+                groupRow.dataset.itemCount = remainingSales.length;
+                
+                if (remainingSales.length > 1) {
+                    amountCell.innerHTML = `<strong>${total.toFixed(2)}</strong><small class="text-muted d-block">(${remainingSales.length} items)</small>`;
+                    // Ensure expand button exists
+                    let expandBtn = groupRow.querySelector('.expand-btn');
+                    if (!expandBtn) {
+                        const productCodeCell = groupRow.querySelector('td:nth-child(2)');
+                        expandBtn = document.createElement('button');
+                        expandBtn.type = 'button';
+                        expandBtn.className = 'btn btn-sm btn-link p-0 me-2 expand-btn';
+                        expandBtn.dataset.target = `group-${groupRow.dataset.groupId}`;
+                        expandBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                        expandBtn.style.cursor = 'pointer';
+                        productCodeCell.insertBefore(expandBtn, productCodeCell.firstChild);
+                    }
+                } else {
+                    amountCell.innerHTML = `<strong>${total.toFixed(2)}</strong>`;
+                    // Remove expand button if only one item
+                    const expandBtn = groupRow.querySelector('.expand-btn');
+                    if (expandBtn) {
+                        expandBtn.remove();
+                    }
+                }
+            }
+            
+            // Disable save button if no pending sales
+            if (pendingSales.length === 0) {
+                saveBtn.disabled = true;
+            }
+        }
+    });
+    
+    // Handle save button
+    saveBtn.addEventListener('click', function() {
+        if (pendingSales.length === 0) {
+            alert('No sales to save');
+            return;
+        }
+        
+        // Disable button during save
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Saving...';
+        
+        // Get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        const csrftoken = getCookie('csrftoken');
+        
+        // Send AJAX request
+        fetch('{% url "job:job_sales_bulk_create" job.id %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                sales: pendingSales
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove pending sale rows
+                document.querySelectorAll('.pending-sale').forEach(row => row.remove());
+                pendingSales = [];
+                
+                // Reload page to show new sales
+                window.location.reload();
+            } else {
+                alert('Error saving sales: ' + (data.error || 'Unknown error'));
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save Sales';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error saving sales. Please try again.');
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save Sales';
+        });
+    });
+    
+    // Handle expand/collapse for grouped sales (both saved and pending) using event delegation
+    salesTableBody.addEventListener('click', function(e) {
+        if (e.target.closest('.expand-btn')) {
+            const btn = e.target.closest('.expand-btn');
+            const targetId = btn.dataset.target;
+            const icon = btn.querySelector('i');
+            const groupItems = document.querySelectorAll(`.group-item.${targetId}`);
+            
+            groupItems.forEach(item => {
+                if (item.style.display === 'none' || item.style.display === '') {
+                    item.style.display = '';
+                    icon.classList.remove('fa-chevron-right');
+                    icon.classList.add('fa-chevron-down');
+                } else {
+                    item.style.display = 'none';
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-right');
+                }
+            });
+        }
+    });
+    
+    // Also handle expand buttons that exist on page load (for saved sales)
+    document.querySelectorAll('.expand-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const targetId = this.dataset.target;
+            const icon = this.querySelector('i');
+            const groupItems = document.querySelectorAll(`.group-item.${targetId}`);
+            
+            groupItems.forEach(item => {
+                if (item.style.display === 'none' || item.style.display === '') {
+                    item.style.display = '';
+                    icon.classList.remove('fa-chevron-right');
+                    icon.classList.add('fa-chevron-down');
+                } else {
+                    item.style.display = 'none';
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-right');
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
+

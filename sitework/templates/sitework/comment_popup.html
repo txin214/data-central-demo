@@ -1,0 +1,17 @@
+<!-- NOT THIS ONE!! -->
+<!-- sitework/comment_popup.html Production  this allows editing the comment in the table row  -->
+<form id='commentform' hx-post="{% url 'sitework:comment_post' %}" enctype="multipart/form-data" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'> 
+      <div class="col">
+        <textarea id='ctextarea' form='commentform' class="form-control-plaintext" name='comment' 
+        rows="4" cols="40" maxlength="200">{{ data.comment }}</textarea>
+
+        <input class="btn btn-success btn-sm" type="submit" value="OK">
+        <input type="hidden" name="quoteid" value ="{{ data.qte }}">
+        <input type="hidden" name="subcat" value ="{{ data.subcat.pk }}">
+        <input type="submit" class="form-control" style="display: none" />
+        <input class="btn btn-danger btn-sm" type="submit" value="NO">
+        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+      </div> 
+  </form>
+  
+    

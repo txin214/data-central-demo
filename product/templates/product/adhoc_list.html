@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/table_styles.css' %}">
+{% endblock %}
+
+{% block content %}
+<style>
+    .table-responsive {
+        overflow-x: auto;
+        padding-right: 0;
+    }
+    .action-bar {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+        gap: 12px;
+        width: 100%;
+    }
+    .action-bar .form-select {
+        flex-shrink: 0;
+        width: 180px;
+    }
+    .action-bar .search-container {
+        flex: 1;
+        display: flex;
+        justify-content: flex-end;
+        margin-left: auto;
+        padding-right: 0;
+    }
+    .table th, .table td {
+        white-space: nowrap;
+    }
+</style>
+
+<div class="container-fluid mt-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Ad-Hoc Products</h2>
+        </div>
+    </div>
+
+    <!-- Search and Filter Section -->
+    <div class="action-bar">
+        <select id="category" name="category" class="form-select form-select-sm">
+            <option value="">All Categories</option>
+            {% for category in categories %}
+                <option value="{{ category.id }}" {% if category_filter == category.id|stringformat:"s" %}selected{% endif %}>
+                    {{ category.product_category }}
+                </option>
+            {% endfor %}
+        </select>
+        
+        <select id="manufacturer" name="manufacturer" class="form-select form-select-sm">
+            <option value="">All Manufacturers</option>
+            {% for manufacturer in manufacturers %}
+                <option value="{{ manufacturer.id }}" {% if manufacturer_filter == manufacturer.id|stringformat:"s" %}selected{% endif %}>
+                    {{ manufacturer.manufacturer_name }}
+                </option>
+            {% endfor %}
+        </select>
+        
+        <select id="vendor" name="vendor" class="form-select form-select-sm">
+            <option value="">All Vendors</option>
+            {% for vendor in vendors %}
+                <option value="{{ vendor.id }}" {% if vendor_filter == vendor.id|stringformat:"s" %}selected{% endif %}>
+                    {{ vendor.vendor_name }}
+                </option>
+            {% endfor %}
+        </select>
+        
+        <div class="search-container">
+            <input type="text" class="form-control form-control-sm search-input" id="search" name="search" 
+                   value="{{ search_query }}" placeholder="Search Ad-Hoc Products...">
+        </div>
+    </div>
+
+    <!-- Results Section -->
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle mb-0">
+            <thead class="sticky-header">
+                <tr>
+                    <th>Part Number</th>
+                    <th>Description</th>
+                    <th>Category</th>
+                    <th>Manufacturer</th>
+                    <th>Vendor</th>
+                    <th>Cost</th>
+                    <th>Retail Price</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="border-top-0 border-bottom-0">
+                    <td colspan="9" class="border-top-0 border-bottom-0 py-2">
+                        <a href="{% url 'admin:product_adhoc_add' %}" class="btn btn-sm btn-success" target="_blank">
+                            <i class="fas fa-plus me-1"></i>
+                            Add New Ad-Hoc
+                        </a>
+                    </td>
+                </tr>
+                {% for adhoc in adhoc_items %}
+                            <tr>
+                                <td>
+                                    <strong>{{ adhoc.part_no }}</strong>
+                                </td>
+                                <td>{{ adhoc.description }}</td>
+                                <td>
+                                    {% if adhoc.category %}
+                                        <span class="badge bg-info">{{ adhoc.category.product_category }}</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if adhoc.manufacturer %}
+                                        {{ adhoc.manufacturer.manufacturer_name }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if adhoc.vendor %}
+                                        {{ adhoc.vendor.vendor_name }}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>{% if adhoc.cost and adhoc.cost != 0 %}${{ adhoc.cost|floatformat:2 }}{% else %}-{% endif %}</td>
+                                <td>{% if adhoc.retail_price and adhoc.retail_price != 0 %}${{ adhoc.retail_price|floatformat:2 }}{% else %}-{% endif %}</td>
+                                <td>{% if adhoc.status %}Active{% else %}Inactive{% endif %}</td>
+                                <td>
+                                    <a href="{% url 'admin:product_adhoc_change' adhoc.id %}" class="btn btn-sm btn-outline-warning" target="_blank">Edit</a>
+                                    <a href="#" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteAdhoc({{ adhoc.id }}, '{{ adhoc.part_no }}'); return false;">Delete</a>
+                                </td>
+                            </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="mt-2 text-end text-muted small">
+        COUNT <span id="adhocCount">{{ adhoc_items|length }}</span>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteAdhocModal" tabindex="-1" aria-labelledby="deleteAdhocModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteAdhocModalLabel">
+                    <i class="fas fa-exclamation-triangle text-danger"></i> Confirm Delete
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the Ad-Hoc item "<strong id="adhocPartNo"></strong>"?</p>
+                <p class="text-muted small">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteAdhocForm" method="POST" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Search and filter functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('search');
+    const categorySelect = document.getElementById('category');
+    const manufacturerSelect = document.getElementById('manufacturer');
+    const vendorSelect = document.getElementById('vendor');
+    
+    // Function to update URL and reload with filters
+    function updateFilters() {
+        const searchQuery = searchInput.value;
+        const categoryValue = categorySelect.value;
+        const manufacturerValue = manufacturerSelect.value;
+        const vendorValue = vendorSelect.value;
+        
+        const params = new URLSearchParams();
+        if (searchQuery) params.append('search', searchQuery);
+        if (categoryValue) params.append('category', categoryValue);
+        if (manufacturerValue) params.append('manufacturer', manufacturerValue);
+        if (vendorValue) params.append('vendor', vendorValue);
+        
+        const url = new URL(window.location);
+        url.search = params.toString();
+        window.location.href = url.toString();
+    }
+    
+    // Add event listeners
+    searchInput.addEventListener('input', function() {
+        clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(updateFilters, 500);
+    });
+    
+    categorySelect.addEventListener('change', updateFilters);
+    manufacturerSelect.addEventListener('change', updateFilters);
+    vendorSelect.addEventListener('change', updateFilters);
+});
+
+function confirmDeleteAdhoc(adhocId, partNo) {
+    // Set the part number in the modal
+    document.getElementById('adhocPartNo').textContent = partNo;
+    
+    // Set the form action
+    document.getElementById('deleteAdhocForm').action = `{% url 'product:delete-adhoc' 0 %}`.replace('0', adhocId);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('deleteAdhocModal'));
+    modal.show();
+}
+</script>
+{% endblock %} 

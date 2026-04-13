@@ -1,0 +1,9 @@
+<button class="btn btn-light"
+hx-get="{% url 'job:job_sitework_qty_popup' job_id=data.job.id cat=data.cat.id subcat=data.subcat.id quan=data.quan %}"
+hx-target="this" hx-swap="outerHTML">
+{% if data.quan < 1 %}
+    --
+{% else %}
+    {{ data.quan }}
+{% endif %}
+</button>

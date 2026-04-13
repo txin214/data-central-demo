@@ -1,0 +1,206 @@
+{% extends 'job/base_job.html' %}
+{% load static %}
+
+{% block job_content %}
+<style>
+    .form-section {
+        margin-bottom: 15px;
+    }
+    .required-field::after {
+        content: " *";
+        color: red;
+    }
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.875rem;
+    }
+    .form-control, .form-select {
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        font-size: 0.875rem;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    .checkbox-group {
+        display: flex;
+        gap: 15px;
+        align-items: center;
+    }
+    .notes-textarea {
+        min-height: 80px;
+        resize: vertical;
+    }
+</style>
+
+    <!-- ========== Customer information (read-only, same layout as CRM) ========== -->
+    <div class="form-section mt-3">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0 text-uppercase text-muted small">Customer information</h6>
+            </div>
+            <div class="card-body py-2">
+                <!-- Row 1: primary names, phones, email -->
+                <div class="row g-2">
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small required-field">First Name</label>
+                        <input type="text" class="form-control form-control-sm" value="{{ customer.first_name|default:'' }}" readonly>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small">Last Name</label>
+                        <input type="text" class="form-control form-control-sm" value="{{ customer.last_name|default:'' }}" readonly>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small">Home Phone</label>
+                        <input type="tel" class="form-control form-control-sm" value="{{ customer.home_phone|default:'' }}" readonly>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small">Cellphone</label>
+                        <input type="tel" class="form-control form-control-sm" value="{{ customer.cellphone|default:'' }}" readonly>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small">Work Phone</label>
+                        <input type="tel" class="form-control form-control-sm" value="{{ customer.work_phone|default:'' }}" readonly>
+                    </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small">Email</label>
+                        <input type="email" class="form-control form-control-sm" value="{{ customer.email|default:'' }}" readonly>
+                    </div>
+                </div>
+
+                <!-- Row 2: secondary names, phones, email opt-out -->
+                <div class="row g-2 mt-2">
+                    <div class="col-12 col-md-3 col-lg-2">
+                        <label class="form-label small">First Name2</label>
+                        <input type="text" class="form-control form-control-sm" value="{{ customer.first_name2|default:'' }}" readonly>
+                    </div>
+                    <div class="col-12 col-md-3 col-lg-2">
+                        <label class="form-label small">Last Name2</label>
+                        <input type="text" class="form-control form-control-sm" value="{{ customer.last_name2|default:'' }}" readonly>
+                    </div>
+                    <div class="col-12 col-md-3 col-lg-2">
+                        <label class="form-label small">Cellphone 2</label>
+                        <input type="tel" class="form-control form-control-sm" value="{{ customer.cellphone2|default:'' }}" readonly>
+                    </div>
+                    <div class="col-12 col-md-3 col-lg-2">
+                        <label class="form-label small">Work Phone 2</label>
+                        <input type="tel" class="form-control form-control-sm" value="{{ customer.work_phone2|default:'' }}" readonly>
+                    </div>
+                    <div class="col-12 col-md-3 col-lg-4">
+                        <label class="form-label small">Email opt out</label>
+                        <div class="d-flex gap-2 flex-wrap align-items-center pt-1">
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="internalOptOut" {% if customer.email_opt_out_internal %}checked{% endif %} disabled>
+                                <label class="form-check-label small" for="internalOptOut">Internal</label>
+                            </div>
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="promotionalOptOut" {% if customer.email_opt_out_promotional %}checked{% endif %} disabled>
+                                <label class="form-check-label small" for="promotionalOptOut">Promotional</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Row 3: code, status, referral -->
+                <div class="row g-2 mt-2">
+                    <div class="col-12 col-md-3 col-lg-2">
+                        <label class="form-label small">Customer Code</label>
+                        <input type="text" class="form-control form-control-sm" value="{{ customer.cust_code|default:'' }}" readonly>
+                    </div>
+                    <div class="col-12 col-md-3 col-lg-2">
+                        <label class="form-label small">Status</label>
+                        <div class="d-flex align-items-center pt-1">
+                            <div class="form-check form-check-inline mb-0">
+                                <input class="form-check-input" type="checkbox" id="activeCheck" {% if customer.is_active %}checked{% endif %} disabled>
+                                <label class="form-check-label small" for="activeCheck">Active</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-4 col-lg-4">
+                        <label class="form-label small">Referral</label>
+                        <select class="form-select form-select-sm" disabled>
+                            <option value="">{{ customer.referral.name|default:'Select referral source' }}</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Row 4: address, city, state, zip, county -->
+                <div class="row g-2 mt-2">
+                    <div class="col-12 col-lg-4">
+                        <label class="form-label small">Address</label>
+                        <input type="text" class="form-control form-control-sm" value="{{ customer.address|default:'' }}" readonly>
+                    </div>
+                    <div class="col-12 col-md-4 col-lg-3">
+                        <label class="form-label small">City</label>
+                        <input type="text" class="form-control form-control-sm" value="{{ customer.city|default:'' }}" readonly>
+                    </div>
+                    <div class="col-6 col-md-2 col-lg-1">
+                        <label class="form-label small">State</label>
+                        <input type="text" class="form-control form-control-sm" value="{{ customer.state|default:'' }}" readonly>
+                    </div>
+                    <div class="col-6 col-md-2 col-lg-2">
+                        <label class="form-label small">Zip</label>
+                        <input type="text" class="form-control form-control-sm" value="{{ customer.zip|default:'' }}" readonly>
+                    </div>
+                    <div class="col-12 col-md-4 col-lg-2">
+                        <label class="form-label small">County</label>
+                        <select class="form-select form-select-sm" disabled>
+                            <option value="">{{ customer.county.name|default:'Select county' }}</option>
+                        </select>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== Builder information (read-only) ========== -->
+    <div class="form-section">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0 text-uppercase text-muted small">Builder information</h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label small">Company Name</label>
+                        <input type="text" class="form-control form-control-sm" value="{{ customer.company_name|default:'' }}" readonly>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label small">Builder No</label>
+                        <input type="text" class="form-control form-control-sm" value="{{ customer.builder_no|default:'' }}" readonly>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label small">Builder</label>
+                        <div class="pt-2">
+                            <div class="form-check form-check-inline">
+                                <input class="form-check-input" type="checkbox" id="builderCheck" {% if customer.is_builder %}checked{% endif %} disabled>
+                                <label class="form-check-label small" for="builderCheck">This customer is a builder</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label small">Assigned Staff</label>
+                        <input type="text" class="form-control form-control-sm" value="{{ customer.assigned_staff|default:'' }}" readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== Notes (read-only) ========== -->
+    <div class="form-section mb-3">
+        <div class="card">
+            <div class="card-header">
+                <h6 class="card-title mb-0 text-uppercase text-muted small">Notes</h6>
+            </div>
+            <div class="card-body">
+                <label class="form-label small">Notes</label>
+                <textarea class="form-control form-control-sm notes-textarea" readonly>{{ customer.notes|default:'' }}</textarea>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

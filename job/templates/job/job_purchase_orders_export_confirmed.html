@@ -1,0 +1,66 @@
+{% extends 'job/base_job.html' %}
+{% load static %}
+
+{% block job_content %}
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.1">
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_forms.css' %}?v=1.0">
+
+<div class="card mt-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h6 class="card-title mb-0">Confirmed PO Items</h6>
+        <a href="{% url 'job:job_purchase_orders' job.id %}" class="btn btn-sm btn-outline-secondary">Back to POs</a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle mb-0">
+                <thead class="sticky-header">
+                    <tr>
+                        <th>Vendor</th>
+                        <th>PO Number</th>
+                        <th>Part Number</th>
+                        <th>Description</th>
+                        <th>Ordered Date</th>
+                        <th>Quantity</th>
+                        <th>Unit Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if confirmed_items %}
+                        {% for item in confirmed_items %}
+                        <tr>
+                            <td>{{ item.purchase_order.vendor.vendor_name }}</td>
+                            <td>{{ item.purchase_order.po_number }}</td>
+                            <td>{{ item.part_number }}</td>
+                            <td>{{ item.description|default:"-" }}</td>
+                            <td>{{ item.ordered_date|date:"M d, Y" }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>
+                                {% if item.cost %}
+                                    ${{ item.cost|floatformat:2 }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-3">
+                                <i class="fas fa-file-export fa-2x text-muted mb-2"></i>
+                                <p class="text-muted small mb-0">No confirmed items found.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-2 text-end text-muted small">
+            Total Confirmed Items: {{ confirmed_items|length }}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+

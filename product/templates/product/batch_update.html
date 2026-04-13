@@ -1,0 +1,1265 @@
+{% extends "base.html" %}
+{% block extrahead %}
+<style>
+    .sticky-header th {
+        position: sticky;
+        top: 0;
+        background: #f8f9fa;
+        z-index: 2;
+    }
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    
+    /* Notification System */
+    .notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        z-index: 9999;
+        transform: translateX(400px);
+        transition: transform 0.3s ease-in-out;
+        max-width: 350px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .notification.show {
+        transform: translateX(0);
+    }
+    .notification.success {
+        background-color: #28a745;
+        border-left: 4px solid #1e7e34;
+    }
+    .notification.error {
+        background-color: #dc3545;
+        border-left: 4px solid #c82333;
+    }
+    .notification.info {
+        background-color: #17a2b8;
+        border-left: 4px solid #138496;
+    }
+    .notification .close-btn {
+        float: right;
+        margin-left: 10px;
+        cursor: pointer;
+        font-weight: bold;
+        opacity: 0.8;
+    }
+    .notification .close-btn:hover {
+        opacity: 1;
+    }
+    
+    
+    /* Multiplier Input Styling */
+    .multiplier-input {
+        width: 80px;
+        text-align: center;
+    }
+    
+    .multiplier-input:focus {
+        border-color: #28a745;
+        box-shadow: 0 0 0 0.2rem rgba(40,167,69,.25);
+    }
+    
+    /* Pagination styling */
+    .pagination .page-link {
+        color: #007bff;
+        border-color: #dee2e6;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+    }
+    
+    .pagination .page-item.active .page-link {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    
+    .pagination .page-link:hover {
+        color: #0056b3;
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+    }
+    
+    .pagination .page-item.disabled .page-link {
+        color: #6c757d;
+        background-color: #fff;
+        border-color: #dee2e6;
+    }
+    
+    /* Status Badge */
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 500;
+    }
+    
+    .status-active {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    
+    .status-inactive {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    
+    /* Loading Spinner */
+    .loading-spinner {
+        display: none;
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .spinner-border-custom {
+        width: 2rem;
+        height: 2rem;
+        border: 0.25em solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: spinner-border .75s linear infinite;
+    }
+    
+    @keyframes spinner-border {
+        to { transform: rotate(360deg); }
+    }
+    
+    /* Checkbox Styling */
+    .checkbox-custom {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+    
+    /* Alert Styling */
+    .alert-custom {
+        border-radius: 6px;
+        padding: 12px 16px;
+        margin-bottom: 20px;
+        border: 1px solid transparent;
+    }
+    
+    .alert-info-custom {
+        background-color: #d1ecf1;
+        border-color: #bee5eb;
+        color: #0c5460;
+    }
+    
+    .alert-warning-custom {
+        background-color: #fff3cd;
+        border-color: #ffeaa7;
+        color: #856404;
+    }
+    
+    .alert-success-custom {
+        background-color: #d4edda;
+        border-color: #c3e6cb;
+        color: #155724;
+    }
+    
+    /* No Products Message */
+    .no-products-message {
+        text-align: center;
+        padding: 40px;
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .btn-group-custom {
+            flex-direction: column;
+        }
+        
+        .btn-custom {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .multiplier-input {
+            width: 60px;
+        }
+    }
+</style>
+{% endblock %}
+{% load static %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Batch Update Products</h2>
+        </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearAllFilters()">
+                <i class="fa fa-refresh me-1"></i>Clear Filters
+            </button>
+            <button type="button" class="btn btn-outline-success btn-sm" onclick="applyUpdates()">
+                <i class="fa fa-save me-1"></i>Apply Updates
+            </button>
+        </div>
+    </div>
+    
+    <!-- Filter Section -->
+    <div class="mb-3">
+        <div class="row">
+            <div class="col-md-3">
+                <select class="form-select form-select-sm" id="filter-manufacturer">
+                    <option value="">All Manufacturers</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select form-select-sm" id="filter-category">
+                    <option value="">All Categories</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select form-select-sm" id="filter-subcat1">
+                    <option value="">Subcategory 1</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select class="form-select form-select-sm" id="filter-subcat2">
+                    <option value="">Subcategory 2</option>
+                </select>
+            </div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-md-3">
+                <select class="form-select form-select-sm" id="filter-status">
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                </select>
+            </div>
+            <div class="col-md-9">
+                <input type="text" class="form-control form-control-sm" id="filter-keywords" placeholder="Search by part number, description...">
+            </div>
+        </div>
+    </div>
+
+    <!-- Update Method Section -->
+    <div class="mb-3">
+        <h5 class="mb-3">Update Method</h5>
+        
+        <!-- Batch Update Method -->
+        <div id="percentage-method">
+            <div class="table-responsive">
+                <table class="table table-sm table-bordered">
+                        <thead class="table-light">
+                            <tr>
+                                <th></th>
+                                <th>Change To <small class="text-muted">(Sets field to specific value)</small></th>
+                                <th>Value Change  <small class="text-muted">(Adds or subtracts absolute amount (e.g., +5.00 or -2.50))</small></th>
+                                <th>Percentage Change   <small class="text-muted">(Choose + or - and enter percentage to increase/decrease)</small></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Retail Multiplier</strong></td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm" id="retail-change-to" placeholder="1.00" step="0.01" min="0.01">
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="retail-change-by-value-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="retail-change-by-value" placeholder="0" step="0.01" min="0">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="retail-percentage-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="retail-percentage-value" placeholder="0" step="0.01" min="0" max="100">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Builder Multiplier</strong></td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm" id="builder-change-to" placeholder="1.00" step="0.01" min="0.01">
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="builder-change-by-value-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="builder-change-by-value" placeholder="0" step="0.01" min="0">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="builder-percentage-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="builder-percentage-value" placeholder="0" step="0.01" min="0" max="100">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Surplus Multiplier</strong></td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm" id="surplus-change-to" placeholder="1.00" step="0.01" min="0.01">
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="surplus-change-by-value-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="surplus-change-by-value" placeholder="0" step="0.01" min="0">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="surplus-percentage-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="surplus-percentage-value" placeholder="0" step="0.01" min="0" max="100">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Base Cost</strong></td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm" id="base-cost-change-to" placeholder="0.00" step="0.01" min="0">
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="base-cost-change-by-value-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="base-cost-change-by-value" placeholder="0" step="0.01" min="0">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="base-cost-percentage-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="base-cost-percentage-value" placeholder="0" step="0.01" min="0" max="100">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Material Cost</strong></td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm" id="material-cost-change-to" placeholder="0.00" step="0.01" min="0">
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="material-cost-change-by-value-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="material-cost-change-by-value" placeholder="0" step="0.01" min="0">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="material-cost-percentage-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="material-cost-percentage-value" placeholder="0" step="0.01" min="0" max="100">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Labor Cost</strong></td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm" id="labor-cost-change-to" placeholder="0.00" step="0.01" min="0">
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="labor-cost-change-by-value-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="labor-cost-change-by-value" placeholder="0" step="0.01" min="0">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="labor-cost-percentage-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="labor-cost-percentage-value" placeholder="0" step="0.01" min="0" max="100">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Total Cost</strong></td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm" id="total-cost-change-to" placeholder="0.00" step="0.01" min="0">
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="total-cost-change-by-value-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="total-cost-change-by-value" placeholder="0" step="0.01" min="0">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="total-cost-percentage-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="total-cost-percentage-value" placeholder="0" step="0.01" min="0" max="100">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Builder Price</strong></td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm" id="builder-price-change-to" placeholder="0.00" step="0.01" min="0">
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="builder-price-change-by-value-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="builder-price-change-by-value" placeholder="0" step="0.01" min="0">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="builder-price-percentage-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="builder-price-percentage-value" placeholder="0" step="0.01" min="0" max="100">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><strong>Surplus Price</strong></td>
+                                <td>
+                                    <input type="number" class="form-control form-control-sm" id="surplus-price-change-to" placeholder="0.00" step="0.01" min="0">
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="surplus-price-change-by-value-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="surplus-price-change-by-value" placeholder="0" step="0.01" min="0">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="input-group input-group-sm">
+                                        <select class="form-select form-select-sm" id="surplus-price-percentage-action">
+                                            <option value="increase">+</option>
+                                            <option value="decrease">-</option>
+                                        </select>
+                                        <input type="number" class="form-control form-control-sm" id="surplus-price-percentage-value" placeholder="0" step="0.01" min="0" max="100">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+    </div>
+
+    <!-- Products Table -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="mb-0">Products</h5>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="selectAllProducts()">
+                <i class="fa fa-check-square me-1"></i>Select All
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="deselectAllProducts()">
+                <i class="fa fa-square me-1"></i>Deselect All
+            </button>
+        </div>
+    </div>
+    
+    <div class="loading-spinner" id="products-loading">
+        <div class="spinner-border-custom text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 text-muted">Loading products...</p>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle mb-0" style="font-size: 0.8rem;">
+            <thead class="sticky-header">
+                <tr>
+                    <th width="50" style="white-space: nowrap; font-size: 0.8rem;">
+                        <input type="checkbox" id="select-all-checkbox" class="checkbox-custom">
+                    </th>
+                    <th style="white-space: nowrap; font-size: 0.8rem;">Part No</th>
+                    <th style="white-space: nowrap; font-size: 0.8rem;">Description</th>
+                    <th style="white-space: nowrap; font-size: 0.8rem;">Manufacturer</th>
+                    <th style="white-space: nowrap; font-size: 0.8rem;">Category</th>
+                    <th style="white-space: nowrap; font-size: 0.8rem;">Status</th>
+                    <th style="white-space: nowrap; font-size: 0.8rem;">Retail</th>
+                    <th style="white-space: nowrap; font-size: 0.8rem;">Builder</th>
+                    <th style="white-space: nowrap; font-size: 0.8rem;">Surplus</th>
+                    <th style="white-space: nowrap; font-size: 0.8rem;">Base Cost</th>
+                    <th style="white-space: nowrap; font-size: 0.8rem;">Material Cost</th>
+                    <th style="white-space: nowrap; font-size: 0.8rem;">Labor Cost</th>
+                    <th style="white-space: nowrap; font-size: 0.8rem;">Total Cost</th>
+                    <th style="white-space: nowrap; font-size: 0.8rem;">Builder Price</th>
+                    <th style="white-space: nowrap; font-size: 0.8rem;">Surplus Price</th>
+                </tr>
+            </thead>
+            <tbody id="products-tbody">
+                <!-- Products will be loaded here -->
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    <div class="d-flex flex-column align-items-center mt-3" id="products-pagination-container">
+        <div class="text-muted small mb-2" id="products-page-info">
+            Showing 0 to 0 of 0 entries
+        </div>
+        <nav aria-label="Products pagination" id="products-pagination">
+            <!-- Pagination will be loaded here -->
+        </nav>
+    </div>
+    
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// CSRF token for AJAX requests
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Notification system
+function showNotification(message, type = 'info', duration = 5000) {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notification => notification.remove());
+    
+    // Create new notification
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <span class="close-btn" onclick="this.parentElement.remove()">&times;</span>
+        ${message}
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Show notification
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+    
+    // Auto-hide after duration
+    if (duration > 0) {
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 300);
+        }, duration);
+    }
+}
+
+// Global variables
+let currentPage = 1;
+let totalPages = 1;
+let products = [];
+let filteredProducts = [];
+let selectedProducts = new Set();
+let previewData = {};
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    loadFilterData();
+    loadProducts();
+    setupEventListeners();
+    setupInputValidation();
+});
+
+// Utility function for populating dropdowns
+function populateDropdown(selectId, data, valueField, textField, defaultText) {
+    const select = document.getElementById(selectId);
+    select.innerHTML = `<option value="">${defaultText}</option>`;
+    
+    data.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item[valueField];
+        option.textContent = item[textField];
+        select.appendChild(option);
+    });
+}
+
+// Load filter dropdowns
+function loadFilterData() {
+    // Load manufacturers
+    fetch('/product/ajax/batch-update/manufacturers/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                populateDropdown('filter-manufacturer', data.manufacturers, 'id', 'manufacturer_name', 'All Manufacturers');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading manufacturers:', error);
+            showNotification('Error loading manufacturers', 'error');
+        });
+
+    // Load categories
+    fetch('/product/ajax/batch-update/categories/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                populateDropdown('filter-category', data.categories, 'id', 'product_category', 'All Categories');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading categories:', error);
+            showNotification('Error loading categories', 'error');
+        });
+}
+
+// Load subcategories1 based on selected category
+function loadSubcategories1(categoryId) {
+    if (!categoryId) {
+        const select = document.getElementById('filter-subcat1');
+        select.innerHTML = '<option value="">Subcategory 1</option>';
+        return;
+    }
+    
+    fetch(`/product/ajax/batch-update/subcategories1/?category_id=${categoryId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                populateDropdown('filter-subcat1', data.subcategories, 'id', 'product_sub_category', 'Subcategory 1');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading subcategories1:', error);
+            showNotification('Error loading subcategories1', 'error');
+        });
+}
+
+// Load subcategories2 based on selected subcategory1
+function loadSubcategories2(subcategory1Id) {
+    if (!subcategory1Id) {
+        const select = document.getElementById('filter-subcat2');
+        select.innerHTML = '<option value="">Subcategory 2</option>';
+        return;
+    }
+    
+    fetch(`/product/ajax/batch-update/subcategories2/?subcategory1_id=${subcategory1Id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                populateDropdown('filter-subcat2', data.subcategories, 'id', 'product_sub_category2', 'Subcategory 2');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading subcategories2:', error);
+            showNotification('Error loading subcategories2', 'error');
+        });
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    // Filter change events
+    document.getElementById('filter-manufacturer').addEventListener('change', function() {
+        currentPage = 1;
+        applyFilters();
+    });
+    document.getElementById('filter-category').addEventListener('change', function() {
+        loadSubcategories1(this.value);
+        currentPage = 1;
+        applyFilters();
+    });
+    document.getElementById('filter-subcat1').addEventListener('change', function() {
+        loadSubcategories2(this.value);
+        currentPage = 1;
+        applyFilters();
+    });
+    document.getElementById('filter-subcat2').addEventListener('change', function() {
+        currentPage = 1;
+        applyFilters();
+    });
+    document.getElementById('filter-status').addEventListener('change', function() {
+        currentPage = 1;
+        applyFilters();
+    });
+    document.getElementById('filter-keywords').addEventListener('input', debounce(function() {
+        currentPage = 1;
+        applyFilters();
+    }, 300));
+
+    // Select all checkbox
+    document.getElementById('select-all-checkbox').addEventListener('change', function() {
+        if (this.checked) {
+            selectAllProducts();
+        } else {
+            deselectAllProducts();
+        }
+    });
+}
+
+// Load products
+function loadProducts() {
+    // This would load products based on current filter values
+    // For now, we'll just reload the products
+    applyFilters();
+}
+
+// Apply filters and load products
+function applyFilters() {
+    const manufacturerId = document.getElementById('filter-manufacturer').value;
+    const categoryId = document.getElementById('filter-category').value;
+    const subcategory1Id = document.getElementById('filter-subcat1').value;
+    const subcategory2Id = document.getElementById('filter-subcat2').value;
+    const status = document.getElementById('filter-status').value;
+    const keywords = document.getElementById('filter-keywords').value;
+    
+    // Build query parameters
+    const params = new URLSearchParams();
+    if (manufacturerId) params.append('manufacturer_id', manufacturerId);
+    if (categoryId) params.append('category_id', categoryId);
+    if (subcategory1Id) params.append('subcategory1_id', subcategory1Id);
+    if (subcategory2Id) params.append('subcategory2_id', subcategory2Id);
+    if (status) params.append('status', status);
+    if (keywords) params.append('keywords', keywords);
+    params.append('page', currentPage);
+    
+    // Show loading
+    document.getElementById('products-loading').style.display = 'block';
+    document.getElementById('products-tbody').innerHTML = '';
+    
+    fetch(`/product/ajax/batch-update/products/?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                products = data.products;
+                filteredProducts = data.products;
+                totalPages = data.pagination.total_pages;
+                currentPage = data.pagination.current_page;
+                
+                renderProducts(data.products);
+                renderPagination(data.pagination);
+                updateSummary();
+                
+                // Products table and pagination are always visible
+            } else {
+                showNotification('Error loading products: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading products:', error);
+            showNotification('Error loading products', 'error');
+        })
+        .finally(() => {
+            document.getElementById('products-loading').style.display = 'none';
+        });
+}
+
+// Render pagination
+function renderPagination(pagination) {
+    const container = document.getElementById('products-pagination');
+    const pageInfo = document.getElementById('products-page-info');
+    
+    if (!pagination || pagination.total_pages <= 1) {
+        container.innerHTML = '';
+        if (pagination) {
+            pageInfo.textContent = `Showing 1 to ${pagination.total_count} of ${pagination.total_count} entries`;
+        } else {
+            pageInfo.textContent = 'Showing 0 to 0 of 0 entries';
+        }
+        return;
+    }
+    
+    // Calculate page range
+    const currentPage = pagination.current_page;
+    const totalPages = pagination.total_pages;
+    const startItem = (currentPage - 1) * 16 + 1;
+    const endItem = Math.min(currentPage * 16, pagination.total_count);
+    
+    // Update page info
+    pageInfo.textContent = `Showing ${startItem} to ${endItem} of ${pagination.total_count} entries`;
+    
+    // Build pagination HTML
+    let paginationHTML = '<ul class="pagination pagination-sm mb-0">';
+    
+    // Previous button
+    if (pagination.has_previous) {
+        paginationHTML += `<li class="page-item">
+            <a class="page-link" href="#" onclick="goToPage(${currentPage - 1}); return false;">Previous</a>
+        </li>`;
+    } else {
+        paginationHTML += `<li class="page-item disabled">
+            <span class="page-link">Previous</span>
+        </li>`;
+    }
+    
+    // Page numbers
+    const startPage = Math.max(1, currentPage - 2);
+    const endPage = Math.min(totalPages, currentPage + 2);
+    
+    // Show first page and ellipsis if needed
+    if (startPage > 1) {
+        paginationHTML += `<li class="page-item">
+            <a class="page-link" href="#" onclick="goToPage(1); return false;">1</a>
+        </li>`;
+        if (startPage > 2) {
+            paginationHTML += `<li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>`;
+        }
+    }
+    
+    // Show page range
+    for (let i = startPage; i <= endPage; i++) {
+        if (i === currentPage) {
+            paginationHTML += `<li class="page-item active">
+                <span class="page-link">${i}</span>
+            </li>`;
+        } else {
+            paginationHTML += `<li class="page-item">
+                <a class="page-link" href="#" onclick="goToPage(${i}); return false;">${i}</a>
+            </li>`;
+        }
+    }
+    
+    // Show last page and ellipsis if needed
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            paginationHTML += `<li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>`;
+        }
+        paginationHTML += `<li class="page-item">
+            <a class="page-link" href="#" onclick="goToPage(${totalPages}); return false;">${totalPages}</a>
+        </li>`;
+    }
+    
+    // Next button
+    if (pagination.has_next) {
+        paginationHTML += `<li class="page-item">
+            <a class="page-link" href="#" onclick="goToPage(${currentPage + 1}); return false;">Next</a>
+        </li>`;
+    } else {
+        paginationHTML += `<li class="page-item disabled">
+            <span class="page-link">Next</span>
+        </li>`;
+    }
+    
+    paginationHTML += '</ul>';
+    container.innerHTML = paginationHTML;
+}
+
+// Go to specific page
+function goToPage(page) {
+    currentPage = page;
+    applyFilters();
+}
+
+// Render products table
+function renderProducts(products) {
+    const tbody = document.getElementById('products-tbody');
+    tbody.innerHTML = '';
+
+    if (products.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="15" class="text-center text-muted py-4">No products found</td></tr>';
+        return;
+    }
+
+    products.forEach(product => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                <input type="checkbox" class="checkbox-custom product-checkbox" value="${product.id}">
+            </td>
+            <td>${product.part_no || '-'}</td>
+            <td>${product.description || '-'}</td>
+            <td>${product.manufacturer || '-'}</td>
+            <td>${product.category || '-'}</td>
+            <td>
+                <span class="status-badge ${product.status === 'active' ? 'status-active' : 'status-inactive'}">
+                    ${product.status || 'Unknown'}
+                </span>
+            </td>
+            <td class="text-end">${product.retail_multiplier || '-'}</td>
+            <td class="text-end">${product.builder_multiplier || '-'}</td>
+            <td class="text-end">${product.surplus_multiplier || '-'}</td>
+            <td class="text-end">${product.base_cost || '-'}</td>
+            <td class="text-end">${product.material_cost || '-'}</td>
+            <td class="text-end">${product.labor_cost || '-'}</td>
+            <td class="text-end">${product.total_cost || '-'}</td>
+            <td class="text-end">${product.builder_price || '-'}</td>
+            <td class="text-end">${product.surplus_price || '-'}</td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    // Re-attach event listeners for the new checkboxes
+    attachCheckboxListeners();
+}
+
+// Attach checkbox event listeners
+function attachCheckboxListeners() {
+    document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                selectedProducts.add(this.value);
+            } else {
+                selectedProducts.delete(this.value);
+            }
+            updateSummary();
+            updateSelectAllCheckbox();
+        });
+    });
+}
+
+// Update select all checkbox state
+function updateSelectAllCheckbox() {
+    const selectAllCheckbox = document.getElementById('select-all-checkbox');
+    const productCheckboxes = document.querySelectorAll('.product-checkbox');
+    const checkedCount = document.querySelectorAll('.product-checkbox:checked').length;
+    
+    if (checkedCount === 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+    } else if (checkedCount === productCheckboxes.length) {
+        selectAllCheckbox.checked = true;
+        selectAllCheckbox.indeterminate = false;
+    } else {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = true;
+    }
+}
+
+
+// Select all products
+function selectAllProducts() {
+    document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+        checkbox.checked = true;
+        selectedProducts.add(checkbox.value);
+    });
+    document.getElementById('select-all-checkbox').checked = true;
+    updateSummary();
+}
+
+// Deselect all products
+function deselectAllProducts() {
+    document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    selectedProducts.clear();
+    document.getElementById('select-all-checkbox').checked = false;
+    updateSummary();
+}
+
+// Clear all filters
+function clearAllFilters() {
+    document.getElementById('filter-manufacturer').value = '';
+    document.getElementById('filter-category').value = '';
+    document.getElementById('filter-subcat1').value = '';
+    document.getElementById('filter-subcat2').value = '';
+    document.getElementById('filter-status').value = '';
+    document.getElementById('filter-keywords').value = '';
+    
+    // Reset subcategory dropdowns
+    document.getElementById('filter-subcat1').innerHTML = '<option value="">Subcategory 1</option>';
+    document.getElementById('filter-subcat2').innerHTML = '<option value="">Subcategory 2</option>';
+    
+    // Reset pagination to page 1
+    currentPage = 1;
+    applyFilters();
+}
+
+
+// Update summary
+function updateSummary() {
+    const totalProducts = products.length;
+    const selectedCount = selectedProducts.size;
+    const summaryElement = document.getElementById('products-summary');
+    
+    summaryElement.textContent = `Total: ${totalProducts} | Selected: ${selectedCount} | To Update: ${selectedCount}`;
+}
+
+// Validate and prevent negative values
+function validateInput(input) {
+    const value = parseFloat(input.value);
+    if (isNaN(value) || value < 0) {
+        input.value = 0;
+        showNotification('Values cannot be negative. Set to 0.', 'warning');
+    }
+}
+
+// Setup input validation for all change-by and change-to inputs
+function setupInputValidation() {
+    // Add validation to all change-by inputs (percentage)
+    document.querySelectorAll('input[id$="-change-by"]').forEach(input => {
+        input.addEventListener('blur', function() {
+            validateInput(this);
+        });
+    });
+    
+    // Add validation to all change-to inputs (absolute values)
+    document.querySelectorAll('input[id$="-change-to"]').forEach(input => {
+        input.addEventListener('blur', function() {
+            validateInput(this);
+        });
+    });
+    
+    // Add validation to all change-by-value inputs (absolute value changes)
+    document.querySelectorAll('input[id$="-change-by-value"]').forEach(input => {
+        input.addEventListener('blur', function() {
+            validateInput(this);
+        });
+    });
+    
+    // Add validation to all percentage value inputs
+    document.querySelectorAll('input[id$="-percentage-value"]').forEach(input => {
+        input.addEventListener('blur', function() {
+            validateInput(this);
+        });
+    });
+}
+
+// Get update configuration from the table
+function getUpdateConfiguration() {
+    const config = {};
+    
+    // Define field mappings
+    const fields = [
+        'retail', 'builder', 'surplus', 
+        'base-cost', 'material-cost', 'labor-cost', 
+        'total-cost', 'builder-price', 'surplus-price'
+    ];
+    
+    fields.forEach(field => {
+        const changeToInput = document.getElementById(`${field}-change-to`);
+        const changeByValueInput = document.getElementById(`${field}-change-by-value`);
+        const changeByValueActionSelect = document.getElementById(`${field}-change-by-value-action`);
+        const percentageActionSelect = document.getElementById(`${field}-percentage-action`);
+        const percentageValueInput = document.getElementById(`${field}-percentage-value`);
+        
+        if (changeToInput && changeByValueInput && changeByValueActionSelect && percentageActionSelect && percentageValueInput) {
+            const changeToValue = parseFloat(changeToInput.value);
+            const changeByValueValue = parseFloat(changeByValueInput.value);
+            const changeByValueAction = changeByValueActionSelect.value;
+            const percentageValue = parseFloat(percentageValueInput.value);
+            const percentageAction = percentageActionSelect.value;
+            
+            // Priority: Percentage Change > Change By (Value) > Change To
+            if (!isNaN(percentageValue) && percentageValue !== 0) {
+                config[field] = {
+                    type: 'percentage-change',
+                    action: percentageAction,
+                    value: percentageValue
+                };
+            } else if (!isNaN(changeByValueValue) && changeByValueValue !== 0) {
+                config[field] = {
+                    type: 'change-by-value',
+                    action: changeByValueAction,
+                    value: changeByValueValue
+                };
+            } else if (!isNaN(changeToValue) && changeToValue >= 0) {
+                config[field] = {
+                    type: 'change-to',
+                    value: changeToValue
+                };
+                console.log(`Set Value configured for ${field}: ${changeToValue}`);
+            }
+        }
+    });
+    
+    return config;
+}
+
+// Calculate new values based on configuration
+function calculateNewValues(currentValue, config) {
+    if (!config) return currentValue;
+    
+    if (config.type === 'percentage-change') {
+        // Calculate percentage change with + or - action
+        const multiplier = config.action === 'increase' ? 1 : -1;
+        const newValue = currentValue * (1 + (multiplier * config.value) / 100);
+        return Math.max(0, newValue);
+    } else if (config.type === 'change-to') {
+        // Set to specific value, ensuring it's not negative
+        return Math.max(0, config.value);
+    } else if (config.type === 'change-by-value') {
+        // Add/subtract absolute value, ensuring result is not negative
+        const multiplier = config.action === 'increase' ? 1 : -1;
+        const newValue = currentValue + (multiplier * config.value);
+        return Math.max(0, newValue);
+    }
+    
+    return currentValue;
+}
+
+// Preview changes
+function previewChanges() {
+    if (selectedProducts.size === 0) {
+        showNotification('Please select at least one product to preview changes.', 'warning');
+        return;
+    }
+    
+    const config = getUpdateConfiguration();
+    if (Object.keys(config).length === 0) {
+        showNotification('Please configure at least one field to update.', 'warning');
+        return;
+    }
+    
+    showNotification(`Preview will show changes for ${selectedProducts.size} products based on current configuration.`, 'info');
+}
+
+// Clear all input fields
+function clearAllInputFields() {
+    // Define all field types
+    const fields = [
+        'retail', 'builder', 'surplus', 
+        'base-cost', 'material-cost', 'labor-cost', 
+        'total-cost', 'builder-price', 'surplus-price'
+    ];
+    
+    fields.forEach(field => {
+        // Clear change-to inputs
+        const changeToInput = document.getElementById(`${field}-change-to`);
+        if (changeToInput) {
+            changeToInput.value = '';
+        }
+        
+        // Clear change-by-value inputs
+        const changeByValueInput = document.getElementById(`${field}-change-by-value`);
+        if (changeByValueInput) {
+            changeByValueInput.value = '';
+        }
+        
+        // Reset change-by-value action selects to default
+        const changeByValueActionSelect = document.getElementById(`${field}-change-by-value-action`);
+        if (changeByValueActionSelect) {
+            changeByValueActionSelect.value = 'increase';
+        }
+        
+        // Clear percentage value inputs
+        const percentageValueInput = document.getElementById(`${field}-percentage-value`);
+        if (percentageValueInput) {
+            percentageValueInput.value = '';
+        }
+        
+        // Reset percentage action selects to default
+        const percentageActionSelect = document.getElementById(`${field}-percentage-action`);
+        if (percentageActionSelect) {
+            percentageActionSelect.value = 'increase';
+        }
+    });
+    
+    // Update summary
+    updateSummary();
+}
+
+// Apply updates
+function applyUpdates() {
+    if (selectedProducts.size === 0) {
+        showNotification('Please select at least one product to update.', 'warning');
+        return;
+    }
+    
+    const config = getUpdateConfiguration();
+    if (Object.keys(config).length === 0) {
+        showNotification('Please configure at least one field to update.', 'warning');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to update ${selectedProducts.size} products? This action cannot be undone.`)) {
+        // Prepare data for backend
+        const data = {
+            product_ids: Array.from(selectedProducts),
+            updates: config
+        };
+        
+        // Show loading
+        showNotification('Applying updates...', 'info');
+        
+        // Send to backend
+        fetch('/product/ajax/batch-update/apply/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'success');
+                // Clear all input fields
+                clearAllInputFields();
+                // Reload products to show updated values
+                applyFilters();
+            } else {
+                showNotification('Error: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error applying updates:', error);
+            showNotification('Error applying updates', 'error');
+        });
+    }
+}
+
+// Debounce function
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+</script>
+{% endblock %}

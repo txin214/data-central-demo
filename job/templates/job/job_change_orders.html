@@ -1,0 +1,129 @@
+{% extends 'job/base_job.html' %}
+{% load static %}
+
+{% block job_content %}
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.1">
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_forms.css' %}?v=1.0">
+
+    <div class="table-responsive mt-3">
+        <table class="table table-bordered table-hover align-middle mb-0">
+            <thead class="sticky-header">
+                <tr>
+                    <th>Date</th>
+                    <th>Product Code</th>
+                    <th>Amount</th>
+                    <th>Tax</th>
+                    <th>Description</th>
+                    <th>Sold By</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr class="border-top-0 border-bottom-0">
+                    <td colspan="5" class="border-top-0 border-bottom-0 border-end-0 py-2">
+                        {% if is_sold %}
+                        <a href="{% url 'job:job_change_order_create' job.id %}" class="btn btn-sm btn-success">
+                            <i class="fas fa-plus me-1"></i>
+                            Add Change Order
+                        </a>
+                        {% else %}
+                        <button class="btn btn-sm btn-secondary" disabled title="Job must be sold to create change orders">
+                            <i class="fas fa-plus me-1"></i>
+                            Add Change Order (Job Not Sold)
+                        </button>
+                        {% endif %}
+                    </td>
+                    <td colspan="2" class="border-top-0 border-bottom-0 border-start-0 py-2 text-end">
+                        <a href="{% url 'job:job_change_orders_pdf' job.id %}" target="_blank" class="btn btn-sm btn-primary">
+                            <i class="fas fa-print me-1"></i>Print Change Orders
+                        </a>
+                    </td>
+                </tr>
+                {% for change_order in change_orders %}
+                <tr>
+                    <td>{{ change_order.order_date|date:"M d, Y" }}</td>
+                    <td>
+                        {% if change_order.product_code %}
+                        {{ change_order.product_code.code }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if change_order.amount is not None %}
+                            {% if change_order.amount >= 0 %}
+                            <strong>+{{ change_order.amount|floatformat:2 }}</strong>
+                            {% else %}
+                            <strong>{{ change_order.amount|floatformat:2 }}</strong>
+                            {% endif %}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if change_order.tax %}
+                        {{ change_order.get_tax_display }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ change_order.description|truncatewords:15 }}
+                        {% if change_order.notes %}
+                        <br><small class="text-muted">{{ change_order.notes|truncatewords:10 }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if change_order.created_by %}
+                            {{ change_order.created_by.first_name }} {{ change_order.created_by.last_name }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="d-flex gap-2 justify-content-center">
+                            <a href="{% url 'job:job_change_order_edit' job.id change_order.id %}" class="btn btn-sm btn-outline-primary" title="Edit Change Order #{{ change_order.id }}">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="post" action="{% url 'job:job_change_order_delete' job.id change_order.id %}" style="display: inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this change order?')" title="Delete Change Order #{{ change_order.id }}">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-3">
+                        <i class="fas fa-file-invoice fa-2x text-muted mb-2"></i>
+                        <p class="text-muted small">No change orders added to this job yet.</p>
+                        {% if not is_sold %}
+                        <p class="text-warning small"><i class="fas fa-exclamation-triangle"></i> Job must be marked as sold to create change orders.</p>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if change_orders %}
+    <div class="mt-3 d-flex justify-content-between align-items-center">
+        <div class="text-muted small">
+            Total: {{ change_orders|length }} change order{{ change_orders|length|pluralize }}
+        </div>
+        <div class="text-end">
+            <strong>Total Change Amount: 
+                {% if total_change_amount >= 0 %}
+                <span class="text-success">+${{ total_change_amount|floatformat:2 }}</span>
+                {% else %}
+                <span class="text-danger">${{ total_change_amount|floatformat:2 }}</span>
+                {% endif %}
+            </strong>
+        </div>
+    </div>
+    {% endif %}
+{% endblock %}
+

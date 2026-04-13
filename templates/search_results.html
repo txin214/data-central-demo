@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+{% load static %}
+
+
+{% block extrahead %}
+<style>
+    .table-responsive {
+        overflow-x: auto;
+        padding-right: 0;
+    }
+    .sticky-header th {
+        position: sticky;
+        top: 0;
+        background: #f8f9fa;
+        z-index: 2;
+        padding: 0.35rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    .table th, .table td {
+        vertical-align: middle;
+        white-space: nowrap;
+        padding: 0.35rem 0.5rem;
+        font-size: 0.875rem;
+        line-height: 1.3;
+    }
+    .table tbody tr {
+        height: auto;
+    }
+    .table .btn-sm {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.8rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Search Results</h2>
+            {% if query %}
+                <p class="text-muted mb-0">Searching for: "<strong>{{ query }}</strong>"</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if not query %}
+        <div class="alert alert-info">
+            Please enter a search term to find products, jobs, customers, manufacturers, or vendors.
+        </div>
+    {% elif not has_results %}
+        <div class="alert alert-warning">
+            No results found for "<strong>{{ query }}</strong>".
+        </div>
+    {% else %}
+        <!-- Jobs Section -->
+        {% if jobs %}
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0 fw-bold">
+                    Jobs
+                </h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle mb-0">
+                    <thead class="sticky-header">
+                        <tr>
+                            <th>Job Code</th>
+                            <th>Customer</th>
+                            <th>Job Type</th>
+                            <th>Description</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for job in jobs %}
+                        <tr>
+                            <td>{{ job.job_code|default:'-' }}</td>
+                            <td>{{ job.customer.first_name }} {{ job.customer.last_name }}</td>
+                            <td>{{ job.jobtype.name|default:'-' }}</td>
+                            <td>{{ job.job_description|truncatewords:10|default:'-' }}</td>
+                            <td>
+                                <a href="{% url 'job:job_detail' job.id %}" class="btn btn-sm btn-outline-info">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Products Section -->
+        {% if products %}
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0 fw-bold">
+                    Products
+                </h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle mb-0">
+                    <thead class="sticky-header">
+                        <tr>
+                            <th>Part Number</th>
+                            <th>Description</th>
+                            <th>Category</th>
+                            <th>Manufacturer</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td>{{ product.part_no }}</td>
+                            <td>{{ product.description|default:'-' }}</td>
+                            <td>{{ product.category.product_category|default:'-' }}</td>
+                            <td>{{ product.manufacturer.manufacturer_name|default:'-' }}</td>
+                            <td>
+                                <a href="{% url 'product:product-detail2' product.uuid %}" class="btn btn-sm btn-outline-info">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Customers Section -->
+        {% if customers %}
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0 fw-bold">
+                    Customers
+                </h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle mb-0">
+                    <thead class="sticky-header">
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>City</th>
+                            <th>State</th>
+                            <th>Customer Code</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for customer in customers %}
+                        <tr>
+                            <td>
+                                {{ customer.first_name }} {{ customer.last_name }}
+                                {% if customer.first_name2 or customer.last_name2 %}
+                                    <br><small class="text-muted">{{ customer.first_name2 }} {{ customer.last_name2 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if customer.email %}
+                                    <a href="mailto:{{ customer.email }}">{{ customer.email }}</a>
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if customer.cellphone %}
+                                    {{ customer.cellphone }}
+                                {% elif customer.home_phone %}
+                                    {{ customer.home_phone }}
+                                {% elif customer.work_phone %}
+                                    {{ customer.work_phone }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>{{ customer.city|default:'-' }}</td>
+                            <td>{{ customer.state|default:'-' }}</td>
+                            <td>{{ customer.cust_code|default:'-' }}</td>
+                            <td>
+                                <a href="{% url 'crm:detail_customer' customer.uuid %}" class="btn btn-sm btn-outline-info">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Vendors Section -->
+        {% if vendors %}
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0 fw-bold">
+                    Vendors
+                </h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle mb-0">
+                    <thead class="sticky-header">
+                        <tr>
+                            <th>Vendor Name</th>
+                            <th>City</th>
+                            <th>State</th>
+                            <th>Contact Phone</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for vendor in vendors %}
+                        <tr>
+                            <td>{{ vendor.vendor_name }}</td>
+                            <td>{{ vendor.city|default:'-' }}</td>
+                            <td>{{ vendor.state|default:'-' }}</td>
+                            <td>{{ vendor.contact_phone|default:vendor.order_phone|default:'-' }}</td>
+                            <td>
+                                {% if vendor.status %}
+                                    Active
+                                {% else %}
+                                    Inactive
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'product:edit_vendor' vendor.uuid %}" class="btn btn-sm btn-outline-info">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Manufacturers Section -->
+        {% if manufacturers %}
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0 fw-bold">
+                    Manufacturers
+                </h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle mb-0">
+                    <thead class="sticky-header">
+                        <tr>
+                            <th>Manufacturer Name</th>
+                            <th>City</th>
+                            <th>State</th>
+                            <th>Contact Phone</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for manufacturer in manufacturers %}
+                        <tr>
+                            <td>{{ manufacturer.manufacturer_name }}</td>
+                            <td>{{ manufacturer.city|default:'-' }}</td>
+                            <td>{{ manufacturer.state|default:'-' }}</td>
+                            <td>{{ manufacturer.contact_phone|default:manufacturer.order_phone|default:'-' }}</td>
+                            <td>
+                                {% if manufacturer.status %}
+                                    Active
+                                {% else %}
+                                    Inactive
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'product:edit_manufacturer' manufacturer.uuid %}" class="btn btn-sm btn-outline-info">View</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+    {% endif %}
+
+    <!-- Search Again Section -->
+    <div class="mt-4">
+        <form method="GET" action="{% url 'search' %}" class="d-flex">
+            <input class="form-control me-2" type="search" name="q" placeholder="Search Allen Kitchen & Bath" aria-label="Search" value="{{ query }}">
+            <button class="btn btn-outline-primary" type="submit">
+                Search
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+

@@ -1,0 +1,1012 @@
+{% extends 'job/base_job.html' %}
+{% load static %}
+
+{% block job_content %}
+<!-- Google Maps Places API - Using separate API key for autocomplete -->
+<script src="https://maps.googleapis.com/maps/api/js?key={{ google_places_api_key }}&libraries=places&loading=async" async defer></script>
+
+<style>
+/* Style PlaceAutocompleteElement to look like regular input */
+gmp-place-autocomplete {
+    display: block;
+    width: 100%;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 400;
+    line-height: 1.5;
+    color: #212529;
+    background-color: #fff;
+    background-image: none;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+gmp-place-autocomplete:focus {
+    color: #212529;
+    background-color: #fff;
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Hide search icon and any default styling */
+gmp-place-autocomplete::part(input) {
+    border: none;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    outline: none;
+    width: 100%;
+}
+
+/* Remove any icons or default place autocomplete styling */
+gmp-place-autocomplete input,
+gmp-place-autocomplete [part="input"],
+gmp-place-autocomplete::before,
+gmp-place-autocomplete::after {
+    background-image: none !important;
+    padding-right: 0.5rem !important;
+}
+
+/* Make sure it matches form-control-sm styling */
+gmp-place-autocomplete {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* Hide any search icons or overlays */
+gmp-place-autocomplete svg,
+gmp-place-autocomplete .search-icon,
+gmp-place-autocomplete [slot="icon"],
+gmp-place-autocomplete::part(icon),
+gmp-place-autocomplete button {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+/* Ensure internal input fills the entire space */
+gmp-place-autocomplete::part(input) {
+    padding-right: 0.5rem !important;
+    width: 100% !important;
+}
+</style>
+
+    <!-- Compact Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="mt-2">
+            {% if is_edit_mode %}
+                <a href="{% url 'job:job_detail' job.pk %}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-eye"></i> View
+                </a>
+            {% else %}
+                <a href="{% url 'job:job_detail' job.pk %}?edit=true" class="btn btn-primary btn-sm">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="post" id="jobForm">
+        {% csrf_token %}
+        
+        {% if form.errors %}
+            <div class="alert alert-danger alert-sm mb-2">
+                <h6 class="mb-1"><i class="fas fa-exclamation-triangle"></i> Please correct the following errors:</h6>
+                {{ form.errors }}
+            </div>
+        {% endif %}
+
+        <div class="row">
+            <!-- Main Content Area -->
+            <div class="col-md-8">
+                <!-- Combined Card: Job Information, Address, Description, and Important Dates -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                            Job Information
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <!-- Team Assignment Section -->
+                        <h6 class="small text-muted mb-2" style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">Team Assignment</h6>
+                        <div class="row">
+                            <!-- 5 fields in one row -->
+                            <div class="col-md-2 mb-2">
+                                <label class="form-label small">Designer</label>
+                                {% if is_edit_mode %}
+                                    {{ form.soldby }}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-sm" value="{{ job.soldby.get_full_name|default:job.soldby|default:'Not assigned' }}" readonly>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2 mb-2">
+                                <label class="form-label small">Lead Carpenter</label>
+                                {% if is_edit_mode %}
+                                    {{ form.carpenter }}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-sm" value="{{ job.carpenter.get_full_name|default:job.carpenter|default:'Not assigned' }}" readonly>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2 mb-2">
+                                <label class="form-label small">Job Type</label>
+                                {% if is_edit_mode %}
+                                    {{ form.jobtype }}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-sm" value="{{ job.jobtype.name|default:'Not specified' }}" readonly>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2 mb-2">
+                                <label class="form-label small">Coordinator</label>
+                                {% if is_edit_mode %}
+                                    {{ form.coordinator }}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-sm" value="{{ job.coordinator.get_full_name|default:job.coordinator|default:'Not assigned' }}" readonly>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2 mb-2">
+                                <label class="form-label small">Terms</label>
+                                {% if is_edit_mode %}
+                                    {{ form.terms }}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-sm" value="{{ job.get_terms_display|default:'Not specified' }}" readonly>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <!-- Status on separate row -->
+                        <div class="row">
+                            <div class="col-md-12 mb-2">
+                                <label class="form-label small">Status</label>
+                                <div class="d-flex gap-3">
+                                    <div class="form-check form-check-inline">
+                                        {% if is_edit_mode %}
+                                            {{ form.active }}
+                                            <label for="{{ form.active.id_for_label }}" class="form-check-label small">Active</label>
+                                        {% else %}
+                                            <input type="checkbox" class="form-check-input" {% if job.active %}checked{% endif %} disabled>
+                                            <label class="form-check-label small">Active</label>
+                                        {% endif %}
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        {% if is_edit_mode %}
+                                            {{ form.sold }}
+                                            <label for="{{ form.sold.id_for_label }}" class="form-check-label small">Sold</label>
+                                        {% else %}
+                                            <input type="checkbox" class="form-check-input" {% if job.sold %}checked{% endif %} disabled>
+                                            <label class="form-check-label small">Sold</label>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <hr class="my-3">
+                        
+                        <!-- Customer Info Section -->
+                        <h6 class="small text-muted mb-2" style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">Customer Info</h6>
+                        <div class="row">
+                            <!-- 4 fields in one row -->
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label small">Customer</label>
+                                {% if is_edit_mode %}
+                                    {{ form.customer }}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-sm" value="{{ job.customer.first_name }} {{ job.customer.last_name }}" readonly>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label small">Phone</label>
+                                <input type="tel" class="form-control form-control-sm" value="{% if job.customer.cellphone %}{{ job.customer.cellphone }}{% elif job.customer.home_phone %}{{ job.customer.home_phone }}{% elif job.customer.work_phone %}{{ job.customer.work_phone }}{% else %}Not provided{% endif %}" readonly>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label small">Email</label>
+                                <input type="email" class="form-control form-control-sm" value="{{ job.customer.email|default:'Not provided' }}" readonly>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <label class="form-label small">Job Code</label>
+                                {% if is_edit_mode %}
+                                    {% with cust_code=job.customer.cust_code|default:'XXXXX' %}
+                                        <div class="d-flex align-items-center" id="job_code_container">
+                                            <span class="form-control form-control-sm border-0 bg-transparent p-0 me-1" style="width: auto; min-width: fit-content;" id="job_code_prefix">{{ cust_code }}-</span>
+                                            <input type="text" 
+                                                   id="job_code_suffix" 
+                                                   name="job_code_suffix" 
+                                                   class="form-control form-control-sm" 
+                                                   value="" 
+                                                   maxlength="10" 
+                                                   pattern="[A-Z]*" 
+                                                   style="width: 100px; text-transform: uppercase;"
+                                                   placeholder="Optional"
+                                                   oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g, ''); updateJobCode();">
+                                            <input type="hidden" id="job_code_full" name="job_code" value="{{ job.job_code|default:'' }}">
+                                        </div>
+                                    {% endwith %}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-sm" value="{{ job.job_code|default:'Not set' }}" readonly>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <hr class="my-3">
+                        
+                        <!-- Address Information Section -->
+                        <h6 class="small text-muted mb-2" style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">Address Information</h6>
+                        <div class="row">
+                            <div class="col-md-2 mb-2">
+                                <label class="form-label small">State</label>
+                                {% if is_edit_mode %}
+                                    {{ form.state }}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-sm" value="{{ job.state|default:'Not specified' }}" readonly>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2 mb-2">
+                                <label class="form-label small">Zip</label>
+                                {% if is_edit_mode %}
+                                    {{ form.zip }}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-sm" value="{{ job.zip|default:'Not specified' }}" readonly>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label small">City</label>
+                                {% if is_edit_mode %}
+                                    {{ form.city }}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-sm" value="{{ job.city|default:'Not specified' }}" readonly>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label small">County</label>
+                                {% if is_edit_mode %}
+                                    {{ form.county }}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-sm" value="{{ job.county.name|default:'Not specified' }}" readonly>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-12 mb-2">
+                                <label class="form-label small">Address</label>
+                                {% if is_edit_mode %}
+                                    {# Hidden input that stores the actual address value for form submission #}
+                                    {{ form.address }}
+                                    
+                                    {# Display current address with option to change #}
+                                    <div id="address-display-container">
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" id="address-display-field" class="form-control form-control-sm" 
+                                                   value="{{ job.address|default:'No address set' }}" readonly 
+                                                   style="background-color: #f8f9fa;">
+                                            <button type="button" id="change-address-btn" class="btn btn-sm btn-outline-primary" 
+                                                    style="border-color: #ced4da;">
+                                                <i class="bi bi-pencil"></i> Change Address
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    {# Autocomplete search (hidden by default) #}
+                                    <div id="address-search-container" style="display: none;">
+                                        <div id="address-autocomplete-wrapper"></div>
+                                        <div class="mt-1">
+                                            <button type="button" id="cancel-address-change-btn" class="btn btn-sm btn-secondary">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    {# Store job address in JavaScript variable #}
+                                    <script>
+                                        var jobAddress = '{{ job.address|default:""|escapejs }}';
+                                    </script>
+                                {% else %}
+                                    <input type="text" class="form-control form-control-sm" value="{{ job.address|default:'Not specified' }}" readonly>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <hr class="my-3">
+                        
+                        <!-- Job Description Section -->
+                        <h6 class="small text-muted mb-2" style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">Job Description</h6>
+                        <div class="mb-2">
+                            {% if is_edit_mode %}
+                                {{ form.job_description }}
+                            {% else %}
+                                <textarea class="form-control form-control-sm" rows="3" readonly>{{ job.job_description|default:'No description provided' }}</textarea>
+                            {% endif %}
+                        </div>
+                        
+                        <hr class="my-3">
+                        
+                        <!-- Important Dates Section -->
+                        <h6 class="small text-muted mb-2" style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">Important Dates</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label small">Date Sold</label>
+                                        {% if is_edit_mode %}
+                                            {{ form.datesold }}
+                                        {% else %}
+                                            <input type="text" class="form-control form-control-sm" value="{{ job.datesold|date:'Y-m-d'|default:'Not set' }}" readonly>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label small">Start Date</label>
+                                        {% if is_edit_mode %}
+                                            {{ form.startdate }}
+                                        {% else %}
+                                            <input type="text" class="form-control form-control-sm" value="{{ job.startdate|date:'Y-m-d'|default:'Not set' }}" readonly>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label small">Completion</label>
+                                        {% if is_edit_mode %}
+                                            {{ form.completDate }}
+                                        {% else %}
+                                            <input type="text" class="form-control form-control-sm" value="{{ job.completDate|date:'Y-m-d'|default:'Not set' }}" readonly>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label small">Initial Contact</label>
+                                        {% if is_edit_mode %}
+                                            {{ form.initalcontactdate }}
+                                        {% else %}
+                                            <input type="text" class="form-control form-control-sm" value="{{ job.initalcontactdate|date:'Y-m-d'|default:'Not set' }}" readonly>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label small">Initial Measure</label>
+                                        {% if is_edit_mode %}
+                                            {{ form.initialmeasuredate }}
+                                        {% else %}
+                                            <input type="text" class="form-control form-control-sm" value="{{ job.initialmeasuredate|date:'Y-m-d'|default:'Not set' }}" readonly>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label small">Cabinet Needed</label>
+                                        {% if is_edit_mode %}
+                                            {{ form.cabneededdate }}
+                                        {% else %}
+                                            <input type="text" class="form-control form-control-sm" value="{{ job.cabneededdate|date:'Y-m-d'|default:'Not set' }}" readonly>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label small">Top Install</label>
+                                        {% if is_edit_mode %}
+                                            {{ form.topinstalldate }}
+                                        {% else %}
+                                            <input type="text" class="form-control form-control-sm" value="{{ job.topinstalldate|date:'Y-m-d'|default:'Not set' }}" readonly>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <label class="form-label small">Promised</label>
+                                        {% if is_edit_mode %}
+                                            {{ form.promised }}
+                                        {% else %}
+                                            <input type="text" class="form-control form-control-sm" value="{{ job.promised|date:'Y-m-d'|default:'Not set' }}" readonly>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Form Actions for Edit Mode -->
+                        {% if is_edit_mode %}
+                        <hr class="my-3">
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'job:job_detail' job.pk %}" class="btn btn-secondary btn-sm">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                Save Changes
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compact Sidebar -->
+            <div class="col-md-4">
+                <!-- Location Map -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">
+                             Location
+                        </h6>
+                    </div>
+                    <div class="card-body py-2 px-2">
+                        <div class="mb-1">
+                            {% if job.address and job.city and job.state %}
+                                {% with full_address=job.address|add:", "|add:job.city|add:", "|add:job.state|add:" "|add:job.zip|default:"" %}
+                                <div id="map-container" style="position: relative;">
+                                    <iframe 
+                                        id="google-map"
+                                        src="https://www.google.com/maps/embed/v1/place?key={{ google_maps_api_key }}&q={{ full_address|urlencode }}"
+                                        width="100%" 
+                                        height="150" 
+                                        style="border:0;" 
+                                        allowfullscreen="" 
+                                        loading="lazy"
+                                        referrerpolicy="no-referrer-when-downgrade">
+                                    </iframe>
+                                    <div id="map-error" class="bg-light p-2 text-center" style="height: 150px; display: none;">
+                                        <i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i>
+                                        <p class="text-muted small mb-1">Map could not be loaded</p>
+                                        <a href="https://maps.google.com/?q={{ full_address|urlencode }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-external-link-alt"></i> Open Maps
+                                        </a>
+                                    </div>
+                                </div>
+                                {% endwith %}
+                            {% else %}
+                                <div class="bg-light p-2 text-center" style="height: 150px;">
+                                    <i class="fas fa-map-marked-alt fa-2x text-muted mb-2"></i>
+                                    <p class="text-muted small">Address not specified</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center mt-1">
+                            <div class="flex-grow-1 text-center">
+                                <small class="text-muted">
+                                    {% if job.address and job.city and job.state %}
+                                        {{ job.address }}, {{ job.city }}, {{ job.state }} {{ job.zip|default:'' }}
+                                    {% else %}
+                                        Address not specified
+                                    {% endif %}
+                                </small>
+                            </div>
+                            {% if job.address and job.city and job.state %}
+                                <a href="https://maps.google.com/?q={{ job.address|add:","|add:job.city|add:","|add:job.state|add:" "|add:job.zip|default:""|urlencode }}" 
+                                   target="_blank" 
+                                   class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-external-link-alt" style="font-size: 10px;"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Weather Card -->
+                {% if job.address and job.city and job.state %}
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="card-title mb-0">
+                                Weather
+                            </h6>
+                        </div>
+                    </div>
+                    <div class="card-body py-2 px-2">
+                        <div id="weather-content">
+                            <div id="weather-loading" class="text-center py-2">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                    <span class="visually-hidden">Loading weather...</span>
+                                </div>
+                                <small class="text-muted ms-2">Loading weather...</small>
+                            </div>
+                            <div id="weather-data" class="d-none">
+                                <!-- Current Weather -->
+                                <div class="row g-1 mb-2">
+                                    <div class="col-6">
+                                        <div class="bg-light p-1 rounded text-center d-flex flex-column justify-content-center" style="height: 60px;">
+                                            <div class="d-flex align-items-center justify-content-center mb-1">
+                                                <img id="weather-icon" src="" alt="Weather" style="width: 24px; height: 24px; margin-right: 6px; display: none;">
+                                                <div id="weather-temp" class="h6 mb-0 text-primary">--°</div>
+                                            </div>
+                                            <small id="weather-condition" class="text-muted" style="font-size: 11px;">--</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-6">
+                                        <div class="bg-light p-1 rounded d-flex flex-column justify-content-center" style="height: 60px;">
+                                            <div class="text-center mb-0">
+                                                <small class="text-muted" style="font-size: 14px;">Humidity: <span id="weather-humidity" style="font-size: 13px;">--%</span></small>
+                                            </div>
+                                            <div class="text-center mt-0">
+                                                <small class="text-muted" style="font-size: 14px;">Wind: <span id="weather-wind" style="font-size: 13px;">-- --</span></small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- 24-Hour Forecast -->
+                                <div id="hourly-forecast-section" class="mb-2" style="display: none;">
+                                    <div id="hourly-forecast-container" class="d-flex overflow-auto pb-1" style="gap: 8px;">
+                                        <!-- Hourly forecast items will be populated by JavaScript -->
+                                    </div>
+                                </div>
+                                
+                                <!-- 7-Day Forecast -->
+                                <div id="daily-forecast-section" style="display: none;">
+                                    <div id="daily-forecast-container" class="d-flex pb-1" style="width: 100%;">
+                                        <!-- Daily forecast items will be populated by JavaScript -->
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="weather-error" class="d-none">
+                                <div class="bg-light p-2 rounded text-center">
+                                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                                    <small class="text-muted ms-1">Weather data unavailable</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- Schedules and Customer Jobs Row -->
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <!-- Schedules -->
+                        <div class="card h-100">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">
+                                    Schedules
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                {% if top_schedule_slots %}
+                                    <div class="list-group list-group-flush">
+                                        {% for slot in top_schedule_slots %}
+                                            <a href="{% url 'job:top_slot_edit' job.pk slot.pk %}" class="list-group-item list-group-item-action py-1">
+                                                <div style="font-size: 0.75rem;">
+                                                    <div>
+                                                    {{ slot.start_date|date:'M d, Y' }} - {% if slot.end_date %}{{ slot.end_date|date:'M d, Y' }}{% else %}{{ slot.start_date|date:'M d, Y' }}{% endif %}
+                                                    </div>
+                                                    <div>
+                                                        {{ job.job_code|default:'' }}{% if slot.note %}[{{ slot.note }}]{% endif %}
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <p class="small text-muted mb-0">No schedule slots for this job.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <!-- Customer Jobs -->
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="card-title mb-0">
+                                     Customer Jobs
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                {% if customer_jobs %}
+                                    <div class="list-group list-group-flush">
+                                        {% for other_job in customer_jobs %}
+                                            <a href="{% url 'job:job_detail' other_job.pk %}" class="list-group-item list-group-item-action py-2">
+                                                <span class="small">{{ other_job.job_code|default:'No code' }}</span>
+                                            </a>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <p class="small text-muted mb-0">No other jobs for this customer.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Weather functionality (doesn't need jQuery)
+function populateHourlyForecast(hourlyData) {
+    const container = document.getElementById('hourly-forecast-container');
+    container.innerHTML = ''; // Clear existing content
+    
+    hourlyData.forEach(hour => {
+        const hourItem = document.createElement('div');
+        hourItem.className = 'text-center';
+        hourItem.style.minWidth = '55px';
+        
+        // Format time (convert to 12-hour format from actual API hour)
+        const time = hour.time;
+        const displayTime = (() => {
+            // Current hour gets "Now"
+            const currentHour = new Date().getHours();
+            if (time === currentHour && container.children.length === 0) {
+                return 'Now';
+            }
+            
+            // 12-hour format
+            if (time === 0) return '12AM';
+            if (time < 12) return `${time}AM`;
+            if (time === 12) return '12PM';
+            return `${time - 12}PM`;
+        })();
+        
+        hourItem.innerHTML = `
+            <div class="small text-muted mb-1" style="font-size: 10px;">${displayTime}</div>
+            <div class="mb-1">
+                ${hour.icon_url ? `<img src="${hour.icon_url}" alt="${hour.condition}" style="width: 24px; height: 24px;">` : '<div style="width: 24px; height: 24px;"></div>'}
+            </div>
+            <div class="fw-bold small">${hour.temperature ? Math.round(hour.temperature) + '°' : '--°'}</div>
+        `;
+        
+        container.appendChild(hourItem);
+    });
+}
+
+function populateDailyForecast(dailyData) {
+    const container = document.getElementById('daily-forecast-container');
+    container.innerHTML = ''; // Clear existing content
+    
+    const shortDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    dailyData.forEach((day, index) => {
+        const dayItem = document.createElement('div');
+        dayItem.className = 'text-center flex-fill';
+        dayItem.style.minWidth = '0'; // Allow flex shrinking
+        
+        // Format day name with short names
+        const today = new Date();
+        const forecastDate = new Date(today);
+        forecastDate.setDate(today.getDate() + index);
+        const dayName = index === 0 ? 'Today' : shortDays[forecastDate.getDay()];
+        
+        dayItem.innerHTML = `
+            <div class="small text-muted mb-1" style="font-size: 10px;">${dayName}</div>
+            <div class="mb-1">
+                ${day.icon_url ? `<img src="${day.icon_url}" alt="${day.condition}" style="width: 24px; height: 24px;">` : '<div style="width: 24px; height: 24px;"></div>'}
+            </div>
+            <div class="fw-bold small">${day.high_temp ? Math.round(day.high_temp) + '°' : '--°'}</div>
+            <div class="small text-muted" style="font-size: 10px;">${day.low_temp ? Math.round(day.low_temp) + '°' : '--°'}</div>
+        `;
+        
+        container.appendChild(dayItem);
+    });
+}
+
+function loadWeatherData() {
+    const weatherLoading = document.getElementById('weather-loading');
+    const weatherData = document.getElementById('weather-data');
+    const weatherError = document.getElementById('weather-error');
+    
+    if (!weatherLoading) return; // Exit if weather section doesn't exist
+    
+    // Show loading state
+    weatherLoading.classList.remove('d-none');
+    weatherData.classList.add('d-none');
+    weatherError.classList.add('d-none');
+    
+    // Fetch weather data
+    fetch(`{% url 'job:get_weather_data' job.pk %}`)
+        .then(response => response.json())
+        .then(data => {
+            weatherLoading.classList.add('d-none');
+            
+            if (data.success && data.weather) {
+                // Update weather display
+                const weather = data.weather;
+                // Temperature with unit conversion
+                let tempDisplay = '--°';
+                if (weather.temperature !== null && weather.temperature !== undefined) {
+                    let temp = weather.temperature;
+                    let unit = 'F'; // Default to Fahrenheit since API returns in Fahrenheit
+                    
+                    // Convert to Fahrenheit if needed (API should already return in Fahrenheit)
+                    if (weather.temperature_unit === 'CELSIUS') {
+                        temp = Math.round((temp * 9/5) + 32);
+                        unit = 'F';
+                    } else if (weather.temperature_unit === 'FAHRENHEIT') {
+                        temp = Math.round(temp); // Round to nearest degree
+                        unit = 'F';
+                    }
+                    
+                    tempDisplay = `${temp}°${unit}`;
+                }
+                
+                document.getElementById('weather-temp').textContent = tempDisplay;
+                document.getElementById('weather-condition').textContent = weather.condition || '--';
+                
+                // Weather icon
+                const weatherIcon = document.getElementById('weather-icon');
+                if (weather.icon_url) {
+                    weatherIcon.onerror = function() {
+                        this.style.display = 'none';
+                    };
+                    
+                    weatherIcon.src = weather.icon_url;
+                    weatherIcon.alt = weather.condition || 'Weather';
+                    weatherIcon.style.display = 'inline-block';
+                } else {
+                    weatherIcon.style.display = 'none';
+                }
+                
+                // Humidity
+                const humidity = weather.humidity ? `${weather.humidity}%` : '--%';
+                document.getElementById('weather-humidity').textContent = humidity;
+                
+                // Wind
+                let windDisplay = '-- --';
+                if (weather.wind_speed && weather.wind_direction) {
+                    windDisplay = `${weather.wind_speed} mph <span style="font-size: 10px;">${weather.wind_direction}</span>`;
+                } else if (weather.wind_speed) {
+                    windDisplay = `${weather.wind_speed} mph`;
+                }
+                document.getElementById('weather-wind').innerHTML = windDisplay;
+                
+                // Populate hourly forecast
+                if (weather.hourly_forecast && weather.hourly_forecast.length > 0) {
+                    populateHourlyForecast(weather.hourly_forecast);
+                    document.getElementById('hourly-forecast-section').style.display = 'block';
+                }
+                
+                // Populate daily forecast
+                if (weather.daily_forecast && weather.daily_forecast.length > 0) {
+                    populateDailyForecast(weather.daily_forecast);
+                    document.getElementById('daily-forecast-section').style.display = 'block';
+                }
+                
+                weatherData.classList.remove('d-none');
+            } else {
+                weatherError.classList.remove('d-none');
+            }
+        })
+        .catch(error => {
+            weatherLoading.classList.add('d-none');
+            weatherError.classList.remove('d-none');
+        });
+}
+
+// Load weather data when page loads
+{% if job.address and job.city and job.state %}
+    // Wait for DOM to be ready before calling weather API
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadWeatherData);
+    } else {
+        loadWeatherData();
+    }
+{% endif %}
+
+// Refresh weather button
+document.addEventListener('DOMContentLoaded', function() {
+    const refreshBtn = document.getElementById('refresh-weather');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            this.querySelector('i').classList.add('fa-spin');
+            loadWeatherData();
+            setTimeout(() => {
+                this.querySelector('i').classList.remove('fa-spin');
+            }, 1000);
+        });
+    }
+});
+
+// Wait for jQuery to be available
+function waitForJQuery(callback) {
+    if (window.jQuery) {
+        callback();
+    } else {
+        setTimeout(function() {
+            waitForJQuery(callback);
+        }, 50);
+    }
+}
+
+waitForJQuery(function() {
+    $(document).ready(function() {
+    // Debug: Log when edit button is clicked
+    $('a[href*="edit=true"]').click(function(e) {
+        console.log('Edit button clicked!');
+        console.log('Href:', $(this).attr('href'));
+    });
+    
+    // Handle form submission
+    // Update job code by combining prefix and suffix
+    function updateJobCode() {
+        var prefix = $('#job_code_prefix').text().trim();
+        var suffix = $('#job_code_suffix').val().toUpperCase().replace(/[^A-Z]/g, '');
+        // Combine prefix and suffix with dash (suffix can be empty or multiple letters)
+        // Prefix already includes the dash, so just append suffix
+        var fullCode = prefix + suffix;
+        $('#job_code_full').val(fullCode);
+    }
+    
+    // Extract suffix from existing job code on page load
+    {% if is_edit_mode %}
+    $(document).ready(function() {
+        var existingJobCode = $('#job_code_full').val();
+        var prefix = $('#job_code_prefix').text().trim(); // This includes the dash
+        
+        if (existingJobCode && existingJobCode.startsWith(prefix)) {
+            // Extract everything after the prefix (which includes dash) as the suffix
+            var suffix = existingJobCode.substring(prefix.length);
+            if (suffix.length > 0) {
+                $('#job_code_suffix').val(suffix.toUpperCase());
+            }
+        } else if (existingJobCode && existingJobCode.includes('-')) {
+            // Handle old format: extract suffix after dash
+            var parts = existingJobCode.split('-');
+            if (parts.length > 1 && parts[1].length > 0) {
+                $('#job_code_suffix').val(parts[1].toUpperCase());
+            }
+        }
+        updateJobCode(); // Initialize the full code
+        
+        // Hide the original address input (it will be used for form submission only)
+        var addressInput = document.getElementById('id_address');
+        if (addressInput) {
+            addressInput.type = 'hidden';
+            // Ensure it has the initial value
+            if (typeof jobAddress !== 'undefined' && jobAddress) {
+                addressInput.value = jobAddress;
+            }
+        }
+        
+        // Handle "Change Address" button
+        var changeAddressBtn = document.getElementById('change-address-btn');
+        var cancelAddressBtn = document.getElementById('cancel-address-change-btn');
+        var displayContainer = document.getElementById('address-display-container');
+        var searchContainer = document.getElementById('address-search-container');
+        
+        if (changeAddressBtn && searchContainer && displayContainer) {
+            changeAddressBtn.addEventListener('click', function() {
+                displayContainer.style.display = 'none';
+                searchContainer.style.display = 'block';
+                
+                // Initialize autocomplete if not already done
+                if (!window.addressAutocompleteInitialized) {
+                    initAddressAutocomplete();
+                    window.addressAutocompleteInitialized = true;
+                }
+            });
+            
+            if (cancelAddressBtn) {
+                cancelAddressBtn.addEventListener('click', function() {
+                    searchContainer.style.display = 'none';
+                    displayContainer.style.display = 'block';
+                });
+            }
+        }
+    });
+    {% endif %}
+    
+    $('#jobForm').submit(function(e) {
+        // Update job code before submission
+        if ($('#job_code_suffix').length) {
+            updateJobCode();
+        }
+        
+        // Basic validation
+        var customer = $('#id_customer').val();
+        if (!customer) {
+            alert('Please select a customer.');
+            e.preventDefault();
+            return false;
+        }
+        return true;
+    });
+    
+    // Map updates only on form save - no AJAX updates while typing
+    // Map will be updated server-side after form submission
+    
+    // Add some interactivity for edit mode
+    {% if is_edit_mode %}
+    // Focus on first editable field when in edit mode
+    setTimeout(function() {
+        $('input:not([readonly]), select:not([disabled]), textarea:not([readonly])').first().focus();
+    }, 100);
+    
+    // Initialize Google Places Autocomplete for address search
+    function initAddressAutocomplete() {
+        var addressWrapper = document.getElementById('address-autocomplete-wrapper');
+        if (!addressWrapper) return;
+        
+        // Clear any existing autocomplete elements
+        addressWrapper.innerHTML = '';
+        
+        // Check if Google Maps API is loaded
+        if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+            setTimeout(initAddressAutocomplete, 500);
+            return;
+        }
+        
+        var addressInput = document.getElementById('id_address');
+        var addressDisplayField = document.getElementById('address-display-field');
+        var searchContainer = document.getElementById('address-search-container');
+        var displayContainer = document.getElementById('address-display-container');
+        
+        if (!addressInput) return;
+        
+        // Create search input element
+        var searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'form-control form-control-sm';
+        searchInput.placeholder = 'Search for an address...';
+        searchInput.id = 'address-search-input';
+        
+        addressWrapper.appendChild(searchInput);
+        
+        // Initialize Autocomplete
+        var autocomplete = new google.maps.places.Autocomplete(searchInput, {
+            types: ['address'],
+            componentRestrictions: { country: 'us' },
+            fields: ['address_components', 'geometry', 'name', 'formatted_address']
+        });
+        
+        searchInput.focus();
+        
+        // Listen for place selection
+        autocomplete.addListener('place_changed', function() {
+            var place = autocomplete.getPlace();
+            
+            if (!place || !place.geometry) {
+                return;
+            }
+            
+            // Extract address components
+            var addressComponents = place.address_components || [];
+            var streetNumber = '';
+            var route = '';
+            var city = '';
+            var state = '';
+            var zip = '';
+            
+            addressComponents.forEach(function(component) {
+                var types = component.types;
+                
+                if (types.indexOf('street_number') !== -1) {
+                    streetNumber = component.long_name;
+                }
+                if (types.indexOf('route') !== -1) {
+                    route = component.long_name;
+                }
+                if (types.indexOf('locality') !== -1) {
+                    city = component.long_name;
+                }
+                if (types.indexOf('administrative_area_level_1') !== -1) {
+                    state = component.short_name;
+                }
+                if (types.indexOf('postal_code') !== -1) {
+                    zip = component.long_name;
+                }
+            });
+            
+            var fullAddress = (streetNumber + ' ' + route).trim();
+            
+            // Update the hidden input field (for form submission)
+            if (fullAddress && addressInput) {
+                addressInput.value = fullAddress;
+            }
+            
+            // Update the display field
+            if (fullAddress && addressDisplayField) {
+                addressDisplayField.value = fullAddress;
+            }
+            
+            // Update other form fields
+            if (city && document.getElementById('id_city')) {
+                document.getElementById('id_city').value = city;
+            }
+            if (state && document.getElementById('id_state')) {
+                document.getElementById('id_state').value = state;
+            }
+            if (zip && document.getElementById('id_zip')) {
+                document.getElementById('id_zip').value = zip;
+            }
+            
+            // Hide search container, show display container
+            if (searchContainer && displayContainer) {
+                searchContainer.style.display = 'none';
+                displayContainer.style.display = 'block';
+            }
+        });
+    }
+    {% endif %}
+    });
+});
+</script>
+{% endblock %} 

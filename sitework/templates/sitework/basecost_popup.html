@@ -1,0 +1,21 @@
+<!-- MODAL -->
+<!-- sitework/basecost_popup.html Production  this allows editing the base cost in the table row  -->
+ <span>
+<form hx-post="{% url 'sitework:basecost_post' %}" hx-swap="outerHTML"  hx-headers='{"X-CSRFToken":"{{csrf_token }}"}' > 
+      <div>
+      <h5 >Edit Base Cost</h5>
+    </div>
+    <div>
+      <input type="number" name='basecostInput' 
+       step="0.01" min="0" max_length="10" value="{{ data.basecost }}" >
+      <input type="hidden" name="quoteid" value ="{{ data.qte }}">
+      <input type="hidden" name="subcat" value ="{{ data.subcat.pk }}">
+      <input type="hidden" name="cat" value ="{{ data.cat.pk }}">
+    </div>
+    <div>
+      <input class="btn btn-success btn-sm" type="submit" value="OK">
+      <input type="submit" class="form-control" style="display: none" />
+      <button type="button" class="btn btn-danger btn-sm"  
+        onclick="window.location.href='{% url 'sitework:subcat_form' cat=data.cat.pk qte=data.qte %}'">NO</button>      
+    </div> 
+</form></span>

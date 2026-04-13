@@ -1,0 +1,787 @@
+{% extends "base.html" %}
+{% load static %}
+{% load permission_tags %}
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/pagination.css' %}">
+<link rel="stylesheet" href="{% static 'css/table_styles.css' %}">
+{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Vendors</h2>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'product:create_vendor' %}" class="btn btn-outline-primary btn-sm">+ Vendor</a>
+            <button class="btn btn-outline-secondary btn-sm">Import</button>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <div class="mb-3">
+            <div class="row">
+                <div class="col-md-12">
+                    <input type="text" class="form-control form-control-sm" placeholder="Search Vendors by Name or Number..." id="vendor-search-bar">
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-12">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="statusFilterType" id="statusActive" value="active" checked>
+                        <label class="form-check-label small text-muted" for="statusActive">
+                            Active Only
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="statusFilterType" id="statusInactive" value="inactive">
+                        <label class="form-check-label small text-muted" for="statusInactive">
+                            Inactive Only
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="statusFilterType" id="statusAll" value="all">
+                        <label class="form-check-label small text-muted" for="statusAll">
+                            All Vendors
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <table class="table table-bordered table-hover align-middle mb-0">
+            <thead class="sticky-header">
+                <tr>
+                    <th>Vendor No</th>
+                    <th>Name</th>
+                    <th>Contact Name</th>
+                    <th>City</th>
+                    <th>Order Phone</th>
+                    <th>Contact Phone</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>More</th>
+                </tr>
+            </thead>
+            <tbody id="vendor-table-body">
+                {% for vendor in vendors %}
+                <tr>
+                    <td>{{ vendor.vendor_no|default:'-' }}</td>
+                    <td>{{ vendor.vendor_name }}</td>
+                    <td>{{ vendor.contact_name|default:'-' }}</td>
+                    <td>{{ vendor.city|default:'-' }}</td>
+                    <td>
+                        {% if vendor.order_phone and vendor.order_phone != "N/A" %}
+                            <a href="tel:{{ vendor.order_phone }}" class="text-decoration-none">
+                                {{ vendor.order_phone }}
+                            </a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if vendor.contact_phone and vendor.contact_phone != "N/A" %}
+                            <a href="tel:{{ vendor.contact_phone }}" class="text-decoration-none">
+                                {{ vendor.contact_phone }}
+                            </a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if vendor.contact_email and vendor.contact_email != "N/A" %}
+                            <a href="mailto:{{ vendor.contact_email }}" class="text-decoration-none">
+                                {{ vendor.contact_email }}
+                            </a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ vendor.status|yesno:"A,I" }}</td>
+                    <td>
+                        <a href="{% url 'product:edit_vendor' vendor.uuid %}?mode=view" class="btn btn-sm btn-outline-primary">View</a>
+                        <a href="{% url 'product:edit_vendor' vendor.uuid %}" class="btn btn-sm btn-outline-info">Edit</a>
+                        <button type="button" class="btn btn-sm btn-outline-danger ajax-delete-vendor" data-vendor-id="{{ vendor.uuid }}" data-vendor-name="{{ vendor.vendor_name }}">Delete</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="mt-2 text-end text-muted small" style="margin-right: 0; padding-right: 0;">
+        Active: {{ active_vendors }} | Inactive: {{ inactive_vendors }} | Total: {{ total_vendors }}
+    </div>
+    
+    <!-- Search Results Pagination (for AJAX search) -->
+    <div id="search-pagination" class="mt-2 d-flex justify-content-center" style="display: none;"></div>
+    
+    <!-- Pagination Navigation -->
+    {% if paginator.num_pages > 1 %}
+    {% with current_status=request.GET.status|default:'active' %}
+    <nav aria-label="Vendor pagination" id="vendorRegularPagination" data-status="{{ current_status }}" class="mt-2 d-flex justify-content-center">
+        <div class="d-flex align-items-center gap-2">
+            <!-- Page jump input -->
+            <div class="d-flex align-items-center gap-1 page-jump-container">
+                <span class="text-muted small">Go to:</span>
+                <input type="number" id="vendorPageJumpInput" class="form-control form-control-sm" style="width: 70px;" min="1" max="{{ paginator.num_pages }}" placeholder="Page">
+                <button class="btn btn-sm btn-outline-primary" onclick="jumpToVendorPage()">Go</button>
+            </div>
+            
+            <!-- Pagination controls -->
+            <ul class="pagination pagination-sm mb-0">
+                <!-- First page -->
+                {% if page_obj.number > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1&status={{ current_status }}" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+                
+                <!-- Previous page -->
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&status={{ current_status }}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+                
+                <!-- Page numbers with smart range -->
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > page_obj.number|add:'-4' and num < page_obj.number|add:'4' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}&status={{ current_status }}">{{ num }}</a>
+                        </li>
+                    {% elif num == page_obj.number|add:'-4' or num == page_obj.number|add:'4' %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                <!-- Next page -->
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&status={{ current_status }}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+                
+                <!-- Last page -->
+                {% if page_obj.number < page_obj.paginator.num_pages %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ paginator.num_pages }}&status={{ current_status }}" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+            
+            <!-- Page info -->
+            <span class="text-muted small ms-2">
+                Page {{ page_obj.number }} of {{ paginator.num_pages }}
+            </span>
+        </div>
+    </nav>
+    {% endwith %}
+    {% endif %}
+</div>
+
+
+
+
+
+<script>
+// CSRF token for AJAX requests
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Notification system
+function showNotification(message, type = 'info', duration = 5000) {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notification => notification.remove());
+    
+    // Create new notification
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <span class="close-btn" onclick="this.parentElement.remove()">&times;</span>
+        ${message}
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Show notification
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+    
+    // Auto-hide after duration
+    if (duration > 0) {
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 300);
+        }, duration);
+    }
+}
+
+// AJAX search functionality
+document.getElementById('vendor-search-bar').addEventListener('input', function() {
+    const query = this.value;
+    const statusFilterType = document.querySelector('input[name="statusFilterType"]:checked').value;
+    
+    if (query.trim() === '') {
+        // If search is empty, check status filter
+        if (statusFilterType === 'active') {
+            // If showing active vendors, reload the page with status=active parameter
+            window.location.href = window.location.pathname + '?status=active';
+        } else if (statusFilterType === 'inactive') {
+            // If showing inactive vendors, apply status filter
+            performStatusFilter('inactive');
+        } else if (statusFilterType === 'all') {
+            // If showing all vendors, reload the page with status=all parameter
+            window.location.href = window.location.pathname + '?status=all';
+        }
+        return;
+    }
+    
+    // Always use performSearch for actual search queries, it will respect the status filter
+    performSearch(query, statusFilterType, 1);
+});
+
+// Status filter functionality
+document.querySelectorAll('input[name="statusFilterType"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const query = document.getElementById('vendor-search-bar').value;
+        const statusFilterType = this.value;
+        
+        if (query.trim() === '') {
+            // If no search query, just filter by status
+            if (statusFilterType === 'active') {
+                // If showing active vendors, reload the page with status=active parameter
+                window.location.href = window.location.pathname + '?status=active';
+            } else if (statusFilterType === 'inactive') {
+                // If showing inactive vendors, apply status filter
+                performStatusFilter('inactive');
+            } else if (statusFilterType === 'all') {
+                // If showing all vendors, reload the page with status=all parameter
+                window.location.href = window.location.pathname + '?status=all';
+            }
+        } else {
+            // If there's a search query, perform search with status filter
+            performSearch(query, statusFilterType, 1);
+        }
+    });
+});
+
+function restoreRegularPagination() {
+    // Check if we need to filter by status
+    const statusFilterType = document.querySelector('input[name="statusFilterType"]:checked').value;
+    
+    if (statusFilterType === 'active') {
+        // If showing active vendors, reload the page with status=active parameter
+        window.location.href = window.location.pathname + '?status=active';
+    } else if (statusFilterType === 'inactive') {
+        // If showing inactive vendors, apply status filter
+        performStatusFilter('inactive');
+    } else if (statusFilterType === 'all') {
+        // If showing all vendors, reload the page with status=all parameter
+        window.location.href = window.location.pathname + '?status=all';
+    }
+}
+
+function performSearch(query, statusFilterType, page = 1) {
+    let statusParam;
+    if (statusFilterType === 'active') {
+        statusParam = 'active';
+    } else if (statusFilterType === 'inactive') {
+        statusParam = 'inactive';
+    } else if (statusFilterType === 'all') {
+        statusParam = 'all';
+    }
+    
+    const url = `/product/ajax/search-vendors/?q=${encodeURIComponent(query)}&status=${statusParam}&page=${page}`;
+    console.log('Searching with URL:', url); // Debug log
+    console.log('Status filter type:', statusFilterType, 'Status param:', statusParam); // Debug status
+    
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Search results:', data); // Debug log
+            const tbody = document.getElementById('vendor-table-body');
+            const regularPagination = document.getElementById('vendorRegularPagination');
+            
+            tbody.innerHTML = '';
+            
+            data.vendors.forEach(vendor => {
+                const orderPhone = (vendor.order_phone && vendor.order_phone !== 'N/A') 
+                    ? `<a href="tel:${vendor.order_phone}" class="text-decoration-none">${vendor.order_phone}</a>` 
+                    : '-';
+                const contactPhone = (vendor.contact_phone && vendor.contact_phone !== 'N/A') 
+                    ? `<a href="tel:${vendor.contact_phone}" class="text-decoration-none">${vendor.contact_phone}</a>` 
+                    : '-';
+                const contactEmail = (vendor.contact_email && vendor.contact_email !== 'N/A') 
+                    ? `<a href="mailto:${vendor.contact_email}" class="text-decoration-none">${vendor.contact_email}</a>` 
+                    : '-';
+                    
+                tbody.innerHTML += `<tr>
+                    <td>${vendor.vendor_no || '-'}</td>
+                    <td>${vendor.vendor_name}</td>
+                    <td>${vendor.contact_name || '-'}</td>
+                    <td>${vendor.city || '-'}</td>
+                    <td>${orderPhone}</td>
+                    <td>${contactPhone}</td>
+                    <td>${contactEmail}</td>
+                    <td>${vendor.status ? 'A' : 'I'}</td>
+                    <td>
+                        <a href="${vendor.edit_url}?mode=view" class="btn btn-sm btn-outline-primary">View</a>
+                        ${vendor.can_edit ? `<a href="${vendor.edit_url}" class="btn btn-sm btn-outline-info">Edit</a>` : ''}
+                        ${vendor.can_delete ? `<button type="button" class="btn btn-sm btn-outline-danger ajax-delete-vendor" data-vendor-id="${vendor.id}" data-vendor-name="${vendor.vendor_name}">Delete</button>` : ''}
+                    </td>
+                </tr>`;
+            });
+            
+            // Hide regular pagination and show search pagination
+            if (regularPagination) {
+                regularPagination.style.display = 'none';
+            }
+            
+            // Update pagination for search results
+            updateSearchPagination(data.paginator, query, statusFilterType);
+            
+            // Re-attach event listeners
+            attachEventListeners();
+        })
+        .catch(error => {
+            console.error('Search error:', error);
+            // Show error notification or handle gracefully
+        });
+}
+
+function performStatusFilter(statusFilterType, page = 1) {
+    // Only filter for inactive vendors (active and all vendors are handled by page reload)
+    if (statusFilterType !== 'inactive') {
+        return;
+    }
+    
+    const url = `/product/ajax/filter-vendors-by-status/?status=false&page=${page}`;
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('vendor-table-body');
+            const regularPagination = document.getElementById('vendorRegularPagination');
+            
+            tbody.innerHTML = '';
+            
+            data.vendors.forEach(vendor => {
+                const orderPhone = (vendor.order_phone && vendor.order_phone !== 'N/A') 
+                    ? `<a href="tel:${vendor.order_phone}" class="text-decoration-none">${vendor.order_phone}</a>` 
+                    : '-';
+                const contactPhone = (vendor.contact_phone && vendor.contact_phone !== 'N/A') 
+                    ? `<a href="tel:${vendor.contact_phone}" class="text-decoration-none">${vendor.contact_phone}</a>` 
+                    : '-';
+                const contactEmail = (vendor.contact_email && vendor.contact_email !== 'N/A') 
+                    ? `<a href="mailto:${vendor.contact_email}" class="text-decoration-none">${vendor.contact_email}</a>` 
+                    : '-';
+                    
+                tbody.innerHTML += `<tr>
+                    <td>${vendor.vendor_no || '-'}</td>
+                    <td>${vendor.vendor_name}</td>
+                    <td>${vendor.contact_name || '-'}</td>
+                    <td>${vendor.city || '-'}</td>
+                    <td>${orderPhone}</td>
+                    <td>${contactPhone}</td>
+                    <td>${contactEmail}</td>
+                    <td>${vendor.status ? 'A' : 'I'}</td>
+                    <td>
+                        <a href="${vendor.edit_url}?mode=view" class="btn btn-sm btn-outline-primary">View</a>
+                        ${vendor.can_edit ? `<a href="${vendor.edit_url}" class="btn btn-sm btn-outline-info">Edit</a>` : ''}
+                        ${vendor.can_delete ? `<button type="button" class="btn btn-sm btn-outline-danger ajax-delete-vendor" data-vendor-id="${vendor.id}" data-vendor-name="${vendor.vendor_name}">Delete</button>` : ''}
+                    </td>
+                </tr>`;
+            });
+            
+            // Hide regular pagination when filtering
+            if (regularPagination) {
+                regularPagination.style.display = 'none';
+            }
+            
+            // Update pagination for status filter results
+            if (data.paginator.num_pages > 1) {
+                updateStatusFilterPagination(data.paginator, statusFilterType);
+            } else {
+                // Clear search pagination if only one page
+                const searchPagination = document.getElementById('search-pagination');
+                if (searchPagination) {
+                    searchPagination.innerHTML = '';
+                }
+            }
+            
+            // Re-attach event listeners
+            attachEventListeners();
+        });
+}
+
+function updateSearchPagination(paginator, query, statusFilterType) {
+    const paginationContainer = document.getElementById('search-pagination');
+    if (!paginationContainer) return;
+    
+    paginationContainer.dataset.mode = 'search';
+    paginationContainer.dataset.query = query || '';
+    paginationContainer.dataset.status = statusFilterType || '';
+    
+    if (paginator.num_pages > 1) {
+        paginationContainer.style.display = 'flex';
+        paginationContainer.style.visibility = 'visible';
+        
+        let paginationHTML = `
+            <div class="d-flex align-items-center gap-2 justify-content-center w-100">
+                <div class="d-flex align-items-center gap-1 page-jump-container">
+                    <span class="text-muted small">Go to:</span>
+                    <input type="number" id="vendorSearchPageJumpInput" class="form-control form-control-sm" style="width: 70px;" min="1" max="${paginator.num_pages}" placeholder="Page">
+                    <button class="btn btn-sm btn-outline-primary" onclick="jumpToVendorSearchPage()">Go</button>
+                </div>
+                <nav aria-label="Vendor search pagination">
+                    <ul class="pagination pagination-sm mb-0">
+        `;
+        
+        if (paginator.current_page > 1) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link search-page-link" href="#" data-page="1" data-query="${query}" data-status="${statusFilterType}" aria-label="First">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+            `;
+        }
+        
+        if (paginator.has_previous) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link search-page-link" href="#" data-page="${paginator.previous_page_number}" data-query="${query}" data-status="${statusFilterType}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            `;
+        }
+        
+        for (let num of paginator.page_range) {
+            if (num == paginator.current_page) {
+                paginationHTML += `
+                    <li class="page-item active">
+                        <span class="page-link">${num}</span>
+                    </li>
+                `;
+            } else if (num > paginator.current_page - 4 && num < paginator.current_page + 4) {
+                paginationHTML += `
+                    <li class="page-item">
+                        <a class="page-link search-page-link" href="#" data-page="${num}" data-query="${query}" data-status="${statusFilterType}">${num}</a>
+                    </li>
+                `;
+            } else if (num == paginator.current_page - 4 || num == paginator.current_page + 4) {
+                paginationHTML += `
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                `;
+            }
+        }
+        
+        if (paginator.has_next) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link search-page-link" href="#" data-page="${paginator.next_page_number}" data-query="${query}" data-status="${statusFilterType}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            `;
+        }
+        
+        if (paginator.current_page < paginator.num_pages) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link search-page-link" href="#" data-page="${paginator.num_pages}" data-query="${query}" data-status="${statusFilterType}" aria-label="Last">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+            `;
+        }
+        
+        paginationHTML += `
+                    </ul>
+                </nav>
+                <span class="text-muted small ms-2">
+                    Page ${paginator.current_page} of ${paginator.num_pages}
+                </span>
+            </div>
+        `;
+        
+        paginationContainer.innerHTML = paginationHTML;
+        
+        document.querySelectorAll('.search-page-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const page = this.getAttribute('data-page');
+                const currentQuery = this.getAttribute('data-query');
+                const status = this.getAttribute('data-status');
+                performSearch(currentQuery, status, page);
+            });
+        });
+    } else {
+        paginationContainer.innerHTML = '';
+        paginationContainer.style.display = 'none';
+        paginationContainer.style.visibility = 'hidden';
+    }
+}
+
+
+function updateStatusFilterPagination(paginator, statusFilterType) {
+    const paginationContainer = document.getElementById('search-pagination');
+    if (!paginationContainer) return;
+    
+    paginationContainer.dataset.mode = 'status';
+    paginationContainer.dataset.query = '';
+    paginationContainer.dataset.status = statusFilterType || '';
+    
+    if (paginator.num_pages > 1) {
+        paginationContainer.style.display = 'flex';
+        paginationContainer.style.visibility = 'visible';
+        
+        let paginationHTML = `
+            <div class="d-flex align-items-center gap-2 justify-content-center w-100">
+                <div class="d-flex align-items-center gap-1 page-jump-container">
+                    <span class="text-muted small">Go to:</span>
+                    <input type="number" id="vendorSearchPageJumpInput" class="form-control form-control-sm" style="width: 70px;" min="1" max="${paginator.num_pages}" placeholder="Page">
+                    <button class="btn btn-sm btn-outline-primary" onclick="jumpToVendorSearchPage()">Go</button>
+                </div>
+                <nav aria-label="Vendor status pagination">
+                    <ul class="pagination pagination-sm mb-0">
+        `;
+        
+        if (paginator.current_page > 1) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link status-page-link" href="#" data-page="1" data-status="${statusFilterType}" aria-label="First">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+            `;
+        }
+        
+        if (paginator.has_previous) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link status-page-link" href="#" data-page="${paginator.previous_page_number}" data-status="${statusFilterType}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            `;
+        }
+        
+        for (let num of paginator.page_range) {
+            if (num == paginator.current_page) {
+                paginationHTML += `
+                    <li class="page-item active">
+                        <span class="page-link">${num}</span>
+                    </li>
+                `;
+            } else if (num > paginator.current_page - 4 && num < paginator.current_page + 4) {
+                paginationHTML += `
+                    <li class="page-item">
+                        <a class="page-link status-page-link" href="#" data-page="${num}" data-status="${statusFilterType}">${num}</a>
+                    </li>
+                `;
+            } else if (num == paginator.current_page - 4 || num == paginator.current_page + 4) {
+                paginationHTML += `
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                `;
+            }
+        }
+        
+        if (paginator.has_next) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link status-page-link" href="#" data-page="${paginator.next_page_number}" data-status="${statusFilterType}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            `;
+        }
+        
+        if (paginator.current_page < paginator.num_pages) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link status-page-link" href="#" data-page="${paginator.num_pages}" data-status="${statusFilterType}" aria-label="Last">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+            `;
+        }
+        
+        paginationHTML += `
+                    </ul>
+                </nav>
+                <span class="text-muted small ms-2">
+                    Page ${paginator.current_page} of ${paginator.num_pages}
+                </span>
+            </div>
+        `;
+        
+        paginationContainer.innerHTML = paginationHTML;
+        
+        document.querySelectorAll('.status-page-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const page = this.getAttribute('data-page');
+                const status = this.getAttribute('data-status');
+                performStatusFilter(status, page);
+            });
+        });
+    } else {
+        paginationContainer.innerHTML = '';
+        paginationContainer.style.display = 'none';
+        paginationContainer.style.visibility = 'hidden';
+    }
+}
+
+
+function jumpToVendorPage() {
+    const input = document.getElementById('vendorPageJumpInput');
+    const nav = document.getElementById('vendorRegularPagination');
+    if (!input || !nav) {
+        return;
+    }
+    
+    const rawValue = parseInt(input.value, 10);
+    if (isNaN(rawValue) || rawValue < 1) {
+        return;
+    }
+    
+    const maxPages = parseInt(input.getAttribute('max'), 10) || 1;
+    const targetPage = Math.min(Math.max(rawValue, 1), maxPages);
+    const status = nav.dataset.status || '';
+    
+    const url = new URL(window.location.href);
+    url.searchParams.set('page', targetPage);
+    if (status) {
+        url.searchParams.set('status', status);
+    }
+    
+    window.location.href = url.toString();
+}
+
+
+function jumpToVendorSearchPage() {
+    const input = document.getElementById('vendorSearchPageJumpInput');
+    const container = document.getElementById('search-pagination');
+    if (!input || !container) {
+        return;
+    }
+    
+    const rawValue = parseInt(input.value, 10);
+    if (isNaN(rawValue) || rawValue < 1) {
+        return;
+    }
+    
+    const maxPages = parseInt(input.getAttribute('max'), 10) || 1;
+    const targetPage = Math.min(Math.max(rawValue, 1), maxPages);
+    const mode = container.dataset.mode || 'search';
+    const status = container.dataset.status || '';
+    const query = container.dataset.query || '';
+    
+    if (mode === 'status') {
+        performStatusFilter(status, targetPage);
+    } else {
+        performSearch(query, status, targetPage);
+    }
+}
+
+
+// AJAX delete functionality
+function attachEventListeners() {
+    // Delete listeners
+    document.querySelectorAll('.ajax-delete-vendor').forEach(button => {
+        button.addEventListener('click', function() {
+            const vendorId = this.getAttribute('data-vendor-id');
+            const vendorName = this.getAttribute('data-vendor-name');
+            
+            if (confirm(`Are you sure you want to delete vendor "${vendorName}"?`)) {
+                fetch(`/product/ajax/delete-vendor/${vendorId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Remove the row from the table
+                        this.closest('tr').remove();
+                        
+                        showNotification(`Vendor "${vendorName}" deleted successfully`, 'success');
+                    } else {
+                        showNotification('Error deleting vendor: ' + (data.error || 'Unknown error'), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('Error deleting vendor', 'error');
+                });
+            }
+        });
+    });
+}
+
+// Attach event listeners on page load
+document.addEventListener('DOMContentLoaded', function() {
+    attachEventListeners();
+    
+    // Check URL parameters and set radio button state
+    const urlParams = new URLSearchParams(window.location.search);
+    const statusParam = urlParams.get('status');
+    
+    if (statusParam === 'inactive') {
+        document.getElementById('statusInactive').checked = true;
+    } else if (statusParam === 'all') {
+        document.getElementById('statusAll').checked = true;
+    } else {
+        // Default to active
+        document.getElementById('statusActive').checked = true;
+    }
+});
+</script>
+{% endblock %}
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

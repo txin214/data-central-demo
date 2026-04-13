@@ -1,0 +1,61 @@
+{% extends 'job/base_job.html' %}
+{% load static %}
+
+{% block job_content %}
+<div class="card mb-3 mt-3">
+    <div class="card-header">
+        <h6 class="card-title mb-0">Email Preview - Purchase Order {{ purchase_order.po_number }}</h6>
+    </div>
+    <div class="card-body">
+        {% if not vendor_email %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Vendor does not have an email address configured. Please add an email address to the vendor profile.
+            </div>
+        {% else %}
+            <form method="POST" action="{% url 'job:job_purchase_order_email_send' job.id purchase_order.id %}" id="emailForm">
+                {% csrf_token %}
+                
+                <div class="mb-3">
+                    <strong>To:</strong> {{ vendor_email }}<br>
+                    <strong>From:</strong> {{ request.user.email|default:"Your Company Email" }}<br>
+                    <strong>Subject:</strong> Purchase Order {{ purchase_order.po_number }} - {{ job.job_code }}
+                </div>
+                
+                <div class="mb-3">
+                    <label for="emailBody" class="form-label"><strong>Email Message:</strong></label>
+                    <textarea class="form-control" id="emailBody" name="email_body" rows="12" style="font-family: Arial, sans-serif;">Dear {{ purchase_order.vendor.vendor_name|default:"Vendor" }},
+
+Please find attached Purchase Order {{ purchase_order.po_number }} for Job {{ job.job_code }}.
+
+Please confirm receipt of order, ship date and costs within 3 days.
+
+Thank you for your business.
+
+Best regards,
+{{ request.user.get_full_name|default:request.user.username }}
+Allen Construction Services, Inc.</textarea>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>PDF Attachment:</strong> purchase_order_{{ purchase_order.po_number }}.pdf
+                </div>
+                
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-success" onclick="return confirm('Are you sure you want to send this email to {{ vendor_email }}?')">
+                        <i class="fas fa-paper-plane me-1"></i>Send Email
+                    </button>
+                    <a href="{% url 'job:job_purchase_order_detail' job.id purchase_order.id %}" class="btn btn-secondary">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </a>
+                    <a href="{% url 'job:job_purchase_order_pdf' job.id purchase_order.id %}" target="_blank" class="btn btn-primary">
+                        <i class="fas fa-file-pdf me-1"></i>Preview PDF
+                    </a>
+                </div>
+            </form>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+

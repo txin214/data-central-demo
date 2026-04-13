@@ -1,0 +1,179 @@
+<style>
+    .navbar {
+        padding: 0 !important;
+        border-top: 1px solid #dee2e6;
+        border-bottom: 1px solid #dee2e6;
+        border-left: 1px solid #dee2e6;
+        border-right: 1px solid #dee2e6;
+        margin-bottom: 0;
+    }
+    .navbar-nav {
+        padding-top: 0 !important;
+        padding-bottom: 0 !important;
+        margin: 0 !important;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* IE and Edge */
+        width: 100%;
+        height: 100%;
+    }
+    
+    .navbar-nav::-webkit-scrollbar {
+        display: none; /* Chrome, Safari, Opera */
+    }
+    
+    .navbar-nav .nav-item {
+        border-right: 1px solid #dee2e6;
+        height: 100%;
+        display: flex;
+        align-items: stretch;
+        flex: 1;
+        min-width: 0;
+        margin-bottom: -1px;
+    }
+    
+    .navbar-nav .nav-item:last-child {
+        border-right: none;
+    }
+    
+    .navbar-nav .nav-link {
+        padding: 0.25rem 0.5rem !important;
+        width: 100%;
+        text-align: center;
+        white-space: nowrap;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #666;
+        transition: background-color 0.2s ease;
+        font-size: 0.875rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* Responsive breakpoints with equal button widths */
+    @media (min-width: 576px) {
+        .navbar-nav .nav-link {
+            padding: 0.25rem 0.5rem !important;
+            font-size: 0.875rem;
+        }
+    }
+    
+    @media (min-width: 768px) {
+        .navbar-nav .nav-link {
+            padding: 0.25rem 0.75rem !important;
+            font-size: 0.875rem;
+        }
+    }
+    
+    @media (min-width: 992px) {
+        .navbar-nav .nav-link {
+            padding: 0.25rem 1rem !important;
+            font-size: 0.9rem;
+        }
+    }
+    
+    @media (min-width: 1200px) {
+        .navbar-nav .nav-link {
+            padding: 0.25rem 1rem !important;
+            font-size: 0.9rem;
+        }
+    }
+    
+    /* Small screen adjustments */
+    @media (max-width: 575px) {
+        .navbar-nav .nav-link {
+            padding: 0.25rem 0.25rem !important;
+            font-size: 0.75rem;
+        }
+    }
+    
+    /* Extra small screens */
+    @media (max-width: 400px) {
+        .navbar-nav .nav-link {
+            padding: 0.25rem 0.15rem !important;
+            font-size: 0.7rem;
+        }
+    }
+    
+    .navbar-nav .nav-link:hover {
+        background-color: #f8f9fa;
+        color: #333;
+    }
+    
+    .navbar-nav .nav-link.active {
+        background-color: #007bff !important;
+        color: #fff !important;
+        border-bottom: 3px solid #0056b3;
+        margin-bottom: -3px;
+    }
+    
+    .navbar-nav .nav-link.active:hover {
+        background-color: #0056b3 !important;
+        color: #fff !important;
+    }
+</style>
+
+<!-- Job Header -->
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-start mb-2">
+        <div>
+            <div class="fw-bold text-dark" style="font-size: 1.1rem; letter-spacing: 1px;">{{ job.customer }} / {{ job.job_code }}</div>
+        </div>
+        
+    </div>
+</div>
+
+<!-- Navigation Tabs Container -->
+<div class="container-fluid">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white mb-0">
+        <div class="container-fluid px-0">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a class="nav-link {% if 'job_customer_detail' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'job:job_customer_detail' job.id %}">Customer</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if request.resolver_match.url_name == 'job_detail' and 'quotes' not in request.path %}active{% endif %}" href="{% url 'job:job_detail' job.id %}">Job</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'job_notes' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'job:job_notes' job.id %}">Notes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'job_sitework' in request.resolver_match.url_name and 'carpenter' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'job:job_sitework' job.id %}">Site Work</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'quotes' in request.path or request.resolver_match.url_name == 'job_quotes' %}active{% endif %}" href="{% url 'job:job_quotes' job.id %}">Quotes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'job_purchase_orders' in request.resolver_match.url_name or 'job_purchase_order' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'job:job_purchase_orders' job.id %}">PO</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'job_sitework_carpenter' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'job:job_sitework_carpenter' job.id %}">Carpenter</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'job_accounting' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'job:job_accounting' job.id %}">Accounting</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'job_top_entry' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'job:job_top_entry' job.id %}">Top Entry</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'job_attachments' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'job:job_attachments' job.id %}">Attachments</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'job_sales' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'job:job_sales' job.id %}">Sale</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'job_change_orders' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'job:job_change_orders' job.id %}">Change Orders</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'job_payments' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'job:job_payments' job.id %}">Payment</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link {% if 'job_print_preview' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'job:job_print_preview' job.id %}">Print</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+</div> 

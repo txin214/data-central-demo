@@ -1,0 +1,69 @@
+{% extends "sitework/base-reports.html" %}
+{% block title %}Cost Breakdown - {{ customer }} {{ customer2 }}{% endblock %}
+{% block content %}
+<!-- report_show.html -->
+<div class="container py-3">
+  <div class="row mb-3">
+    <div class="col-12">
+      Customer: <strong>{{ customer }}</strong><br>
+      <strong>{{ customer2 }}</strong>
+      Report Date: {% now "jS F Y" %}
+    </div>
+  </div>
+
+  {% for row in report_rows %}
+    {% if row.row_type == 'cat_header' %}
+      <div class="row border-bottom border-dark mt-3 mb-2">
+        <div class="col-12 fs-8 fw-bold">{{ row.text }}</div>
+      </div>
+      <div class="row mb-1">
+        <div class="col-1"><small>Qty</small></div>
+        <div class="col-1"><small>Unit</small></div>
+        <div class="col-6"><small>Description</small></div>
+        <div class="col-1 text-end"><small>Base</small></div>
+        <div class="col-1 text-end"><small>Unit Amt</small></div>
+        <div class="col-2 text-end"><small>Price</small></div>
+      </div>
+
+    {% elif row.row_type == 'line_item' %}
+      <div class="row py-1">
+        <div class="col-1">{{ row.qty }}</div>
+        <div class="col-1">{{ row.unit|upper }}</div>
+        <div class="col-6">{{ row.desc }}</div>
+        <div class="col-1 text-end"><small>{{ row.basecost }}</small></div>
+        <div class="col-1 text-end"><small>{{ row.unitamount }}</small></div>
+        <div class="col-2 text-end">{{ row.price }}</div>
+      </div>
+      {% if row.note %}
+        <div class="row">
+          <div class="col-12 text-start fs-8"><small>{{ row.note }}</small></div>
+        </div>
+      {% endif %}
+
+    {% elif row.row_type == 'cat_subtotal' %}
+      <div class="row border-top mt-2 pt-1">
+        <div class="col-10 text-end fs-8 fw-bold">Category Sub Total:</div>
+        <div class="col-2 text-end fs-8 fw-bold">{{ row.text }}</div>
+      </div>
+      <div class="row mb-3"><div class="col-12">&nbsp;</div></div>
+    {% endif %}
+  {% endfor %}
+
+  <div class="row border-top border-dark mt-4 pt-2">
+    <div class="col-8 text-end fs-6 fw-bold">Contingency Fund:</div>
+    <div class="col-4 text-end fs-6 fw-bold">{{ contingency }}</div>
+  </div>
+  <div class="row">
+    <div class="col-8 text-end fs-6 fw-bold">Over Head Fee:</div>
+    <div class="col-4 text-end fs-6 fw-bold">{{ overhead }}</div>
+  </div>
+  <div class="row">
+    <div class="col-8 text-end fs-6 fw-bold">Contingency:</div>
+    <div class="col-4 text-end fs-6 fw-bold">{{ contingency }}</div>
+  </div>
+  <div class="row bg-light mt-2 p-2">
+    <div class="col-8 text-end fs-6 fw-bold">Site Work Total:</div>
+    <div class="col-4 text-end fs-6 fw-bold">{{ total }}</div>
+  </div>
+</div>
+{% endblock %}

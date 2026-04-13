@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <div>
+      <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+      <h2 class="fw-bold mb-0" style="font-size: 2rem;">Edit Slot</h2>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h6 class="mb-0">{{ slot.job.job_code }} – {{ slot.team.name }} – {{ slot.start_date|date:'M d, Y' }} ({{ slot.phase|title }})</h6>
+    </div>
+    <div class="card-body">
+      {% if slot.job_top %}
+      <div class="alert alert-light border mb-3">
+        <h6 class="mb-2"><i class="fas fa-calendar-alt me-1"></i> TOP Entry Schedule Overview</h6>
+        <div class="row g-2 small">
+          <div class="col-md-4">
+            <strong>Template Date:</strong>
+            <div class="text-muted">
+              {% if slot.job_top.template_date %}
+                {{ slot.job_top.template_date|date:"M d, Y" }}
+                {% if slot.phase == 'template' %}<span class="badge bg-primary ms-1">Current</span>{% endif %}
+              {% else %}
+                <span class="text-muted">Not set</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <strong>Fabrication Date:</strong>
+            <div class="text-muted">
+              {% if slot.job_top.fabrication_date %}
+                {{ slot.job_top.fabrication_date|date:"M d, Y" }}
+                {% if slot.phase == 'fabrication' %}<span class="badge bg-primary ms-1">Current</span>{% endif %}
+              {% else %}
+                <span class="text-muted">Not set</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <strong>Install Date:</strong>
+            <div class="text-muted">
+              {% if slot.job_top.install_date %}
+                {{ slot.job_top.install_date|date:"M d, Y" }}
+                {% if slot.phase == 'install' %}<span class="badge bg-primary ms-1">Current</span>{% endif %}
+              {% else %}
+                <span class="text-muted">Not set</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="mt-2 small text-muted">
+          <i class="fas fa-info-circle me-1"></i>
+          Room: <strong>{{ slot.job_top.room }}</strong> | 
+          Type: <strong>{{ slot.job_top.top_type }}</strong>
+        </div>
+      </div>
+      {% endif %}
+      
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+
+        <div class="row g-2 mb-2">
+          <div class="col-md-4">
+            <label class="form-label small">Job Code</label>
+            <input class="form-control form-control-sm" value="{{ slot.job.job_code }}" readonly>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">Team</label>
+            <select name="team" class="form-select form-select-sm">
+              {% for team in teams %}
+                <option value="{{ team.id }}" {% if team.id == slot.team.id %}selected{% endif %}>{{ team.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="row g-2 mb-2">
+          <div class="col-md-4">
+            <label class="form-label small">Start Date</label>
+            <input type="date" name="start_date" class="form-control form-control-sm" value="{{ slot.start_date|date:'Y-m-d' }}">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">End Date</label>
+            <input type="date" name="end_date" class="form-control form-control-sm" value="{% if slot.end_date %}{{ slot.end_date|date:'Y-m-d' }}{% else %}{{ slot.start_date|date:'Y-m-d' }}{% endif %}">
+          </div>
+          {% if slot.phase == 'fabrication' %}
+          <div class="col-md-4">
+            <label class="form-label small">Fab (hrs)</label>
+            <input type="number" name="fab_hrs" class="form-control form-control-sm" value="{{ slot.job_top.fab_count }}" min="0">
+          </div>
+          {% elif slot.phase == 'install' %}
+          <div class="col-md-4">
+            <label class="form-label small">Inst (hrs)</label>
+            <input type="number" name="inst_hrs" class="form-control form-control-sm" value="{{ slot.job_top.install_count }}" min="0">
+          </div>
+          {% endif %}
+        </div>
+
+        {% if slot.job_top and slot.phase != 'install' %}
+        <div class="mb-3">
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="cascade_shifts" id="cascadeShifts">
+            <label class="form-check-label" for="cascadeShifts">
+              <strong>Also shift dependent phases by the same amount</strong>
+              <br>
+              <small class="text-muted">
+                {% if slot.phase == 'template' %}
+                  This will also move Fabrication and Install dates to maintain schedule gaps
+                {% elif slot.phase == 'fabrication' %}
+                  This will also move Install date to maintain schedule gap
+                {% endif %}
+              </small>
+            </label>
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="mb-3">
+          <label class="form-label small">Job Note (shows inside [ ] in calendar)</label>
+          <input class="form-control form-control-sm" type="text" name="note" value="{{ slot.note|default:slot.phase|title }}">
+        </div>
+
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" name="confirmed" id="confirmed" {% if slot.confirmed %}checked{% endif %}>
+          <label class="form-check-label" for="confirmed">Confirmed (real)</label>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label small">Scope of Project</label>
+          <textarea class="form-control form-control-sm" rows="4" placeholder="Notes (fake)"></textarea>
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary btn-sm">Save</button>
+          <a href="{{ next }}" class="btn btn-secondary btn-sm">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+

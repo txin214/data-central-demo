@@ -1,0 +1,3 @@
+    hooks:
+    -   id: django-upgrade
+    args: ["--target-version", "5.0"]

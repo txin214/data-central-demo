@@ -1,0 +1,210 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<style>
+    .te-schedule { border-collapse: separate; border-spacing: 0; width: 100%; }
+    .te-schedule thead th { background: #f8f9fa; font-weight: 600; font-size: .875rem; position: sticky; top: 0; z-index: 1; }
+    .te-schedule th, .te-schedule td { font-size: .875rem; vertical-align: top; padding: .45rem .5rem; border: 0; }
+    .te-schedule tbody tr + tr td { border-top: 1px solid #e9ecef; }
+    .te-schedule th + th, .te-schedule td + td { border-left: 1px solid #e9ecef; }
+    .sticky-col { position: sticky; left: 0; background: #fff; z-index: 1; min-width: 220px; }
+    .min-w-day { min-width: 220px; }
+    /* Month view: narrower columns */
+    .te-schedule.month-view .min-w-day { min-width: 120px; }
+    /* Weekend styling */
+    .te-schedule th.weekend,
+    .te-schedule td.weekend {
+      background-color: #f8f9fa;
+      color: #6c757d;
+    }
+    /* Holiday styling */
+    .te-schedule th.holiday,
+    .te-schedule td.holiday {
+      background-color: #fff3cd;
+      border-left: 3px solid #ffc107;
+    }
+    .te-schedule th.holiday.weekend,
+    .te-schedule td.holiday.weekend {
+      background-color: #ffeaa7;
+    }
+    /* Add separation between slots in the same date cell */
+    .slot-item {
+      padding: 4px 0;
+      margin-bottom: 6px;
+      border-bottom: 1px solid #dee2e6;
+    }
+    .slot-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+</style>
+
+<div class="container-fluid mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <div>
+      <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+      <h2 class="fw-bold mb-0" style="font-size: 2rem;">Master Scheduler</h2>
+    </div>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h6 class="mb-0">Main Schedule</h6>
+      <div class="d-flex gap-2 align-items-center">
+        <select class="form-select form-select-sm" id="viewModeFilter" onchange="filterByViewMode(this.value)" style="width: auto;">
+          <option value="week" {% if view_mode == 'week' %}selected{% endif %}>Week View</option>
+          <option value="month" {% if view_mode == 'month' %}selected{% endif %}>Month View</option>
+        </select>
+        <select class="form-select form-select-sm" id="eventTypeFilter" onchange="filterByEventType(this.value)" style="width: auto;">
+          <option value="" {% if not event_filter %}selected{% endif %}>All Events</option>
+          <option value="top" {% if event_filter == 'top' %}selected{% endif %}>Top</option>
+          <option value="remodel" {% if event_filter == 'remodel' %}selected{% endif %}>Remodel</option>
+          <option value="delivery" {% if event_filter == 'delivery' %}selected{% endif %}>Delivery</option>
+        </select>
+        <select class="form-select form-select-sm" id="teamFilter" onchange="filterByTeam(this.value)" style="width: auto;">
+          <option value="" {% if not team_filter %}selected{% endif %}>All Teams</option>
+          {% for team in teams %}
+            <option value="{{ team.id }}" {% if team_filter|stringformat:"s" == team.id|stringformat:"s" %}selected{% endif %}>{{ team.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="card-body p-0 overflow-x-auto">
+      <table class="te-schedule mb-0 {% if view_mode == 'month' %}month-view{% endif %}">
+        <thead>
+          <tr>
+            <th class="sticky-col">Team Name</th>
+            {% for info in date_info %}
+              <th class="text-center min-w-day {% if info.is_weekend %}weekend{% endif %} {% if info.is_holiday %}holiday{% endif %}">
+                <span>{{ info.date|date:"D" }}</span><br>
+                <span class="text-muted">{{ info.date|date:"m/d/Y" }}</span>
+                {% if info.is_holiday %}
+                  <br><span class="badge bg-warning text-dark small">{{ info.holiday_name }}</span>
+                {% endif %}
+              </th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in schedule_rows %}
+          <tr>
+            <td class="sticky-col">{{ row.team.name }}</td>
+            {% for cell in row.cells %}
+              <td class="align-top {% if cell.date_info.is_weekend %}weekend{% endif %} {% if cell.date_info.is_holiday %}holiday{% endif %}">
+                {% if cell.items %}
+                  {% for it in cell.items %}
+                    <div class="small slot-item">
+                      <a href="{% url 'job:top_slot_edit' it.job_id it.id %}?next={{ request.get_full_path|urlencode }}" class="text-decoration-none {% if it.confirmed %}text-success{% else %}text-danger{% endif %}">{{ it.label }}</a>
+                    </div>
+                  {% endfor %}
+                {% endif %}
+              </td>
+            {% endfor %}
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="{{ date_info|length|add:1 }}" class="text-center text-muted py-3">No scheduled items {% if view_mode == 'month' %}this month{% else %}this week{% endif %}.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div class="card-footer py-2">
+      <div class="d-flex align-items-center justify-content-center gap-2">
+        {% if view_mode == 'month' %}
+          <a href="{% url 'job:master_scheduler' %}?view=month&month={{ prev_view|date:'Y-m-d' }}{% if event_filter %}&filter={{ event_filter }}{% endif %}{% if team_filter %}&team={{ team_filter }}{% endif %}" class="btn btn-outline-primary btn-sm">← Prev Month</a>
+          <span class="text-muted">{{ view_start_date|date:"F Y" }}</span>
+          <a href="{% url 'job:master_scheduler' %}?view=month&month={{ next_view|date:'Y-m-d' }}{% if event_filter %}&filter={{ event_filter }}{% endif %}{% if team_filter %}&team={{ team_filter }}{% endif %}" class="btn btn-outline-primary btn-sm">Next Month →</a>
+        {% else %}
+          <a href="{% url 'job:master_scheduler' %}?view=week&week={{ prev_view|date:'Y-m-d' }}{% if event_filter %}&filter={{ event_filter }}{% endif %}{% if team_filter %}&team={{ team_filter }}{% endif %}" class="btn btn-outline-primary btn-sm">← Prev Week</a>
+          <span class="text-muted">{{ view_start_date|date:"M d" }} - {{ view_end_date|date:"M d, Y" }}</span>
+          <a href="{% url 'job:master_scheduler' %}?view=week&week={{ next_view|date:'Y-m-d' }}{% if event_filter %}&filter={{ event_filter }}{% endif %}{% if team_filter %}&team={{ team_filter }}{% endif %}" class="btn btn-outline-primary btn-sm">Next Week →</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  function filterByViewMode(viewMode) {
+    const url = new URL(window.location.href);
+    const weekParam = url.searchParams.get('week') || '';
+    const monthParam = url.searchParams.get('month') || '';
+    const filterParam = url.searchParams.get('filter') || '';
+    const teamParam = url.searchParams.get('team') || '';
+    
+    url.searchParams.set('view', viewMode);
+    
+    // Clear week/month params when switching views
+    url.searchParams.delete('week');
+    url.searchParams.delete('month');
+    
+    // Preserve filter and team parameters
+    if (filterParam) {
+      url.searchParams.set('filter', filterParam);
+    }
+    if (teamParam) {
+      url.searchParams.set('team', teamParam);
+    }
+    
+    window.location.href = url.toString();
+  }
+
+  function filterByEventType(eventType) {
+    const url = new URL(window.location.href);
+    const viewMode = url.searchParams.get('view') || 'week';
+    const weekParam = url.searchParams.get('week') || '';
+    const monthParam = url.searchParams.get('month') || '';
+    const teamParam = url.searchParams.get('team') || '';
+    
+    if (eventType) {
+      url.searchParams.set('filter', eventType);
+    } else {
+      url.searchParams.delete('filter');
+    }
+    
+    // Preserve view mode and date parameters
+    url.searchParams.set('view', viewMode);
+    if (viewMode === 'month' && monthParam) {
+      url.searchParams.set('month', monthParam);
+    } else if (viewMode === 'week' && weekParam) {
+      url.searchParams.set('week', weekParam);
+    }
+    if (teamParam) {
+      url.searchParams.set('team', teamParam);
+    }
+    
+    window.location.href = url.toString();
+  }
+
+  function filterByTeam(teamId) {
+    const url = new URL(window.location.href);
+    const viewMode = url.searchParams.get('view') || 'week';
+    const weekParam = url.searchParams.get('week') || '';
+    const monthParam = url.searchParams.get('month') || '';
+    const filterParam = url.searchParams.get('filter') || '';
+    
+    if (teamId) {
+      url.searchParams.set('team', teamId);
+    } else {
+      url.searchParams.delete('team');
+    }
+    
+    // Preserve view mode and date parameters
+    url.searchParams.set('view', viewMode);
+    if (viewMode === 'month' && monthParam) {
+      url.searchParams.set('month', monthParam);
+    } else if (viewMode === 'week' && weekParam) {
+      url.searchParams.set('week', weekParam);
+    }
+    if (filterParam) {
+      url.searchParams.set('filter', filterParam);
+    }
+    
+    window.location.href = url.toString();
+  }
+</script>
+{% endblock %}
+
+
+

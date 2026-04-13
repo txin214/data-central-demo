@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <div>
+      <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+      <h2 class="fw-bold mb-0" style="font-size: 2rem;">Batch Shift Slots</h2>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h6 class="mb-0">{{ top.job.job_code }} – {{ top.room }} – {{ top.top_type }}</h6>
+    </div>
+    <div class="card-body">
+      <div class="alert alert-light border mb-3">
+        <h6 class="mb-2"><i class="fas fa-calendar-alt me-1"></i> Current Schedule</h6>
+        <div class="row g-2 small">
+          <div class="col-md-4">
+            <strong>Template Date:</strong>
+            <div class="text-muted">
+              {% if top.template_date %}
+                {{ top.template_date|date:"M d, Y" }}
+              {% else %}
+                <span class="text-muted">Not set</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <strong>Fabrication Date:</strong>
+            <div class="text-muted">
+              {% if top.fabrication_date %}
+                {{ top.fabrication_date|date:"M d, Y" }}
+              {% else %}
+                <span class="text-muted">Not set</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <strong>Install Date:</strong>
+            <div class="text-muted">
+              {% if top.install_date %}
+                {{ top.install_date|date:"M d, Y" }}
+              {% else %}
+                <span class="text-muted">Not set</span>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        <div class="mt-2 small text-muted">
+          <i class="fas fa-info-circle me-1"></i>
+          Team: <strong>{% if top.team %}{{ top.team.name }}{% else %}Not assigned{% endif %}</strong> | 
+          Fab Hours: <strong>{{ top.fab_count }}</strong> | 
+          Install Hours: <strong>{{ top.install_count }}</strong>
+        </div>
+      </div>
+      
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next }}">
+
+        <div class="mb-3">
+          <label class="form-label fw-bold">Shift Type</label>
+          <div class="form-check mb-2">
+            <input class="form-check-input" type="radio" name="shift_type" id="shiftAll" value="all" checked>
+            <label class="form-check-label" for="shiftAll">
+              <strong>Move Template, Fabrication, and Install together</strong>
+              <br>
+              <small class="text-muted">All three phases will be shifted by the same number of workdays.</small>
+            </label>
+          </div>
+          <div class="form-check">
+            <input class="form-check-input" type="radio" name="shift_type" id="shiftFabInstall" value="fab_install">
+            <label class="form-check-label" for="shiftFabInstall">
+              <strong>Move only Fabrication and Install</strong>
+              <br>
+              <small class="text-muted">Template date will remain unchanged. Only Fabrication and Install will be shifted.</small>
+            </label>
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label for="days" class="form-label fw-bold">Number of Workdays</label>
+          <input type="number" class="form-control" id="days" name="days" value="1" min="-365" max="365" required>
+          <small class="form-text text-muted">
+            <i class="fas fa-info-circle me-1"></i>
+            Enter a <strong>positive number</strong> to postpone (move forward) or a <strong>negative number</strong> to advance (move backward). 
+            Weekends and holidays are automatically skipped.
+          </small>
+        </div>
+
+        <div class="alert alert-warning">
+          <i class="fas fa-exclamation-triangle me-1"></i>
+          <strong>Note:</strong> This will update all schedule slots and dates for the selected phases. The operation cannot be undone.
+        </div>
+
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">Apply Shift</button>
+          <a href="{{ next }}" class="btn btn-secondary">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+

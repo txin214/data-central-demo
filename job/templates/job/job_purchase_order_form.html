@@ -1,0 +1,158 @@
+{% extends 'job/base_job.html' %}
+{% load static %}
+
+{% block job_content %}
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.1">
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_forms.css' %}?v=1.0">
+
+<div class="card mb-3 mt-3">
+    <div class="card-header">
+        <h6 class="card-title mb-0">
+            {% if action == 'create' %}Create{% elif action == 'edit' %}Update{% else %}View{% endif %} Purchase Order
+        </h6>
+    </div>
+    <div class="card-body">
+        <form method="POST" {% if action != 'view' %}{% if action == 'edit' %}action="{% url 'job:job_purchase_order_edit' job.id purchase_order.id %}"{% else %}action="{% url 'job:job_purchase_order_create' job.id %}"{% endif %}{% endif %}>
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger py-1 mb-2 small">{{ form.non_field_errors }}</div>
+            {% endif %}
+            
+            <div class="row">
+                <!-- Main Form Fields -->
+                <div class="col-md-8 mb-2">
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label small" for="{{ form.vendor.id_for_label }}">Vendor *</label>
+                            {% if action == 'view' %}
+                                <div class="form-control form-control-sm bg-light">{{ form.vendor.value|default:"-" }}</div>
+                            {% else %}
+                                {{ form.vendor }}
+                            {% endif %}
+                            {% if form.vendor.errors %}
+                                <div class="text-danger small">{{ form.vendor.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label small" for="{{ form.location.id_for_label }}">Location *</label>
+                            {% if action == 'view' %}
+                                <div class="form-control form-control-sm bg-light">{{ form.location.value|default:"-" }}</div>
+                            {% else %}
+                                {{ form.location }}
+                            {% endif %}
+                            {% if form.location.errors %}
+                                <div class="text-danger small">{{ form.location.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label small" for="{{ form.arrive_by_date.id_for_label }}">Arrive By Date *</label>
+                            {% if action == 'view' %}
+                                <div class="form-control form-control-sm bg-light">{{ form.arrive_by_date.value|default:"-" }}</div>
+                            {% else %}
+                                {{ form.arrive_by_date }}
+                            {% endif %}
+                            {% if form.arrive_by_date.errors %}
+                                <div class="text-danger small">{{ form.arrive_by_date.errors }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <label class="form-label small" for="{{ form.status.id_for_label }}">Status</label>
+                            {% if action == 'view' %}
+                                <div class="form-control form-control-sm bg-light">{{ form.status.value|default:"-" }}</div>
+                            {% else %}
+                                {{ form.status }}
+                            {% endif %}
+                            {% if form.status.errors %}
+                                <div class="text-danger small">{{ form.status.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    
+                    <div class="mb-2">
+                        <label class="form-label small" for="{{ form.notes.id_for_label }}">Notes</label>
+                        {% if action == 'view' %}
+                            <div class="form-control form-control-sm bg-light" style="min-height: 80px;">{{ form.notes.value|default:"-" }}</div>
+                        {% else %}
+                            <textarea class="form-control form-control-sm" id="{{ form.notes.id_for_label }}" name="{{ form.notes.name }}" rows="4" placeholder="Enter any additional notes...">{{ form.notes.value }}</textarea>
+                        {% endif %}
+                        {% if form.notes.errors %}
+                            <div class="text-danger small">{{ form.notes.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Additional Info Section -->
+                <div class="col-md-4 mb-2">
+                    <div class="row">
+                        <div class="col-12 mb-2">
+                            <label class="form-label small">PO Number:</label>
+                            <div class="form-control form-control-sm bg-light">
+                                {% if purchase_order %}
+                                    {{ purchase_order.po_number }}
+                                {% else %}
+                                    Auto-generated
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-12 mb-2">
+                            <label class="form-label small">Job:</label>
+                            <div class="form-control form-control-sm bg-light">{{ job.job_code }}</div>
+                        </div>
+                        <div class="col-12 mb-2">
+                            <label class="form-label small">Created By:</label>
+                            <div class="form-control form-control-sm bg-light">
+                                {% if purchase_order and purchase_order.created_by %}
+                                    {{ purchase_order.created_by.first_name }} {{ purchase_order.created_by.last_name }}
+                                {% else %}
+                                    Current User
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-12 mb-2">
+                            <label class="form-label small">Created Date:</label>
+                            <div class="form-control form-control-sm bg-light">
+                                {% if purchase_order %}
+                                    {{ purchase_order.created_at|date:"M d, Y H:i" }}
+                                {% else %}
+                                    Now
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            {% if action != 'view' %}
+            <div class="row mt-3">
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-{% if action == 'edit' %}save{% else %}plus{% endif %} me-1"></i>
+                        {% if action == 'edit' %}Update{% else %}Create{% endif %} Purchase Order
+                    </button>
+                    <a href="{% url 'job:job_purchase_orders' job.id %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-times me-1"></i>
+                        Cancel
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="row mt-3">
+                <div class="col-12">
+                    <a href="{% url 'job:job_purchase_orders' job.id %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        Back to Purchase Orders
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{% endblock %}

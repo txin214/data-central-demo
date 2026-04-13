@@ -1,0 +1,96 @@
+{% extends 'job/base_job.html' %}
+{% load static %}
+{% load job_utils %}
+
+{% block job_content %}
+<div class="card mb-3 mt-3">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h6 class="card-title mb-0">Carpenter Progress - {{ job.customer.last_name }} - {{ sitework_quote.quotedesc }}</h6>
+  </div>
+  <div class="card-body">
+    {% if grouped %}
+      {% for cat, lines in grouped.items %}
+        <div class="mb-3">
+          <div class="bg-light px-2 py-1 fw-bold">{{ cat.name }}</div>
+          <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+              <tbody>
+                {% for line in lines %}
+                <tr>
+                  <td>
+                    {% with p=progress_map|get_item:line.id %}
+                    <!-- Row 1: subcategory + note inline -->
+                    <div class="d-flex align-items-center gap-3">
+                      <div class="flex-grow-1">{{ line.workdesc }}</div>
+                      <div style="width:520px;">
+                        <input class="form-control form-control-sm" type="text" placeholder="Add note" value="{{ p.note|default:'' }}" data-note-for-line="{{ line.id }}" style="width:100%;">
+                      </div>
+                    </div>
+                    <!-- Row 2: progress radios -->
+                    <div class="mt-1 d-flex align-items-center flex-wrap">
+                      {% for val in progress_choices %}
+                        <label class="me-2 mb-0">
+                          <input type="radio" name="progress_{{ line.id }}" value="{{ val }}" {% if p and p.progress_percent == val %}checked{% endif %} data-line-id="{{ line.id }}"> {{ val }}%
+                        </label>
+                      {% endfor %}
+                      <span class="ms-2 small text-muted" id="status_{{ line.id }}"></span>
+                    </div>
+                    {% endwith %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      {% endfor %}
+    {% endif %}
+  </div>
+</div>
+
+<script>
+document.addEventListener('change', function(e){
+  if (e.target && e.target.matches('input[type="radio"][name^="progress_"]')) {
+    const input = e.target;
+    const lineId = input.dataset.lineId;
+    const value = input.value;
+    const noteInput = document.querySelector('input[data-note-for-line="' + lineId + '"]');
+    const noteVal = noteInput ? noteInput.value : '';
+    const status = document.getElementById('status_' + lineId);
+    if (status) { status.textContent = 'Saving...'; }
+    fetch('{% url "job:job_set_sitework_line_progress" job.id %}', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: new URLSearchParams({ line_id: lineId, progress: value, note: noteVal })
+    }).then(r => r.json()).then(data => {
+      if (status) { status.textContent = data.success ? 'Saved' : (data.error || 'Error'); }
+    }).catch(() => { if (status) { status.textContent = 'Error'; } });
+  }
+});
+
+// Save note on blur
+document.addEventListener('blur', function(e){
+  if (e.target && e.target.matches('input[data-note-for-line]')) {
+    const input = e.target;
+    const lineId = input.getAttribute('data-note-for-line');
+    const radios = document.querySelectorAll('input[name="progress_' + lineId + '"]:checked');
+    const progressVal = radios.length ? radios[0].value : '0';
+    const status = document.getElementById('status_' + lineId);
+    if (status) { status.textContent = 'Saving...'; }
+    fetch('{% url "job:job_set_sitework_line_progress" job.id %}', {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: new URLSearchParams({ line_id: lineId, progress: progressVal, note: input.value })
+    }).then(r => r.json()).then(data => {
+      if (status) { status.textContent = data.success ? 'Saved' : (data.error || 'Error'); }
+    }).catch(() => { if (status) { status.textContent = 'Error'; } });
+  }
+}, true);
+</script>
+{% endblock %}
+
+

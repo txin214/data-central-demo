@@ -1,0 +1,107 @@
+
+/* Basic styles for layout and table formatting */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.ContentBody {
+  padding: 20px;
+}
+
+.TabTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: -1px;
+}
+
+.TabTable td {
+  padding: 8px;
+  text-align: center;
+  border: 1px solid #000;
+  cursor: pointer;
+}
+
+.CurrentTab {
+  background-color: #2780e3; /* Background color */
+  color: white; /* Text color */
+}
+
+.ViewTable {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ViewTable td {
+  padding: 8px;
+  border: 1px solid #000;
+}
+
+.ViewTable th {
+  background-color: #f2f2f2;
+}
+
+.ViewTable input[type="text"] {
+  width: 100%;
+  padding: 5px;
+  box-sizing: border-box;
+}
+
+.ViewTable a {
+  color: #2780e3;
+  text-decoration: none;
+}
+
+.ViewTable a:hover {
+  text-decoration: underline;
+}
+
+.ViewTable p {
+  margin: 0;
+  padding: 0;
+}
+
+.ViewTable small {
+  color: #ff0000;
+}
+
+.btn {
+  padding: 10px 20px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  border-radius: 4px;
+  margin: 5px;
+}
+
+.btn.cancel {
+  background-color: #6c757d;
+}
+
+.btn:hover {
+  opacity: 0.8;
+}
+
+.btn.cancel:hover {
+  opacity: 0.8;
+}
+
+.table-title {
+  font-weight: bold;
+  font-size: 16px;
+  color: navy;
+}
+
+.align-left {
+  text-align: left;
+}
+
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: table;
+}

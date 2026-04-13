@@ -1,0 +1,902 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{% load static %}
+<style>
+.product-img-thumb {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border-radius: 4px;
+    background: #fff;
+    border: 1px solid #eee;
+}
+.search-bar {
+    max-width: 1250px;
+}
+.action-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    padding-left: 0;
+    width: 100%;
+}
+.table th, .table td {
+    vertical-align: middle;
+    font-size: 13px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+.table td {
+    word-wrap: break-word;
+    white-space: normal;
+}
+.table th {
+    white-space: nowrap;
+}
+.table {
+    font-size: 13px;
+}
+</style>
+<script src="{% static 'product/js/quote_products.js' %}"></script>
+<div class="mt-3 mb-2 fw-bold fs-5 text-primary">Allen Kitchen & Bath</div>
+
+<!-- Breadcrumb Navigation -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'product:product_quote_list' %}">Quotes</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{% if quote.name %}{{ quote.name }}{% else %}Quote #{{ quote.id }}{% endif %}</li>
+    </ol>
+</nav>
+
+<h2>{% if quote.name %}{{ quote.name }}{% else %}Products in Quote{% endif %}</h2>
+
+
+
+<!-- Toast Notification Container -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1050;">
+    <div id="notificationToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i id="toastIcon" class="fas fa-info-circle me-2"></i>
+            <strong id="toastTitle" class="me-auto">Notification</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div id="toastBody" class="toast-body">
+            <!-- Toast content will be inserted here -->
+        </div>
+    </div>
+</div>
+
+<!-- Job Navigation -->
+{% if associated_jobs %}
+<div class="alert alert-info mb-3">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <a href="{% url 'job:job_list' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="fas fa-list"></i> All Jobs
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Search and Results Section (Left Side - 3/5) -->
+    <div class="col-md-7">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Search and Add Products</h5>
+            </div>
+            <div class="card-body">
+                <div id="categoryBreadcrumb" class="mb-2 fw-bold text-primary"></div>
+                <div class="action-bar" style="padding-left:0;">
+                    <select id="categoryDropdown" class="form-select form-select-sm" style="width: 120px;"></select>
+                    <select id="subcat1Dropdown" class="form-select form-select-sm" style="width: 120px;" disabled><option value="">Subcategory 1</option></select>
+                    <select id="subcat2Dropdown" class="form-select form-select-sm" style="width: 120px;" disabled><option value="">Subcategory 2</option></select>
+                    <select id="statusDropdown" class="form-select form-select-sm" style="width: 90px; margin-right: 8px;">
+                        <option value="">Status</option>
+                        <option value="True">Active</option>
+                        <option value="False">Inactive</option>
+                    </select>
+                    <input id="searchInput" type="text" class="form-control form-control-sm" placeholder="Search Products..." style="flex: 1; min-width: 200px;">
+                </div>
+                
+                <!-- Search Results -->
+                <div id="quoteSearchResults" class="mt-4">
+                    {% include 'product/_quote_product_search_table.html' with products_with_images=products_with_images page_obj=page_obj quote=quote %}
+                </div>
+                
+                <!-- Ad-Hoc Product Entry Section -->
+                <div class="mt-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">Ad-Hoc Product Entry</h6>
+                        </div>
+                        <div class="card-body">
+                            <form id="adhocForm" class="row g-3">
+                                {% csrf_token %}
+                                <div class="col-md-3">
+                                    <label for="adhoc_part_no" class="form-label">Part Number</label>
+                                    <input type="text" class="form-control form-control-sm" id="adhoc_part_no" name="part_no" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="adhoc_description" class="form-label">Description</label>
+                                    <input type="text" class="form-control form-control-sm" id="adhoc_description" name="description" required>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="adhoc_category" class="form-label">Category</label>
+                                    <select class="form-select form-select-sm" id="adhoc_category" name="category">
+                                        <option value="">Select Category</option>
+                                        {% for category in categories %}
+                                            <option value="{{ category.id }}">{{ category.product_category }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="adhoc_cost" class="form-label">Cost</label>
+                                    <input type="number" class="form-control form-control-sm" id="adhoc_cost" name="cost" step="0.01" min="0" placeholder="0.00">
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="adhoc_manufacturer" class="form-label">Manufacturer</label>
+                                    <select class="form-select form-select-sm" id="adhoc_manufacturer" name="manufacturer">
+                                        <option value="">Select Manufacturer</option>
+                                        {% for manufacturer in manufacturers %}
+                                            <option value="{{ manufacturer.id }}">{{ manufacturer.manufacturer_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="adhoc_vendor" class="form-label">Vendor</label>
+                                    <select class="form-select form-select-sm" id="adhoc_vendor" name="vendor">
+                                        <option value="">Select Vendor</option>
+                                        {% for vendor in vendors %}
+                                            <option value="{{ vendor.id }}">{{ vendor.vendor_name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="adhoc_retail_price" class="form-label">Retail Price</label>
+                                    <input type="number" class="form-control form-control-sm" id="adhoc_retail_price" name="retail_price" step="0.01" min="0" placeholder="0.00">
+                                </div>
+                                <div class="col-md-2">
+                                    <label for="adhoc_quantity" class="form-label">Quantity</label>
+                                    <input type="number" class="form-control form-control-sm" id="adhoc_quantity" name="quantity" min="1" value="1">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">&nbsp;</label>
+                                    <button type="submit" class="btn btn-primary btn-sm w-100" id="adhocCreateBtn">
+                                        <span id="adhocCreateBtnSpinner" class="spinner-border spinner-border-sm me-1" style="display:none;" role="status" aria-hidden="true"></span>
+                                        <i class="fas fa-plus"></i> Create & Add
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Products in Quote (Right Side - 2/5) -->
+    <div class="col-md-5">
+        <!-- Regular Products Section -->
+        {% if line_items_with_images %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    {% if quote.name %}Products in {{ quote.name }}{% else %}Current Products in Quote{% endif %}
+                    <small class="text-muted ms-2">
+                        <i class="fas fa-tag"></i> Using {{ quote.get_price_type_display }} pricing
+                    </small>
+                </h5>
+            </div>
+            
+            <!-- Quick Navigation Card -->
+            <div class="card-body border-bottom">
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'product:product_quote_list' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-list"></i> All Quotes
+                    </a>
+                    {% if associated_jobs %}
+                        {% for job in associated_jobs %}
+                            <a href="{% url 'job:job_quotes' job.id %}" class="btn btn-sm btn-outline-info">
+                                <i class="fas fa-briefcase"></i> {{ job.job_code }}
+                            </a>
+                        {% endfor %}
+                    {% endif %}
+                    <a href="{% url 'job:job_list' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-tasks"></i> All Jobs
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle mb-0">
+                        <thead class="sticky-header">
+                            <tr style="background-color: #f2f2f2;">
+                                <th>Image</th>
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Price Type</th>
+                                <th>Quantity</th>
+                                <th>Unit Price</th>
+                                <th>Total Price</th>
+                                <th class="optional-header" style="display: none;">Current Price</th>
+                                <th class="optional-header" style="display: none;">Current Total</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for line_item, primary_image in line_items_with_images %}
+                            <tr>
+                                <td>
+                                    {% if primary_image %}
+                                        <img src="{{ primary_image.image.url }}" alt="{{ line_item.product.description }}" class="product-img-thumb">
+                                    {% else %}
+                                        <img src="{% static 'product/image-not-found.png' %}" alt="No image" class="product-img-thumb">
+                                    {% endif %}
+                                </td>
+                                <td>{{ line_item.product.part_no }}</td>
+                                <td>{{ line_item.product_description }}</td>
+                                <td>
+                                    <select name="price_type_{{ line_item.id }}" class="form-select form-select-sm" style="width: 100px; font-size: 12px;" onchange="updatePriceType({{ line_item.id }}, this.value)">
+                                        <option value="retail_sell" {% if line_item.price_type == 'retail_sell' %}selected{% endif %}>Retail</option>
+                                        <option value="builder_sell" {% if line_item.price_type == 'builder_sell' %}selected{% endif %}>Builder</option>
+                                        <option value="surplus_sell" {% if line_item.price_type == 'surplus_sell' %}selected{% endif %}>Surplus</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <input type="number" name="quantity_{{ line_item.id }}" value="{{ line_item.quantity }}" style="width: 60px; text-align: center; font-size: 13px; padding: 2px 4px;" min="0">
+                                </td>
+                                <td>{% if line_item.unit_price and line_item.unit_price != 0 %}${{ line_item.unit_price|floatformat:2 }}{% else %}-{% endif %}</td>
+                                <td>{% if line_item.total_price and line_item.total_price != 0 %}${{ line_item.total_price|floatformat:2 }}{% else %}-{% endif %}</td>
+                                <td class="optional-column" style="display: none;">
+                                    {{ line_item.get_current_price }}
+                                </td>
+                                <td class="optional-column" style="display: none;">
+                                    {{ line_item.get_current_total }}
+                                </td>
+                                <td style="white-space: nowrap;">
+                                    <div class="d-flex gap-1">
+                                        <button onclick="updateQuantity({{ line_item.id }}, 'quantity_{{ line_item.id }}')" class="btn btn-sm btn-outline-primary" title="Update Quantity" style="padding: 2px 6px;">
+                                            <i class="fas fa-save"></i>
+                                        </button>
+                                        <form method="post" action="{% url 'product:delete_product' quote.id line_item.id %}" style="display: inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Product" style="padding: 2px 6px;" onclick="return confirm('Are you sure you want to delete this product?')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card mb-3">
+            <div class="card-header">
+                <h5 class="mb-0">{% if quote.name %}Products in {{ quote.name }}{% else %}Current Products in Quote{% endif %}</h5>
+            </div>
+            
+            <!-- Quick Navigation Card -->
+            <div class="card-body border-bottom">
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="{% url 'product:product_quote_list' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-list"></i> All Quotes
+                    </a>
+                    {% if associated_jobs %}
+                        {% for job in associated_jobs %}
+                            <a href="{% url 'job:job_quotes' job.id %}" class="btn btn-sm btn-outline-info">
+                                <i class="fas fa-briefcase"></i> {{ job.job_code }}
+                            </a>
+                        {% endfor %}
+                    {% endif %}
+                    <a href="{% url 'job:job_list' %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-tasks"></i> All Jobs
+                    </a>
+                </div>
+            </div>
+            
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h5>No products in this quote yet.</h5>
+                    <p class="mb-0">Use the search section on the left to find and add products to your quote.</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Ad-Hoc Products Section -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">{% if quote.name %}Ad-Hoc Products in {{ quote.name }}{% else %}Ad-Hoc Products in Quote{% endif %}</h5>
+            </div>
+            <div class="card-body">
+                <div id="adhocProductsContainer">
+                    {% if adhoc_line_items %}
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover align-middle mb-0">
+                            <thead class="sticky-header">
+                                <tr style="background-color: #fff3cd;">
+                                    <th>Icon</th>
+                                    <th>Part No</th>
+                                    <th>Description</th>
+                                    <th>Quantity</th>
+                                    <th>Unit Price</th>
+                                    <th>Total Price</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adhocProductsTableBody">
+                                {% for adhoc_line_item in adhoc_line_items %}
+                                <tr class="table-warning" id="adhoc-row-{{ adhoc_line_item.id }}">
+                                    <td>
+                                        <i class="fas fa-tools text-warning"></i>
+                                    </td>
+                                    <td>{{ adhoc_line_item.adhoc.part_no }}</td>
+                                    <td>{{ adhoc_line_item.adhoc_description }} <span class="badge bg-warning text-dark">Ad-Hoc</span></td>
+                                    <td>
+                                        <input type="number" name="adhoc_quantity_{{ adhoc_line_item.id }}" value="{{ adhoc_line_item.quantity }}" style="width: 60px; text-align: center; font-size: 13px; padding: 2px 4px;" min="0">
+                                    </td>
+                                    <td>{% if adhoc_line_item.unit_price and adhoc_line_item.unit_price != 0 %}${{ adhoc_line_item.unit_price|floatformat:2 }}{% else %}-{% endif %}</td>
+                                    <td>{% if adhoc_line_item.total_price and adhoc_line_item.total_price != 0 %}${{ adhoc_line_item.total_price|floatformat:2 }}{% else %}-{% endif %}</td>
+                                    <td style="white-space: nowrap;">
+                                        <div class="d-flex gap-1">
+                                            <button onclick="updateAdhocQuantity({{ adhoc_line_item.id }}, 'adhoc_quantity_{{ adhoc_line_item.id }}')" class="btn btn-sm btn-outline-primary" title="Update Quantity" style="padding: 2px 6px;">
+                                                <i class="fas fa-save"></i>
+                                            </button>
+                                            <button onclick="deleteAdhocFromQuote({{ quote.id }}, {{ adhoc_line_item.id }})" class="btn btn-sm btn-outline-danger" title="Delete Ad-Hoc Item" style="padding: 2px 6px;">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <h6>No Ad-Hoc products in this quote yet.</h6>
+                        <p class="mb-0">Use the Ad-Hoc Product Entry section on the left to create and add Ad-Hoc items to your quote.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quote Total Display -->
+        <div class="alert alert-success mb-3">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <strong><i class="fas fa-calculator"></i> Quote Total:</strong>
+                    <span class="fs-5 fw-bold text-success ms-2" id="quoteTotalDisplay">${{ quote.subtotal|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteConfirmModalLabel">Confirm Delete</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this Ad-Hoc item?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+function ensureCsrfTokenInForms() {
+    const csrfToken = getCookie('csrftoken');
+    document.querySelectorAll('form').forEach(function(form) {
+        let input = form.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (!input) {
+            input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'csrfmiddlewaretoken';
+            form.appendChild(input);
+        }
+        input.value = csrfToken;
+    });
+}
+document.addEventListener('DOMContentLoaded', function() {
+    ensureCsrfTokenInForms();
+});
+document.addEventListener('ajaxUpdate', function() {
+    ensureCsrfTokenInForms();
+});
+// --- AJAX Dropdowns and Search for Quote Products ---
+function updateBreadcrumb() {
+    const cat = document.getElementById('categoryDropdown');
+    const sub1 = document.getElementById('subcat1Dropdown');
+    const sub2 = document.getElementById('subcat2Dropdown');
+    let parts = [];
+    if (cat.value) parts.push(cat.options[cat.selectedIndex].text);
+    if (sub1.value) parts.push(sub1.options[sub1.selectedIndex].text);
+    if (sub2.value) parts.push(sub2.options[sub2.selectedIndex].text);
+    document.getElementById('categoryBreadcrumb').textContent = parts.join(' > ');
+}
+function fetchCategories() {
+    fetch('/product/ajax/categories/')
+        .then(res => res.json())
+        .then(data => {
+            const cat = document.getElementById('categoryDropdown');
+            cat.innerHTML = '<option value="">Category</option>' + data.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+        });
+}
+function fetchSubcat1(categoryId) {
+    fetch(`/product/ajax/subcat1/${categoryId}/`)
+        .then(res => res.json())
+        .then(data => {
+            const sub1 = document.getElementById('subcat1Dropdown');
+            sub1.innerHTML = '<option value="">Subcategory 1</option>' + data.subcategories.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+            sub1.disabled = false;
+            document.getElementById('subcat2Dropdown').innerHTML = '<option value="">Subcategory 2</option>';
+            document.getElementById('subcat2Dropdown').disabled = true;
+        });
+}
+function fetchSubcat2(subcat1Id) {
+    fetch(`/product/ajax/subcat2/${subcat1Id}/`)
+        .then(res => res.json())
+        .then(data => {
+            const sub2 = document.getElementById('subcat2Dropdown');
+            sub2.innerHTML = '<option value="">Subcategory 2</option>' + data.subcategories.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+            sub2.disabled = false;
+        });
+}
+function fetchQuoteProducts() {
+    const category = document.getElementById('categoryDropdown').value;
+    const subcat1 = document.getElementById('subcat1Dropdown').value;
+    const subcat2 = document.getElementById('subcat2Dropdown').value;
+    const status = document.getElementById('statusDropdown').value;
+    const keywords = document.getElementById('searchInput').value;
+    const url = new URL(window.location.href);
+    const quoteId = url.pathname.split('/').filter(Boolean).pop();
+    fetch(`/product/quote/${quoteId}?ajax=1&category=${category}&sub_category1=${subcat1}&sub_category2=${subcat2}&active_status=${status}&keywords=${encodeURIComponent(keywords)}`)
+        .then(res => res.text())
+        .then(html => {
+            document.getElementById('quoteSearchResults').innerHTML = html;
+            document.dispatchEvent(new Event('ajaxUpdate'));
+        });
+}
+document.addEventListener('DOMContentLoaded', function() {
+    fetchCategories();
+    updateBreadcrumb();
+    document.getElementById('categoryDropdown').addEventListener('change', function() {
+        const val = this.value;
+        if (val) fetchSubcat1(val); else {
+            document.getElementById('subcat1Dropdown').innerHTML = '<option value="">Subcategory 1</option>';
+            document.getElementById('subcat1Dropdown').disabled = true;
+            document.getElementById('subcat2Dropdown').innerHTML = '<option value="">Subcategory 2</option>';
+            document.getElementById('subcat2Dropdown').disabled = true;
+        }
+        fetchQuoteProducts();
+        updateBreadcrumb();
+    });
+    document.getElementById('subcat1Dropdown').addEventListener('change', function() {
+        const val = this.value;
+        if (val) fetchSubcat2(val); else {
+            document.getElementById('subcat2Dropdown').innerHTML = '<option value="">Subcategory 2</option>';
+            document.getElementById('subcat2Dropdown').disabled = true;
+        }
+        fetchQuoteProducts();
+        updateBreadcrumb();
+    });
+    document.getElementById('subcat2Dropdown').addEventListener('change', function() {
+        fetchQuoteProducts();
+        updateBreadcrumb();
+    });
+    document.getElementById('statusDropdown').addEventListener('change', fetchQuoteProducts);
+    document.getElementById('searchInput').addEventListener('input', function() {
+        clearTimeout(window._searchTimeout);
+        window._searchTimeout = setTimeout(fetchQuoteProducts, 300);
+    });
+});
+// Function to update quantity
+function updateQuantity(lineItemId, inputName) {
+    const quantityInput = document.querySelector(`input[name="${inputName}"]`);
+    const quantity = quantityInput.value;
+    
+    fetch(`/product/quotes/edit-quantity/${lineItemId}/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            quantity: quantity
+        })
+    })
+    .then(response => {
+        if (response.ok) {
+            // Reload the page to show updated values
+            window.location.reload();
+        } else {
+            showNotification('Error updating quantity', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error updating quantity', 'error');
+    });
+}
+
+// Function to validate quantities before form submission
+function validateQuantities() {
+    const quantityInputs = document.querySelectorAll('input[name^="quantities["]');
+    let hasValidQuantity = false;
+    
+    quantityInputs.forEach(input => {
+        const quantity = parseInt(input.value) || 0;
+        if (quantity >= 1) {
+            hasValidQuantity = true;
+        }
+    });
+    
+    if (!hasValidQuantity) {
+        showNotification('Please enter a quantity of 1 or more for at least one product.', 'warning');
+        return false;
+    }
+    
+    return true;
+}
+
+// Ad-Hoc functionality
+function createAndAddAdhoc() {
+    const form = document.getElementById('adhocForm');
+    const formData = new FormData(form);
+    const createBtn = document.getElementById('adhocCreateBtn');
+    const spinner = document.getElementById('adhocCreateBtnSpinner');
+    
+    // Disable button and show spinner
+    createBtn.disabled = true;
+    spinner.style.display = 'inline-block';
+    
+    // First create the Ad-Hoc item
+    fetch('{% url "product:ajax-create-adhoc" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Now add it to the quote
+            const quantity = document.getElementById('adhoc_quantity').value;
+            const addFormData = new FormData();
+            addFormData.append('adhoc_id', data.id);
+            addFormData.append('quantity', quantity);
+            
+            return fetch('{% url "product:ajax-add-adhoc-to-quote" quote.id %}', {
+                method: 'POST',
+                body: addFormData,
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+        } else {
+            throw new Error(data.errors ? Object.values(data.errors).flat().join(', ') : 'Failed to create Ad-Hoc item');
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Add the new Ad-Hoc item to the table dynamically
+            addAdhocItemToTable(data);
+            // Clear the form
+            form.reset();
+            showNotification(data.message, 'success');
+        } else {
+            throw new Error(data.error || 'Failed to add Ad-Hoc item to quote');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error: ' + error.message, 'error');
+    })
+    .finally(() => {
+        // Re-enable button and hide spinner
+        createBtn.disabled = false;
+        spinner.style.display = 'none';
+    });
+}
+
+function addAdhocItemToTable(data) {
+    const container = document.getElementById('adhocProductsContainer');
+    const tableBody = document.getElementById('adhocProductsTableBody');
+    
+    // If no table exists, create one
+    if (!tableBody) {
+        const tableHTML = `
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle mb-0">
+                    <thead class="sticky-header">
+                        <tr style="background-color: #fff3cd;">
+                            <th>Icon</th>
+                            <th>Part No</th>
+                            <th>Description</th>
+                            <th>Quantity</th>
+                            <th>Unit Price</th>
+                            <th>Total Price</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adhocProductsTableBody">
+                    </tbody>
+                </table>
+            </div>
+        `;
+        container.innerHTML = tableHTML;
+    }
+    
+    // Add the new row
+    const newRow = document.createElement('tr');
+    newRow.className = 'table-warning';
+    newRow.id = `adhoc-row-${data.line_item_id}`;
+    newRow.innerHTML = `
+        <td>
+            <i class="fas fa-tools text-warning"></i>
+        </td>
+        <td>${data.part_no}</td>
+        <td>${data.description} <span class="badge bg-warning text-dark">Ad-Hoc</span></td>
+        <td>
+            <input type="number" name="adhoc_quantity_${data.line_item_id}" value="${data.quantity}" style="width: 60px; text-align: center; font-size: 13px; padding: 2px 4px;" min="0">
+        </td>
+        <td>$${parseFloat(data.unit_price).toFixed(2)}</td>
+        <td>$${parseFloat(data.total_price).toFixed(2)}</td>
+        <td style="white-space: nowrap;">
+            <div class="d-flex gap-1">
+                <button onclick="updateAdhocQuantity(${data.line_item_id}, 'adhoc_quantity_${data.line_item_id}')" class="btn btn-sm btn-outline-primary" title="Update Quantity" style="padding: 2px 6px;">
+                    <i class="fas fa-save"></i>
+                </button>
+                <button onclick="deleteAdhocFromQuote({{ quote.id }}, ${data.line_item_id})" class="btn btn-sm btn-outline-danger" title="Delete Ad-Hoc Item" style="padding: 2px 6px;">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </td>
+    `;
+    
+    const tbody = document.getElementById('adhocProductsTableBody');
+    tbody.appendChild(newRow);
+    
+    // Update quote total
+    updateQuoteTotal(data.quote_subtotal);
+    
+    // Show success notification
+    showNotification(`Added ${data.quantity} of ${data.part_no} to quote`, 'success');
+}
+
+function updateQuoteTotal(newTotal) {
+    const totalElement = document.getElementById('quoteTotalDisplay');
+    if (totalElement) {
+        totalElement.textContent = `$${parseFloat(newTotal).toFixed(2)}`;
+    }
+    
+    // Update the item count display
+    const adhocCount = document.getElementById('adhocProductsTableBody')?.children.length || 0;
+    const regularCount = document.querySelectorAll('#quoteProductsTableBody tr').length || 0;
+    
+    const countElement = document.querySelector('.alert-success small');
+    if (countElement) {
+        countElement.innerHTML = `
+            Regular Products: ${regularCount} items | 
+            Ad-Hoc Products: ${adhocCount} items
+        `;
+    }
+}
+
+function showNotification(message, type = 'success') {
+    const toast = document.getElementById('notificationToast');
+    const toastIcon = document.getElementById('toastIcon');
+    const toastTitle = document.getElementById('toastTitle');
+    const toastBody = document.getElementById('toastBody');
+    
+    // Set icon and title based on type
+    switch(type) {
+        case 'success':
+            toastIcon.className = 'fas fa-check-circle me-2 text-success';
+            toastTitle.textContent = 'Success';
+            break;
+        case 'error':
+            toastIcon.className = 'fas fa-exclamation-circle me-2 text-danger';
+            toastTitle.textContent = 'Error';
+            break;
+        case 'warning':
+            toastIcon.className = 'fas fa-exclamation-triangle me-2 text-warning';
+            toastTitle.textContent = 'Warning';
+            break;
+        default:
+            toastIcon.className = 'fas fa-info-circle me-2 text-info';
+            toastTitle.textContent = 'Info';
+    }
+    
+    toastBody.textContent = message;
+    
+    // Show the toast
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+}
+
+function updateAdhocQuantity(lineItemId, inputName) {
+    const quantityInput = document.querySelector(`input[name="${inputName}"]`);
+    const quantity = quantityInput.value;
+    
+    fetch('{% url "product:ajax-update-adhoc-quantity" 0 %}'.replace('0', lineItemId), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            quantity: quantity
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Update the total price in the table
+            const row = document.getElementById(`adhoc-row-${lineItemId}`);
+            if (row) {
+                const totalPriceCell = row.querySelector('td:nth-child(6)');
+                if (totalPriceCell) {
+                    totalPriceCell.textContent = `$${parseFloat(data.total_price).toFixed(2)}`;
+                }
+            }
+            // Update quote total
+            updateQuoteTotal(data.quote_subtotal);
+            showNotification('Quantity updated successfully', 'success');
+        } else {
+            showNotification('Error updating quantity: ' + (data.error || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error updating quantity', 'error');
+    });
+}
+
+function deleteAdhocFromQuote(quoteId, lineItemId) {
+    // Store the lineItemId for the confirmation
+    window.pendingDeleteLineItemId = lineItemId;
+    
+    // Show the confirmation modal
+    const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
+    modal.show();
+}
+
+function confirmDeleteAdhoc() {
+    const lineItemId = window.pendingDeleteLineItemId;
+    if (!lineItemId) return;
+    
+    fetch(`{% url "product:ajax-delete-adhoc-from-quote" quote.id 0 %}`.replace('0', lineItemId), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove the row from the table
+            const row = document.getElementById(`adhoc-row-${lineItemId}`);
+            if (row) {
+                row.remove();
+                
+                // If no more rows, show the empty message
+                const tbody = document.getElementById('adhocProductsTableBody');
+                if (tbody && tbody.children.length === 0) {
+                    const container = document.getElementById('adhocProductsContainer');
+                    container.innerHTML = `
+                        <div class="alert alert-warning">
+                            <h6>No Ad-Hoc products in this quote yet.</h6>
+                            <p class="mb-0">Use the Ad-Hoc Product Entry section on the left to create and add Ad-Hoc items to your quote.</p>
+                        </div>
+                    `;
+                }
+            }
+            // Update quote total
+            updateQuoteTotal(data.quote_subtotal);
+            showNotification(data.message, 'success');
+        } else {
+            showNotification('Error: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error deleting Ad-Hoc item', 'error');
+    });
+}
+
+// Add event listener for Ad-Hoc form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const adhocForm = document.getElementById('adhocForm');
+    if (adhocForm) {
+        adhocForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            createAndAddAdhoc();
+        });
+    }
+    
+    // Add event listener for confirm delete button
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', function() {
+            confirmDeleteAdhoc();
+            // Hide the modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'));
+            if (modal) {
+                modal.hide();
+            }
+        });
+    }
+    
+    // Add event listener for price type form
+    document.querySelectorAll('.form-select[name^="price_type_"]').forEach(function(select) {
+        select.addEventListener('change', function() {
+            const lineItemId = this.name.replace('price_type_', '');
+            const priceType = this.value;
+            
+            fetch(`/product/quotes/update-price-type/${lineItemId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    price_type: priceType
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Price type updated successfully', 'success');
+                    // Reload the page to reflect changes
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showNotification('Error updating price type: ' + (data.error || 'Unknown error'), 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showNotification('Error updating price type', 'error');
+            });
+        });
+    });
+});
+</script>
+
+{% endblock %}

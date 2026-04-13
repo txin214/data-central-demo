@@ -1,0 +1,532 @@
+{% extends 'job/base_job.html' %}
+{% load static %}
+
+{% block job_content %}
+    <div class="card mt-3">
+        <div class="card-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <h6 class="card-title mb-0">Project Timeline - {{ job.job_code }}</h6>
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="viewDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-chart-gantt me-1"></i>Gantt
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="viewDropdown">
+                        <li><a class="dropdown-item" href="#" data-view="list"><i class="fas fa-list me-2"></i>List</a></li>
+                        <li><a class="dropdown-item active" href="#" data-view="gantt"><i class="fas fa-chart-gantt me-2"></i>Gantt</a></li>
+                        <li><a class="dropdown-item" href="#" data-view="month"><i class="fas fa-calendar-alt me-2"></i>Calendar</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+            <!-- Gantt Chart View -->
+            <div id="gantt_here" style="width: 100%; height: 400px;"></div>
+            
+            <!-- Calendar View -->
+            <div id="calendar_view" style="display: none; margin: 1rem;">
+                <div id="calendar_container" style="width: 100%; height: 400px;"></div>
+            </div>
+            
+            <!-- List View -->
+            <div id="list_view" style="display: none; margin: 1rem;">
+                <div class="table-responsive" style="height: 400px; overflow-y: auto;">
+                    <table class="table table-bordered table-hover align-middle mb-0">
+                        <thead class="sticky-header">
+                            <tr>
+                                <th>Name</th>
+                                <th>Start</th>
+                                <th>End</th>
+                                <th>Type</th>
+                                <th>Assignees</th>
+                            </tr>
+                        </thead>
+                        <tbody id="task_list_body">
+                            <!-- Tasks will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            
+    </div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .sticky-header th {
+        position: sticky;
+        top: 0;
+        background: #f8f9fa;
+        z-index: 2;
+    }
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    .table th {
+        background-color: #f8f9fa;
+        border-color: #dee2e6;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+    .table td {
+        font-size: 0.875rem;
+    }
+    
+    /* Month view styling */
+    #gantt_here iframe {
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+    }
+    
+    /* Calendar styling */
+    .task-mark {
+        background-color: #4fc3f7 !important;
+        color: white !important;
+        border-radius: 3px !important;
+        font-size: 0.75rem !important;
+        padding: 2px 4px !important;
+        margin: 1px !important;
+    }
+    
+    #calendar_container {
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        background: white;
+    }
+    
+    /* DHTMLX Scheduler styling */
+    .dhx_cal_container {
+        border: none !important;
+        border-radius: 4px;
+    }
+    
+    .dhx_cal_header {
+        background: #f8f9fa !important;
+        border-bottom: 1px solid #dee2e6 !important;
+    }
+    
+    .dhx_cal_navline {
+        background: #f8f9fa !important;
+        border-bottom: 1px solid #dee2e6 !important;
+    }
+    
+    /* Clean calendar grid borders - avoid overlapping */
+    .dhx_cal_data {
+        border: none !important;
+    }
+    
+    /* Simple border for calendar container */
+    .dhx_cal_container {
+        border: 1px solid #dee2e6 !important;
+    }
+    
+    /* Clean month view borders */
+    .dhx_cal_month {
+        border: 1px solid #dee2e6 !important;
+    }
+    
+    /* Remove default DHTMLX borders to prevent overlap */
+    .dhx_cal_month .dhx_cal_data,
+    .dhx_cal_month .dhx_month_body,
+    .dhx_cal_month .dhx_month_head,
+    .dhx_cal_month .dhx_month_row,
+    .dhx_cal_month .dhx_month_cell {
+        border: none !important;
+    }
+    
+    /* Add clean internal grid lines */
+    .dhx_cal_month .dhx_month_cell {
+        border-right: 1px solid #dee2e6 !important;
+        border-bottom: 1px solid #dee2e6 !important;
+    }
+    
+    /* Remove right border from last column */
+    .dhx_cal_month .dhx_month_cell:last-child {
+        border-right: none !important;
+    }
+    
+    /* Remove bottom border from last row */
+    .dhx_cal_month .dhx_month_row:last-child .dhx_month_cell {
+        border-bottom: none !important;
+    }
+    
+    .dhx_cal_event {
+        background: #4fc3f7 !important;
+        border: none !important;
+        border-radius: 3px !important;
+    }
+    
+    /* Isolate Gantt chart from Bootstrap conflicts */
+    #gantt_here {
+        isolation: isolate;
+        position: relative;
+        z-index: 1;
+    }
+    
+    #gantt_here * {
+        box-sizing: content-box !important;
+    }
+    
+    #gantt_here .dhx_gantt_container {
+        font-family: Arial, sans-serif !important;
+    }
+    
+    /* Ensure Gantt chart is properly isolated */
+    #gantt_container {
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Reset any Bootstrap styles that might interfere */
+    #gantt_here .dhx_gantt_container * {
+        box-sizing: content-box !important;
+        font-family: Arial, sans-serif !important;
+    }
+    
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.js"></script>
+<link rel="stylesheet" href="https://cdn.dhtmlx.com/gantt/edge/dhtmlxgantt.css">
+<script src="https://cdn.dhtmlx.com/scheduler/edge/dhtmlxscheduler.js"></script>
+<link rel="stylesheet" href="https://cdn.dhtmlx.com/scheduler/edge/dhtmlxscheduler.css">
+<script>
+// Global variables
+let currentView = 'gantt';
+let ganttInstance = null;
+let taskData = [];
+
+// View switching functions
+function switchView(view) {
+    currentView = view;
+    
+    // Hide all views
+    document.getElementById('gantt_here').style.display = 'none';
+    document.getElementById('list_view').style.display = 'none';
+    document.getElementById('calendar_view').style.display = 'none';
+    
+    // Show selected view
+    if (view === 'list') {
+        document.getElementById('list_view').style.display = 'block';
+        populateListView();
+    } else if (view === 'month') {
+        document.getElementById('calendar_view').style.display = 'block';
+        // Small delay to ensure container is visible before initializing
+        setTimeout(() => {
+            initializeCalendar('month');
+        }, 100);
+    } else {
+        document.getElementById('gantt_here').style.display = 'block';
+        
+        if (ganttInstance) {
+            // Default Gantt view configuration
+            ganttInstance.config.scale_unit = "day";
+            ganttInstance.config.date_scale = "%d %M";
+            ganttInstance.config.subscales = [
+                {unit: "hour", step: 6, date: "%H:%i"}
+            ];
+            ganttInstance.render();
+        }
+    }
+    
+    // Update dropdown button text
+    const button = document.querySelector('#viewDropdown');
+    const icon = button.querySelector('i');
+    
+    switch(view) {
+        case 'list':
+            icon.className = 'fas fa-list me-1';
+            button.childNodes[2].textContent = 'List';
+            break;
+        case 'gantt':
+            icon.className = 'fas fa-chart-gantt me-1';
+            button.childNodes[2].textContent = 'Gantt';
+            break;
+        case 'month':
+            icon.className = 'fas fa-calendar-alt me-1';
+            button.childNodes[2].textContent = 'Calendar';
+            break;
+    }
+    
+    // Update active dropdown item
+    document.querySelectorAll('.dropdown-item').forEach(item => item.classList.remove('active'));
+    event.target.classList.add('active');
+}
+
+// Populate list view
+function populateListView() {
+    const tbody = document.getElementById('task_list_body');
+    tbody.innerHTML = '';
+    
+    taskData.forEach((task, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>
+                ${task.text}
+            </td>
+            <td>
+                ${formatDate(task.start_date)}
+            </td>
+            <td>
+                ${formatDate(task.end_date)}
+            </td>
+            <td>
+                -
+            </td>
+            <td>
+                <span class="text-muted">-</span>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+// Format date for display
+function formatDate(date) {
+    const d = new Date(date);
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    const dayName = days[d.getDay()];
+    const month = months[d.getMonth()];
+    const day = d.getDate().toString().padStart(2, '0');
+    
+    return `${dayName}, ${month} ${day}`;
+}
+
+// Initialize DHTMLX Scheduler Calendar
+function initializeCalendar(view = 'month') {
+    const calendarContainer = document.getElementById('calendar_container');
+    
+    // Clear previous calendar if exists
+    calendarContainer.innerHTML = '';
+    
+    // Check if DHTMLX Scheduler is loaded
+    if (typeof scheduler === 'undefined') {
+        console.error('DHTMLX Scheduler not loaded!');
+        return;
+    }
+    
+    // Initialize scheduler in calendar container with the specified view
+    scheduler.init(calendarContainer, new Date(), view);
+    
+    // Configure scheduler based on view
+    if (view === 'month') {
+        scheduler.config.month_date = "%d";
+        scheduler.config.month_day = "%D";
+    } else if (view === 'week') {
+        scheduler.config.week_date = "%d %M";
+        scheduler.config.week_day = "%D";
+    } else if (view === 'day') {
+        scheduler.config.day_date = "%d %M %Y";
+        scheduler.config.day_time = "%H:%i";
+    }
+    
+    // Common configuration
+    scheduler.config.readonly = true;
+    scheduler.config.details_on_create = false;
+    scheduler.config.details_on_dblclick = false;
+    scheduler.config.drag_create = false;
+    scheduler.config.drag_move = false;
+    scheduler.config.drag_resize = false;
+    
+    // Show day/week/month buttons on the left and navigation on the right
+    scheduler.config.buttons_left = ["day", "week", "month"];
+    scheduler.config.buttons_right = ["prev", "today", "next"];
+    
+    // Convert task data to scheduler events
+    const events = taskData.map(task => ({
+        id: task.id,
+        text: task.text,
+        start_date: task.start_date,
+        end_date: task.end_date,
+        color: "#4fc3f7"
+    }));
+    
+    // Clear existing events and add new ones
+    scheduler.clearAll();
+    scheduler.parse(events);
+    
+    // Store scheduler instance globally
+    window.schedulerInstance = scheduler;
+    
+    // Clean up any overlapping borders after initialization
+    setTimeout(() => {
+        const calendarContainer = document.getElementById('calendar_container');
+        if (calendarContainer) {
+            // Remove any conflicting borders from DHTMLX default styling
+            const allCells = calendarContainer.querySelectorAll('.dhx_month_cell');
+            allCells.forEach(cell => {
+                // Reset borders to clean state
+                cell.style.borderLeft = '';
+                cell.style.borderRight = '';
+                cell.style.borderTop = '';
+                cell.style.borderBottom = '';
+            });
+            
+            // Apply clean grid borders
+            allCells.forEach(cell => {
+                cell.style.borderRight = '1px solid #dee2e6';
+                cell.style.borderBottom = '1px solid #dee2e6';
+            });
+            
+            // Remove right border from last column
+            const lastCells = calendarContainer.querySelectorAll('.dhx_month_cell:last-child');
+            lastCells.forEach(cell => {
+                cell.style.borderRight = 'none';
+            });
+            
+            // Remove bottom border from last row
+            const lastRowCells = calendarContainer.querySelectorAll('.dhx_month_row:last-child .dhx_month_cell');
+            lastRowCells.forEach(cell => {
+                cell.style.borderBottom = 'none';
+            });
+        }
+    }, 100);
+}
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Starting DHTMLX Gantt');
+    
+    // Check if gantt is loaded
+    if (typeof gantt === 'undefined') {
+        console.error('DHTMLX Gantt not loaded!');
+        return;
+    }
+    
+    console.log('DHTMLX Gantt loaded successfully');
+    
+    // Create container directly (no iframe for drag functionality)
+    const container = document.getElementById('gantt_here');
+    container.innerHTML = '<div id="gantt_container" style="width: 100%; height: 400px;"></div>';
+    
+    // Initialize Gantt directly (no iframe)
+            
+            // Initialize Gantt directly
+            gantt.config.date_format = "%Y-%m-%d";
+            
+            // Disable features that cause errors
+            gantt.config.auto_scheduling = false;
+            gantt.config.auto_scheduling_strict = false;
+            gantt.config.auto_scheduling_compatibility = false;
+            gantt.config.unscheduled_tasks = false;
+            gantt.config.show_unscheduled = false;
+            
+            // Enable drag and drop functionality
+            gantt.config.drag_links = true;
+            gantt.config.drag_progress = true;
+            gantt.config.drag_resize = true;
+            gantt.config.drag_move = true;
+            
+            // Month view specific configurations
+            gantt.config.scale_height = 50;
+            gantt.config.row_height = 40;
+            gantt.config.grid_width = 350;
+            gantt.config.task_height = 20;
+            gantt.config.bar_height = 20;
+            gantt.config.padding = 12;
+            gantt.config.work_time = false;
+            gantt.config.cascade_delete = false;
+            gantt.config.readonly = false;
+            
+            // Disable error messages
+            gantt.config.show_errors = false;
+            gantt.config.show_warnings = false;
+            
+            // Override error functions to prevent red errors
+            gantt.message = function() { return false; };
+            gantt.alert = function() { return false; };
+            
+            gantt.init("gantt_container");
+            
+            // Store gantt instance reference
+            ganttInstance = gantt;
+            
+            // Add drag event listeners for debugging
+            gantt.attachEvent("onTaskDrag", function(id, mode, e, task) {
+                console.log("Task drag started:", id, mode, task);
+            });
+            
+            gantt.attachEvent("onTaskDragEnd", function(id, mode, e, task) {
+                console.log("Task drag ended:", id, mode, task);
+            });
+            
+            gantt.attachEvent("onTaskClick", function(id, e) {
+                console.log("Task clicked:", id);
+            });
+            
+            gantt.attachEvent("onMouseDown", function(id, e) {
+                console.log("Mouse down on:", id);
+            });
+            
+            // Load real data from backend
+            fetch('{% url "job:job_gantt_data" job.id %}')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Real data received:', data);
+                    
+                    if (data.data && data.data.length > 0) {
+                        // Process data to ensure proper format
+                        const processedData = data.data.map(task => {
+                            const startDate = new Date(task.start_date);
+                            const endDate = new Date(task.end_date);
+                            const duration = task.type === 'milestone' ? 0 : Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+                            
+                            return {
+                                id: task.id,
+                                text: task.text,
+                                start_date: startDate,
+                                end_date: endDate,
+                                type: task.type || 'task',
+                                progress: task.progress || 0,
+                                duration: duration,
+                                parent: 0,
+                                open: true,
+                                unscheduled: false,
+                                summary: false,
+                                readonly: false
+                            };
+                        });
+                        
+                        console.log('Processed data:', processedData);
+                        
+                        // Store data globally for list view
+                        taskData = processedData;
+                        
+                        gantt.parse({
+                            data: processedData,
+                            links: data.links || []
+                        });
+                        
+                        // Re-enable drag functionality after data is loaded
+                        gantt.config.readonly = false;
+                        gantt.config.drag_move = true;
+                        gantt.config.drag_resize = true;
+                        gantt.config.drag_links = true;
+                        gantt.config.drag_progress = true;
+                        
+                        // Refresh the gantt to apply new settings
+                        gantt.render();
+                        
+                        console.log('Gantt chart loaded successfully with drag enabled');
+                    } else {
+                        console.log('No data available');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading data:', error);
+                });
+    
+    // Add event listeners for dropdown
+    document.querySelectorAll('.dropdown-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            const view = this.getAttribute('data-view');
+            switchView(view);
+        });
+    });
+    
+});
+</script>
+{% endblock %}

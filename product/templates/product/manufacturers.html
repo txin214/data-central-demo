@@ -1,0 +1,633 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/pagination.css' %}">
+<link rel="stylesheet" href="{% static 'css/table_styles.css' %}">
+{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Manufacturers</h2>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'product:create_manufacturer' %}" class="btn btn-outline-primary btn-sm">+ Manufacturer</a>
+            <button class="btn btn-outline-secondary btn-sm">Import</button>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <div class="mb-3">
+            <div class="row">
+                <div class="col-md-12">
+                    <input type="text" class="form-control form-control-sm" placeholder="Search Manufacturers..." id="manufacturer-search-bar">
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-12">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="statusFilterType" id="statusActive" value="active" checked>
+                        <label class="form-check-label small text-muted" for="statusActive">
+                            Active Only
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="statusFilterType" id="statusInactive" value="inactive">
+                        <label class="form-check-label small text-muted" for="statusInactive">
+                            Inactive Only
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="statusFilterType" id="statusAll" value="all">
+                        <label class="form-check-label small text-muted" for="statusAll">
+                            All Manufacturers
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <table class="table table-bordered table-hover align-middle mb-0">
+            <thead class="sticky-header">
+                <tr>
+                    <th>Manufacturer Name</th>
+                    <th>Contact Name</th>
+                    <th>City</th>
+                    <th>State</th>
+                    <th>Order Phone</th>
+                    <th>Website</th>
+                    <th>Status</th>
+                    <th>More</th>
+                </tr>
+            </thead>
+            <tbody id="manufacturer-table-body">
+                {% for manufacturer in manufacturers %}
+                <tr>
+                    <td>{{ manufacturer.manufacturer_name }}</td>
+                    <td>{{ manufacturer.contact_name|default:'-' }}</td>
+                    <td>{{ manufacturer.city|default:'-' }}</td>
+                    <td>{{ manufacturer.state|default:'-' }}</td>
+                    <td>{{ manufacturer.order_phone|default:'-' }}</td>
+                    <td>
+                        {% if manufacturer.website %}
+                            <a href="{{ manufacturer.website }}" target="_blank">Visit Website</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ manufacturer.status|yesno:"A,I" }}</td>
+                    <td>
+                        <a href="{% url 'product:edit_manufacturer' manufacturer.uuid %}?mode=view" class="btn btn-sm btn-outline-primary">View</a>
+                        <a href="{% url 'product:edit_manufacturer' manufacturer.uuid %}" class="btn btn-sm btn-outline-info">Edit</a>
+                        <button type="button" class="btn btn-sm btn-outline-danger ajax-delete-manufacturer" data-manufacturer-id="{{ manufacturer.uuid }}" data-manufacturer-name="{{ manufacturer.manufacturer_name }}">Delete</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div class="mt-2 text-end text-muted small" style="margin-right: 0; padding-right: 0;">
+        Active: {{ active_manufacturers }} | Inactive: {{ inactive_manufacturers }} | Total: {{ total_manufacturers }}
+    </div>
+    
+    <!-- Pagination Navigation -->
+    {% if paginator.num_pages > 1 %}
+    {% with current_status=request.GET.status|default:'active' %}
+    <nav aria-label="Manufacturer pagination" id="manufacturerRegularPagination" data-status="{{ current_status }}" class="mt-2 d-flex justify-content-center">
+        <div class="d-flex align-items-center gap-2">
+            <!-- Page jump input -->
+            <div class="d-flex align-items-center gap-1 page-jump-container">
+                <span class="text-muted small">Go to:</span>
+                <input type="number" id="manufacturerPageJumpInput" class="form-control form-control-sm" style="width: 70px;" min="1" max="{{ paginator.num_pages }}" placeholder="Page">
+                <button class="btn btn-sm btn-outline-primary" onclick="jumpToManufacturerPage()">Go</button>
+            </div>
+            
+            <!-- Pagination controls -->
+            <ul class="pagination pagination-sm mb-0">
+                <!-- First page -->
+                {% if page_obj.number > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page=1&status={{ current_status }}" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+                
+                <!-- Previous page -->
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}&status={{ current_status }}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+                
+                <!-- Page numbers with smart range -->
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > page_obj.number|add:'-4' and num < page_obj.number|add:'4' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}&status={{ current_status }}">{{ num }}</a>
+                        </li>
+                    {% elif num == page_obj.number|add:'-4' or num == page_obj.number|add:'4' %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                <!-- Next page -->
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ page_obj.next_page_number }}&status={{ current_status }}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+                
+                <!-- Last page -->
+                {% if page_obj.number < page_obj.paginator.num_pages %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ paginator.num_pages }}&status={{ current_status }}" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+            
+            <!-- Page info -->
+            <span class="text-muted small ms-2">
+                Page {{ page_obj.number }} of {{ paginator.num_pages }}
+            </span>
+        </div>
+    </nav>
+    {% endwith %}
+    {% endif %}
+</div>
+
+
+
+<script>
+function jumpToManufacturerPage() {
+    const input = document.getElementById('manufacturerPageJumpInput');
+    const status = new URLSearchParams(window.location.search).get('status') || 'active';
+    if (!input) return;
+    const page = parseInt(input.value, 10);
+    if (!isNaN(page) && page >= 1 && page <= {{ paginator.num_pages }}) {
+        window.location.href = `?page=${page}&status=${status}`;
+    }
+}
+
+// CSRF token for AJAX requests
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Notification system
+function showNotification(message, type = 'info', duration = 5000) {
+    // Remove existing notifications
+    const existingNotifications = document.querySelectorAll('.notification');
+    existingNotifications.forEach(notification => notification.remove());
+    
+    // Create new notification
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <span class="close-btn" onclick="this.parentElement.remove()">&times;</span>
+        ${message}
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Show notification
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+    
+    // Auto-hide after duration
+    if (duration > 0) {
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 300);
+        }, duration);
+    }
+}
+
+// AJAX search functionality
+document.getElementById('manufacturer-search-bar').addEventListener('input', function() {
+    const query = this.value;
+    const statusFilterType = document.querySelector('input[name="statusFilterType"]:checked').value;
+    performSearch(query, statusFilterType, 1);
+});
+
+// Status filter functionality
+document.querySelectorAll('input[name="statusFilterType"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const query = document.getElementById('manufacturer-search-bar').value;
+        const statusFilterType = this.value;
+        
+        if (query.trim() === '') {
+            // If no search query, just filter by status
+            if (statusFilterType === 'active') {
+                // If showing active manufacturers, reload the page with status=active parameter
+                window.location.href = window.location.pathname + '?status=active';
+            } else if (statusFilterType === 'inactive') {
+                // If showing inactive manufacturers, apply status filter
+                performStatusFilter('inactive');
+            } else if (statusFilterType === 'all') {
+                // If showing all manufacturers, reload the page with status=all parameter
+                window.location.href = window.location.pathname + '?status=all';
+            }
+        } else {
+            // If there's a search query, perform search with status filter
+            performSearch(query, statusFilterType, 1);
+        }
+    });
+});
+
+function performSearch(query, statusFilterType, page) {
+    let statusParam;
+    if (statusFilterType === 'active') {
+        statusParam = 'active';
+    } else if (statusFilterType === 'inactive') {
+        statusParam = 'inactive';
+    } else if (statusFilterType === 'all') {
+        statusParam = 'all';
+    }
+    
+    const url = `/product/ajax/search-manufacturers/?q=${encodeURIComponent(query)}&status=${statusParam}&page=${page}`;
+    console.log('Manufacturer search URL:', url); // Debug log
+    console.log('Status filter type:', statusFilterType, 'Status param:', statusParam); // Debug status
+    
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('manufacturer-table-body');
+            
+            // Update table content
+            tbody.innerHTML = '';
+            data.manufacturers.forEach(manufacturer => {
+                tbody.innerHTML += `<tr>
+                    <td>${manufacturer.manufacturer_name}</td>
+                    <td>${manufacturer.contact_name || '-'}</td>
+                    <td>${manufacturer.city || '-'}</td>
+                    <td>${manufacturer.state || '-'}</td>
+                    <td>${manufacturer.order_phone || '-'}</td>
+                    <td>${manufacturer.website ? `<a href="${manufacturer.website}" target="_blank">Visit Website</a>` : '-'}</td>
+                    <td>${manufacturer.status ? 'A' : 'I'}</td>
+                    <td>
+                        <a href="${manufacturer.edit_url}?mode=view" class="btn btn-sm btn-outline-primary">View</a>
+                        <a href="${manufacturer.edit_url}" class="btn btn-sm btn-outline-info">Edit</a>
+                        <button type="button" class="btn btn-sm btn-outline-danger ajax-delete-manufacturer" data-manufacturer-id="${manufacturer.id}" data-manufacturer-name="${manufacturer.manufacturer_name}">Delete</button>
+                    </td>
+                </tr>`;
+            });
+            
+            // Update pagination for search results
+            if (query.trim()) {
+                updateSearchPagination(data.paginator, query, statusFilterType);
+            } else {
+                restoreRegularPagination();
+            }
+            
+            // Re-attach event listeners
+            attachEventListeners();
+        });
+}
+
+function performStatusFilter(statusFilterType, page = 1) {
+    // Only filter for inactive manufacturers (active and all manufacturers are handled by page reload)
+    if (statusFilterType !== 'inactive') {
+        return;
+    }
+    
+    const url = `/product/ajax/filter-manufacturers-by-status/?status=false&page=${page}`;
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            const tbody = document.getElementById('manufacturer-table-body');
+            const regularPagination = document.querySelector('nav[aria-label="Manufacturer pagination"]');
+            
+            tbody.innerHTML = '';
+            
+            data.manufacturers.forEach(manufacturer => {
+                tbody.innerHTML += `<tr>
+                    <td>${manufacturer.manufacturer_name}</td>
+                    <td>${manufacturer.contact_name || '-'}</td>
+                    <td>${manufacturer.city || '-'}</td>
+                    <td>${manufacturer.state || '-'}</td>
+                    <td>${manufacturer.order_phone || '-'}</td>
+                    <td>${manufacturer.website ? `<a href="${manufacturer.website}" target="_blank">Visit Website</a>` : '-'}</td>
+                    <td>${manufacturer.status ? 'A' : 'I'}</td>
+                    <td>
+                        <a href="${manufacturer.edit_url}?mode=view" class="btn btn-sm btn-outline-primary">View</a>
+                        <a href="${manufacturer.edit_url}" class="btn btn-sm btn-outline-info">Edit</a>
+                        <button type="button" class="btn btn-sm btn-outline-danger ajax-delete-manufacturer" data-manufacturer-id="${manufacturer.id}" data-manufacturer-name="${manufacturer.manufacturer_name}">Delete</button>
+                    </td>
+                </tr>`;
+            });
+            
+            // Hide regular pagination when filtering
+            if (regularPagination) {
+                regularPagination.style.display = 'none';
+            }
+            
+            // Update pagination for status filter results
+            if (data.paginator.num_pages > 1) {
+                updateStatusFilterPagination(data.paginator, statusFilterType);
+            } else {
+                // Clear search pagination if only one page
+                const searchPagination = document.getElementById('search-pagination');
+                if (searchPagination) {
+                    searchPagination.innerHTML = '';
+                }
+            }
+            
+            // Re-attach event listeners
+            attachEventListeners();
+        });
+}
+
+function updateSearchPagination(paginator, query, statusFilterType) {
+    // Hide regular pagination
+    const regularPagination = document.querySelector('nav[aria-label="Manufacturer pagination"]');
+    if (regularPagination) {
+        regularPagination.style.display = 'none';
+    }
+    
+    // Remove existing search pagination if any
+    const existingSearchPagination = document.getElementById('search-pagination');
+    if (existingSearchPagination) {
+        existingSearchPagination.remove();
+    }
+    
+    // Create search pagination
+    const searchPagination = document.createElement('nav');
+    searchPagination.id = 'search-pagination';
+    searchPagination.setAttribute('aria-label', 'Search results pagination');
+    searchPagination.className = 'mt-3';
+    
+    const paginationList = document.createElement('ul');
+    paginationList.className = 'pagination justify-content-center';
+    
+    // Previous button
+    if (paginator.has_previous) {
+        const prevLi = document.createElement('li');
+        prevLi.className = 'page-item';
+        const prevLink = document.createElement('a');
+        prevLink.className = 'page-link';
+        prevLink.href = '#';
+        prevLink.textContent = 'Previous';
+        prevLink.onclick = (e) => {
+            e.preventDefault();
+            performSearch(query, paginator.previous_page_number);
+        };
+        prevLi.appendChild(prevLink);
+        paginationList.appendChild(prevLi);
+    }
+    
+    // Page numbers
+    paginator.page_range.forEach(pageNum => {
+        if (pageNum > paginator.current_page - 3 && pageNum < paginator.current_page + 3) {
+            const pageLi = document.createElement('li');
+            pageLi.className = 'page-item';
+            if (pageNum === paginator.current_page) {
+                pageLi.classList.add('active');
+                const pageSpan = document.createElement('span');
+                pageSpan.className = 'page-link';
+                pageSpan.textContent = pageNum;
+                pageLi.appendChild(pageSpan);
+            } else {
+                const pageLink = document.createElement('a');
+                pageLink.className = 'page-link';
+                pageLink.href = '#';
+                pageLink.textContent = pageNum;
+                pageLink.onclick = (e) => {
+                    e.preventDefault();
+                    performSearch(query, pageNum);
+                };
+                pageLi.appendChild(pageLink);
+            }
+            paginationList.appendChild(pageLi);
+        }
+    });
+    
+    // Next button
+    if (paginator.has_next) {
+        const nextLi = document.createElement('li');
+        nextLi.className = 'page-item';
+        const nextLink = document.createElement('a');
+        nextLink.className = 'page-link';
+        nextLink.href = '#';
+        nextLink.textContent = 'Next';
+        nextLink.onclick = (e) => {
+            e.preventDefault();
+            performSearch(query, paginator.next_page_number);
+        };
+        nextLi.appendChild(nextLink);
+        paginationList.appendChild(nextLi);
+    }
+    
+    searchPagination.appendChild(paginationList);
+    
+    // Insert after the table
+    const tableContainer = document.querySelector('.table-responsive');
+    tableContainer.parentNode.insertBefore(searchPagination, tableContainer.nextSibling);
+}
+
+function updateStatusFilterPagination(paginator, statusFilterType) {
+    const paginationContainer = document.getElementById('search-pagination');
+    if (!paginationContainer) return;
+    
+    if (paginator.num_pages > 1) {
+        let paginationHTML = `
+            <nav aria-label="Status filter pagination" class="mt-3">
+                <ul class="pagination justify-content-center">
+        `;
+        
+        // First and Previous buttons
+        if (paginator.has_previous) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link status-page-link" href="#" data-page="1" data-status="${statusFilterType}" aria-label="First">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link status-page-link" href="#" data-page="${paginator.previous_page_number}" data-status="${statusFilterType}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            `;
+        } else {
+            paginationHTML += `
+                <li class="page-item disabled">
+                    <span class="page-link" aria-label="First">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </span>
+                </li>
+            `;
+        }
+        
+        // Page numbers
+        for (let num of paginator.page_range) {
+            if (num == paginator.current_page) {
+                paginationHTML += `
+                    <li class="page-item active">
+                        <span class="page-link">${num}</span>
+                    </li>
+                `;
+            } else if (num > paginator.current_page - 3 && num < paginator.current_page + 3) {
+                paginationHTML += `
+                    <li class="page-item">
+                        <a class="page-link status-page-link" href="#" data-page="${num}" data-status="${statusFilterType}">${num}</a>
+                    </li>
+                `;
+            }
+        }
+        
+        // Next and Last buttons
+        if (paginator.has_next) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link status-page-link" href="#" data-page="${paginator.next_page_number}" data-status="${statusFilterType}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link status-page-link" href="#" data-page="${paginator.num_pages}" data-status="${statusFilterType}" aria-label="Last">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+            `;
+        } else {
+            paginationHTML += `
+                <li class="page-item disabled">
+                    <span class="page-link" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </span>
+                </li>
+                <li class="page-item disabled">
+                    <span class="page-link" aria-label="Last">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </span>
+                </li>
+            `;
+        }
+        
+        paginationHTML += `
+                </ul>
+                <div class="text-center text-muted small mt-2">
+                    Page ${paginator.current_page} of ${paginator.num_pages}
+                </div>
+            </nav>
+        `;
+        
+        paginationContainer.innerHTML = paginationHTML;
+        
+        // Add event listeners to pagination links
+        document.querySelectorAll('.status-page-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const page = this.getAttribute('data-page');
+                const status = this.getAttribute('data-status');
+                performStatusFilter(status, page);
+            });
+        });
+    } else {
+        paginationContainer.innerHTML = '';
+    }
+}
+
+function restoreRegularPagination() {
+    // Check if we need to filter by status
+    const statusFilterType = document.querySelector('input[name="statusFilterType"]:checked').value;
+    
+    if (statusFilterType === 'active') {
+        // If showing active manufacturers, reload the page with status=active parameter
+        window.location.href = window.location.pathname + '?status=active';
+    } else if (statusFilterType === 'inactive') {
+        // If showing inactive manufacturers, apply status filter
+        performStatusFilter('inactive');
+    } else if (statusFilterType === 'all') {
+        // If showing all manufacturers, reload the page with status=all parameter
+        window.location.href = window.location.pathname + '?status=all';
+    }
+}
+
+// AJAX delete functionality
+function attachEventListeners() {
+    // Delete listeners
+    document.querySelectorAll('.ajax-delete-manufacturer').forEach(button => {
+        button.addEventListener('click', function() {
+            const manufacturerId = this.getAttribute('data-manufacturer-id');
+            const manufacturerName = this.getAttribute('data-manufacturer-name');
+            
+            if (confirm(`Are you sure you want to delete manufacturer "${manufacturerName}"?`)) {
+                fetch(`/product/ajax/delete-manufacturer/${manufacturerId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Remove the row from the table
+                        this.closest('tr').remove();
+                    } else {
+                        showNotification('Error deleting manufacturer: ' + (data.error || 'Unknown error'), 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showNotification('Error deleting manufacturer', 'error');
+                });
+            }
+        });
+    });
+}
+
+// Attach event listeners on page load
+document.addEventListener('DOMContentLoaded', function() {
+    attachEventListeners();
+    
+    // Check URL parameters and set radio button state
+    const urlParams = new URLSearchParams(window.location.search);
+    const statusParam = urlParams.get('status');
+    
+    if (statusParam === 'inactive') {
+        document.getElementById('statusInactive').checked = true;
+    } else if (statusParam === 'all') {
+        document.getElementById('statusAll').checked = true;
+    } else {
+        // Default to active
+        document.getElementById('statusActive').checked = true;
+    }
+});
+</script>
+{% endblock %}

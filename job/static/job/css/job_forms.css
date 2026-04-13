@@ -1,0 +1,60 @@
+/* Job Forms Common Styles */
+/* Fallback styles to ensure font sizes are correct */
+.table.table-bordered.table-hover th {
+    font-size: 0.875rem !important;
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+    font-weight: 600 !important;
+}
+.table.table-bordered.table-hover td {
+    font-size: 0.875rem !important;
+}
+.sticky-header th {
+    position: sticky !important;
+    top: 0 !important;
+    background: #f8f9fa !important;
+    z-index: 2 !important;
+}
+
+/* Add Quote Form Styles */
+.form-section {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
+.form-label {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.875rem;
+}
+.form-control, .form-select {
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+.form-control:focus, .form-select:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+/* Ensure dropdown menus are not covered by other elements */
+.form-select {
+    position: relative;
+    z-index: 1;
+}
+
+.form-select:focus {
+    position: relative;
+    z-index: 1000;
+}
+
+/* Ensure parent containers allow dropdowns to overflow */
+.card-body {
+    overflow: visible !important;
+}
+
+.row {
+    overflow: visible !important;
+}

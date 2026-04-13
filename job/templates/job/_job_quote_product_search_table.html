@@ -1,0 +1,185 @@
+{% load static %}
+{% if products_with_images %}
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Search Results</h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info mb-3">
+            <small><i class="fa fa-info-circle"></i> Set quantity to 1 or more for products you want to add to the quote. Select the price type for each product.</small>
+        </div>
+<form method="post" action="{% url 'job:add_multiple_products_to_job_quote' job.id quote.id %}">
+    {% csrf_token %}
+    <div class="table-responsive mb-4">
+        <table class="table table-bordered table-hover align-middle mb-0" style="font-size:13px;">
+            <thead class="sticky-header">
+                <tr style="background-color: #f2f2f2;">
+                    <th>Select</th>
+                    <th>Image</th>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Price Type</th>
+                    <th>Retail Price</th>
+                    <th>Builder Price</th>
+                    <th>Surplus Price</th>
+                    <th>Quantity</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for product, primary_image in products_with_images %}
+                <tr>
+                    <td style="text-align: center; padding: 5px;">
+                        <input type="checkbox" name="products[]" value="{{ product.id }}" style="margin: 0;">
+                    </td>
+                    <td>
+                        {% if primary_image %}
+                            <img src="{{ primary_image.image.url }}" alt="{{ product.description }}" class="product-img-thumb" style="width: 32px; height: 32px;">
+                        {% else %}
+                            <img src="{% static 'product/images.png' %}" alt="No image" class="product-img-thumb" style="width: 32px; height: 32px;">
+                        {% endif %}
+                    </td>
+                    <td>{{ product.part_no }}</td>
+                    <td>{{ product.description }}</td>
+                    <td>
+                        <select name="price_types[{{ product.id }}]" class="form-select form-select-sm" style="width: 100px; font-size: 12px;">
+                            <option value="retail_sell" {% if product.retail_sell %}selected{% endif %}>Retail</option>
+                            <option value="builder_sell" {% if product.builder_sell and not product.retail_sell %}selected{% endif %}>Builder</option>
+                            <option value="surplus_sell" {% if product.surplus_sell and not product.retail_sell and not product.builder_sell %}selected{% endif %}>Surplus</option>
+                        </select>
+                    </td>
+                    <td class="text-end">
+                        {% if product.retail_sell %}
+                            ${{ product.retail_sell|floatformat:2 }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if product.builder_sell %}
+                            ${{ product.builder_sell|floatformat:2 }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        {% if product.surplus_sell %}
+                            ${{ product.surplus_sell|floatformat:2 }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 5px; text-align: center;">
+                        <input type="number" name="quantities[{{ product.id }}]" value="0" min="0" class="form-control d-inline quantity-input" style="width: 60px; padding: 2px 4px; font-size: 13px; text-align: center;">
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="9" class="p-0">
+                        <div class="d-flex justify-content-end align-items-center gap-2 p-2">
+                            <a href="{% url 'job:job_quotes' job.id %}" class="btn btn-outline-secondary btn-sm">Back</a>
+                            <button type="submit" class="btn btn-primary btn-sm ms-2" onclick="return validateQuantities()">+Add</button>
+                        </div>
+                    </td>
+                </tr>
+            </tfoot>
+        </table>
+        </div>
+    </form>
+    <!-- Pagination controls -->
+    {% if page_obj %}
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                {% if is_ajax %}
+                <a class="page-link ajax-pagination" href="#" data-page="{{ page_obj.previous_page_number }}" aria-label="Previous">
+                {% else %}
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}" aria-label="Previous">
+                {% endif %}
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+            {% endif %}
+            
+            {% if page_obj.paginator.num_pages <= 7 %}
+                {% for num in page_obj.paginator.page_range %}
+                <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                    {% if is_ajax %}
+                    <a class="page-link ajax-pagination" href="#" data-page="{{ num }}">{{ num }}</a>
+                    {% else %}
+                    <a class="page-link" href="?page={{ num }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}">{{ num }}</a>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            {% else %}
+                <!-- Show first page -->
+                <li class="page-item {% if page_obj.number == 1 %}active{% endif %}">
+                    {% if is_ajax %}
+                    <a class="page-link ajax-pagination" href="#" data-page="1">1</a>
+                    {% else %}
+                    <a class="page-link" href="?page=1{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}">1</a>
+                    {% endif %}
+                </li>
+                
+                {% if page_obj.number > 4 %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                {% endif %}
+                
+                <!-- Show pages around current page -->
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num > 1 and num < page_obj.paginator.num_pages %}
+                        {% if num >= page_obj.number|add:'-2' and num <= page_obj.number|add:'2' %}
+                        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                            {% if is_ajax %}
+                            <a class="page-link ajax-pagination" href="#" data-page="{{ num }}">{{ num }}</a>
+                            {% else %}
+                            <a class="page-link" href="?page={{ num }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}">{{ num }}</a>
+                            {% endif %}
+                        </li>
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+                
+                {% if page_obj.number < page_obj.paginator.num_pages|add:'-3' %}
+                <li class="page-item disabled">
+                    <span class="page-link">...</span>
+                </li>
+                {% endif %}
+                
+                <!-- Show last page -->
+                {% if page_obj.paginator.num_pages > 1 %}
+                <li class="page-item {% if page_obj.number == page_obj.paginator.num_pages %}active{% endif %}">
+                    {% if is_ajax %}
+                    <a class="page-link ajax-pagination" href="#" data-page="{{ page_obj.paginator.num_pages }}">{{ page_obj.paginator.num_pages }}</a>
+                    {% else %}
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}">{{ page_obj.paginator.num_pages }}</a>
+                    {% endif %}
+                </li>
+                {% endif %}
+            {% endif %}
+            
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                {% if is_ajax %}
+                <a class="page-link ajax-pagination" href="#" data-page="{{ page_obj.next_page_number }}" aria-label="Next">
+                {% else %}
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}" aria-label="Next">
+                {% endif %}
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+    </div>
+</div>
+{% else %}
+<div>
+    <h5>No search performed.</h5>
+</div>
+{% endif %}

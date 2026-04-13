@@ -1,0 +1,44 @@
+{% load i18n %}
+
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb" itemprop="breadcrumb" itemscope itemtype="https://schema.org/BreadcrumbList" style="padding: 15px 10px; line-height: 2;">
+        {% for item in breadcrumbs %}
+        {% if forloop.last %}
+        <li class="breadcrumb-item active" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem" aria-current="page">
+            <span itemprop="name">
+                {% if "-" in item.name or "_" in item.name %}
+                    {{ item.name|capfirst|default_if_none:""|default:""|cut:"-"|cut:"_"|add:" " }}
+                {% else %}
+                    {{ item.name|capfirst }}
+                {% endif %}
+            </span>
+            <meta itemprop="position" content="{{ item.position }}" />
+        </li>
+        {% else %}
+        <li class="breadcrumb-item" itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem">
+            {% if item.resolved %}
+            <a itemprop="item" href="{{ item.url }}">
+                <span itemprop="name">
+                    {% if "-" in item.name or "_" in item.name %}
+                        {{ item.name|capfirst|default_if_none:""|default:""|cut:"-"|cut:"_"|add:" " }}
+                    {% else %}
+                        {{ item.name|capfirst }}
+                    {% endif %}
+                </span>
+            </a>
+            <meta itemprop="position" content="{{ item.position }}" />
+            {% else %}
+            <span itemprop="name">
+                {% if "-" in item.name or "_" in item.name %}
+                    {{ item.name|capfirst|default_if_none:""|default:""|cut:"-"|cut:"_"|add:" " }}
+                {% else %}
+                    {{ item.name|capfirst }}
+                {% endif %}
+            </span>
+            <meta itemprop="position" content="{{ item.position }}" />
+            {% endif %}
+        </li>
+        {% endif %}
+        {% endfor %}
+    </ol>
+</nav>

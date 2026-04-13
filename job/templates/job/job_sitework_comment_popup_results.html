@@ -1,0 +1,12 @@
+{% load static %}
+<button class="btn btn-light"
+hx-get="{% url 'job:job_sitework_comment_popup' job_id=job.id subcat=data.subcat.id comment='gomer' %}" 
+hx-target="this"  
+hx-swap="outerHTML"
+>
+{% if data.comment|length > 1 %}
+    <img src="{% static 'sitework/clipboard-fill.svg' %}" />
+{% else %}
+    <img src="{% static 'sitework/clipboard.svg' %}" />
+{% endif %}
+</button>

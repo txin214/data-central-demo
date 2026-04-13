@@ -1,0 +1,21 @@
+<!-- MODAL -->
+<!-- sitework/Mcomment_popup.html Production  this allows editing the comment in the table row  -->
+<span >
+<form hx-post="{% url 'sitework:comment_post' %}"  hx-swap="outerHTML" hx-target="this" hx-headers='{"X-CSRFToken":"{{csrf_token }}"}' > 
+      <div >
+        <h5 >Edit Comment </h5>
+      </div>
+      <div >
+        <textarea id='ctextarea' name='comment' 
+        rows="4" cols="60" maxlength="200">{{ data.comment }}</textarea>
+        <input type="hidden" name="quoteid" value ="{{ data.qte }}">
+        <input type="hidden" name="subcat" value ="{{ data.subcat.pk }}">
+      </div>
+      <div >
+        <input class="btn btn-success btn-sm" type="submit" value="OK">
+             <!-- simpler way to cancel (maybe)
+        <button type="button" class="btn btn-danger btn-sm"  
+         onclick="window.history.back()">ONO</button>
+          -->
+      </div> 
+  </form></span>

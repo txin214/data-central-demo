@@ -1,0 +1,16 @@
+<!-- sitework/comment_results.html Production  after the edit-in-place, this shows the value  -->
+{% load static %}
+<div hx-trigger="load" hx-get="/sitework/subcat_form/{{ data.cat }}/{{ data.q }}/" hx-target="body">
+</div>
+<button class="btn btn-light"
+hx-get="{% url 'sitework:comment_popup' qte=data.q subcat=data.s comment='gomer' %}" 
+hx-target="this"  
+hx-swap="outerHTML"
+alt="comment">
+
+{% if data.x|length > 1 %}
+  <img  src="{% static 'sitework/clipboard-fill.svg' %}" />
+{% else %}
+  <img src="{% static 'sitework/clipboard.svg' %}" />
+{% endif %}
+</button>

@@ -1,0 +1,65 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Media and static files
+# /media/  # Commented out to allow pushing product images to GitHub
+media/product_images/
+/static/
+!/static/.gitkeep
+
+# Environment
+.env
+.venv
+env/
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+*.pyc
+gunicorn.sock
+production_settings.py
+
+# OAuth2 credentials (sensitive - never commit)
+gmail_credentials.json
+gmail_token.json
+*_credentials.json
+*_token.json
+
+# Temporary files
+*.bak
+*.tmp
+*~

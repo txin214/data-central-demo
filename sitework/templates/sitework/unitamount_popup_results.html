@@ -1,0 +1,10 @@
+<!-- unitamount_popup_results.html Production  after the edit-in-place, this shows the current value  -->
+<button class="btn btn-light"
+                hx-get="{% url 'sitework:unitamount_popup' qte=q cat=c subcat=s unitamt=x %}"
+                hx-target="this" hx-swap="outerHTML">
+                {% if x == 0 %}
+                  --
+                {% else %}
+                  {{ x }}
+                {% endif %}
+            </button>

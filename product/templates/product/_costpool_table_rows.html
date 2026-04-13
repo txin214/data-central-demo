@@ -1,0 +1,19 @@
+{% for costpool in costpools %}
+<tr>
+    <td>{{ costpool.id }}</td>
+    <td>{{ costpool.manufacturer.manufacturer_name }}</td>
+    <td>{{ costpool.category.product_category }}</td>
+    <td>{{ costpool.sub_category1.product_sub_category }}</td>
+    <td>{{ costpool.sub_category2.product_sub_category2|default:'-' }}</td>
+    <td>{{ costpool.retail }}</td>
+    <td>{{ costpool.builder }}</td>
+    <td>{{ costpool.surplus }}</td>
+    <td>{{ costpool.status|yesno:"A,I" }}</td>
+    <td>{{ costpool.date_updated|date:"M d, Y H:i"|default:"-" }}</td>
+    <td>
+        <a href="{% url 'product:edit_costpool' costpool.id %}?mode=view" class="btn btn-sm btn-outline-primary">View</a>
+        <a href="{% url 'product:edit_costpool' costpool.id %}" class="btn btn-sm btn-outline-info">Edit</a>
+        <button type="button" class="btn btn-sm btn-outline-danger ajax-delete-costpool" data-costpool-id="{{ costpool.id }}" data-costpool-name="{{ costpool.manufacturer.manufacturer_name }} - {{ costpool.category.product_category }}">Delete</button>
+    </td>
+</tr>
+{% endfor %}

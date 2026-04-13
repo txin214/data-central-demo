@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+{% block title %}Customer Form{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">Customer Information</h4>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <!-- Primary Contact Information -->
+                        <h5 class="mt-3 mb-3">Primary Contact</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.first_name.label_tag }}
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                    <div class="text-danger">{{ form.first_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.last_name.label_tag }}
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                    <div class="text-danger">{{ form.last_name.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Secondary Contact Information -->
+                        <h5 class="mt-4 mb-3">Secondary Contact</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.first_name2.label_tag }}
+                                {{ form.first_name2 }}
+                                {% if form.first_name2.errors %}
+                                    <div class="text-danger">{{ form.first_name2.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.last_name2.label_tag }}
+                                {{ form.last_name2 }}
+                                {% if form.last_name2.errors %}
+                                    <div class="text-danger">{{ form.last_name2.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Contact Information -->
+                        <h5 class="mt-4 mb-3">Contact Details</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.email.label_tag }}
+                                {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="text-danger">{{ form.email.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.cellphone.label_tag }}
+                                {{ form.cellphone }}
+                                {% if form.cellphone.errors %}
+                                    <div class="text-danger">{{ form.cellphone.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                {{ form.home_phone.label_tag }}
+                                {{ form.home_phone }}
+                                {% if form.home_phone.errors %}
+                                    <div class="text-danger">{{ form.home_phone.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.work_phone.label_tag }}
+                                {{ form.work_phone }}
+                                {% if form.work_phone.errors %}
+                                    <div class="text-danger">{{ form.work_phone.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                {{ form.cellphone2.label_tag }}
+                                {{ form.cellphone2 }}
+                                {% if form.cellphone2.errors %}
+                                    <div class="text-danger">{{ form.cellphone2.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.work_phone2.label_tag }}
+                                {{ form.work_phone2 }}
+                                {% if form.work_phone2.errors %}
+                                    <div class="text-danger">{{ form.work_phone2.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Address Information -->
+                        <h5 class="mt-4 mb-3">Address</h5>
+                        <div class="row">
+                            <div class="col-md-12">
+                                {{ form.address.label_tag }}
+                                {{ form.address }}
+                                {% if form.address.errors %}
+                                    <div class="text-danger">{{ form.address.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                {{ form.city.label_tag }}
+                                {{ form.city }}
+                                {% if form.city.errors %}
+                                    <div class="text-danger">{{ form.city.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                {{ form.state.label_tag }}
+                                {{ form.state }}
+                                {% if form.state.errors %}
+                                    <div class="text-danger">{{ form.state.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-3">
+                                {{ form.zip.label_tag }}
+                                {{ form.zip }}
+                                {% if form.zip.errors %}
+                                    <div class="text-danger">{{ form.zip.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Additional Information -->
+                        <h5 class="mt-4 mb-3">Additional Information</h5>
+                        <div class="row">
+                            <div class="col-md-6">
+                                {{ form.county.label_tag }}
+                                {{ form.county }}
+                                {% if form.county.errors %}
+                                    <div class="text-danger">{{ form.county.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.referral.label_tag }}
+                                {{ form.referral }}
+                                {% if form.referral.errors %}
+                                    <div class="text-danger">{{ form.referral.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-4">
+                                {{ form.status_flag.label_tag }}
+                                {{ form.status_flag }}
+                                {% if form.status_flag.errors %}
+                                    <div class="text-danger">{{ form.status_flag.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.emailoptout.label_tag }}
+                                {{ form.emailoptout }}
+                                {% if form.emailoptout.errors %}
+                                    <div class="text-danger">{{ form.emailoptout.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.cust_code.label_tag }}
+                                {{ form.cust_code }}
+                                {% if form.cust_code.errors %}
+                                    <div class="text-danger">{{ form.cust_code.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-12">
+                                {{ form.assigned_staff.label_tag }}
+                                {{ form.assigned_staff }}
+                                {% if form.assigned_staff.errors %}
+                                    <div class="text-danger">{{ form.assigned_staff.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-md-12">
+                                {{ form.notes.label_tag }}
+                                {{ form.notes }}
+                                {% if form.notes.errors %}
+                                    <div class="text-danger">{{ form.notes.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <a href="{% url 'crm:list_customer' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

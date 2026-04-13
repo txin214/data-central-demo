@@ -1,0 +1,109 @@
+{% extends 'job/base_job.html' %}
+{% load static %}
+
+{% block job_content %}
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.1">
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_forms.css' %}?v=1.0">
+
+<div class="card mb-3 mt-3">
+    <div class="card-header">
+        <h6 class="card-title mb-0">
+            {% if action == 'create' %}Create{% elif action == 'update' %}Update{% else %}View{% endif %} Job Note
+        </h6>
+    </div>
+    <div class="card-body">
+        <form method="POST" {% if action != 'view' %}{% if action == 'update' %}action="{% url 'job:job_notes_update_specific' job.id note.id %}"{% else %}action="{% url 'job:job_notes_create' job.id %}"{% endif %}{% endif %}>
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger py-1 mb-2 small">{{ form.non_field_errors }}</div>
+            {% endif %}
+            
+            <div class="row">
+                <!-- Note Content -->
+                <div class="col-md-8 mb-2">
+                    <label class="form-label small" for="note">Note</label>
+                    {% if action == 'view' %}
+                        <div class="form-control form-control-sm bg-light" style="min-height: 120px;">{{ form.note|default:"-" }}</div>
+                    {% else %}
+                        <textarea class="form-control form-control-sm notes-textarea" id="note" name="note" rows="6" placeholder="Enter your note here..." required>{{ form.note }}</textarea>
+                    {% endif %}
+                </div>
+                
+                <!-- Follow Up Section -->
+                <div class="col-md-4 mb-2">
+                    <div class="row">
+                        <div class="col-12 mb-2">
+                            <label class="form-label small" for="assigned_to">Assigned To:</label>
+                            {% if action == 'view' %}
+                                <div class="form-control form-control-sm bg-light">
+                                    {% for user in users %}
+                                        {% if user.id == form.assigned_to %}
+                                            {{ user.first_name }} {{ user.last_name }}
+                                        {% endif %}
+                                    {% empty %}
+                                        Not assigned
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <select class="form-select form-select-sm" id="assigned_to" name="assigned_to">
+                                    <option value="">A- Select Designer</option>
+                                    {% for user in users %}
+                                        <option value="{{ user.id }}" {% if user.id == form.assigned_to %}selected{% endif %}>{{ user.first_name }} {{ user.last_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% endif %}
+                        </div>
+                        <div class="col-12 mb-2">
+                            <label class="form-label small" for="follow_up">Needed By:</label>
+                            {% if action == 'view' %}
+                                <div class="form-control form-control-sm bg-light">{{ form.follow_up|default:"Not set" }}</div>
+                            {% else %}
+                                <input type="datetime-local" class="form-control form-control-sm" id="follow_up" name="follow_up" value="{{ form.follow_up }}">
+                            {% endif %}
+                        </div>
+                        <div class="col-12 mb-2">
+                            <div class="form-check">
+                                {% if action == 'view' %}
+                                    <div class="form-control form-control-sm bg-light">{{ form.completed|yesno:"Yes,No"|default:"No" }}</div>
+                                {% else %}
+                                    <input class="form-check-input" type="checkbox" id="completed" name="completed" {% if form.completed %}checked{% endif %}>
+                                    <label class="form-check-label small" for="completed">
+                                        Completed
+                                    </label>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            {% if action != 'view' %}
+            <div class="row mt-3">
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-{% if action == 'update' %}save{% else %}plus{% endif %} me-1"></i>
+                        {% if action == 'update' %}Update{% else %}Create{% endif %} Note
+                    </button>
+                    <a href="{% url 'job:job_notes' job.id %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-times me-1"></i>
+                        Cancel
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="row mt-3">
+                <div class="col-12">
+                    <a href="{% url 'job:job_notes' job.id %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i>
+                        Back to Job Notes
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{% endblock %}

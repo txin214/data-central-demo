@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Close Customer{% endblock %}
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h4 class="mb-0">Confirm Customer Status Change</h4>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">{{ message }}</p>
+                    
+                    <form method="POST">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-warning">{{ action }} Customer</button>
+                            <a href="{% url 'crm:list_customer' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

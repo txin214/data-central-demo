@@ -1,0 +1,91 @@
+{% extends 'job/base_job.html' %}
+{% load static %}
+
+{% block job_content %}
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.1">
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_forms.css' %}?v=1.0">
+
+<div class="card mb-3 mt-3">
+    <div class="card-header">
+        <h6 class="card-title mb-0">
+            {% if is_edit %}Edit{% else %}Create{% endif %} Payment
+        </h6>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger py-1 mb-2 small">{{ form.non_field_errors }}</div>
+            {% endif %}
+            
+            <div class="row">
+                <!-- Date -->
+                <div class="col-md-6 mb-2">
+                    <label class="form-label small" for="{{ form.date.id_for_label }}">{{ form.date.label }}</label>
+                    {{ form.date }}
+                    {% if form.date.errors %}
+                        <div class="text-danger small">{{ form.date.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Account Category -->
+                <div class="col-md-6 mb-2">
+                    <label class="form-label small" for="{{ form.account_category.id_for_label }}">{{ form.account_category.label }}</label>
+                    {{ form.account_category }}
+                    {% if form.account_category.errors %}
+                        <div class="text-danger small">{{ form.account_category.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Amount -->
+                <div class="col-md-6 mb-2">
+                    <label class="form-label small" for="{{ form.amount.id_for_label }}">{{ form.amount.label }}</label>
+                    {{ form.amount }}
+                    {% if form.amount.errors %}
+                        <div class="text-danger small">{{ form.amount.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Discount -->
+                <div class="col-md-6 mb-2">
+                    <label class="form-label small" for="{{ form.discount.id_for_label }}">{{ form.discount.label }}</label>
+                    {{ form.discount }}
+                    {% if form.discount.errors %}
+                        <div class="text-danger small">{{ form.discount.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Comment -->
+                <div class="col-md-12 mb-2">
+                    <label class="form-label small" for="{{ form.comment.id_for_label }}">{{ form.comment.label }}</label>
+                    {{ form.comment }}
+                    {% if form.comment.errors %}
+                        <div class="text-danger small">{{ form.comment.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="row mt-3">
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-{% if is_edit %}save{% else %}plus{% endif %} me-1"></i>
+                        {% if is_edit %}Update{% else %}Create{% endif %} Payment
+                    </button>
+                    <a href="{% url 'job:job_payments' job.id %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-times me-1"></i>
+                        Cancel
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+

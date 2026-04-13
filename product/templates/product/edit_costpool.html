@@ -1,0 +1,640 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'product/css/form-table.css' %}">
+<style>
+    .sticky-header th {
+        position: sticky;
+        top: 0;
+        background: #f8f9fa;
+        z-index: 2;
+    }
+    .table th, .table td {
+        vertical-align: middle;
+    }
+    
+    /* Linked products table styling */
+    #linked-products-table {
+        font-size: 0.9rem;
+    }
+    
+    #linked-products-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        border-bottom: 2px solid #dee2e6;
+        padding: 12px 8px;
+        color: #495057;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    #linked-products-table td {
+        padding: 8px;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    #linked-products-table tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    #linked-products-table .product-checkbox {
+        transform: scale(1.1);
+    }
+    
+    /* Table responsive styling */
+    .table-responsive {
+        border-radius: 0.375rem;
+        overflow: hidden;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+    
+    /* Pagination styling */
+    .pagination .page-link {
+        color: #007bff;
+        border-color: #dee2e6;
+    }
+    
+    .pagination .page-item.active .page-link {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+    
+    .pagination .page-link:hover {
+        color: #0056b3;
+        background-color: #e9ecef;
+        border-color: #dee2e6;
+    }
+</style>
+{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Cost Pools</h2>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'product:costpools' %}" class="btn btn-outline-secondary btn-sm">← Back to Cost Pools</a>
+        </div>
+    </div>
+    
+    <div class="form-container">
+        <form method="POST" id="costpool-form">
+            {% csrf_token %}
+            <!-- Hidden field to store selected product IDs -->
+            <input type="hidden" id="selected_products" name="selected_products" value="">
+            <table class="costpool-form-table table table-bordered table-hover">
+                <tr>
+                    <th colspan="2">
+                        {% if costpool.id %}
+                            {% if is_view_mode %}
+                                View Cost Pool: {{ costpool.manufacturer.manufacturer_name }} - {{ costpool.category.product_category }}
+                            {% else %}
+                                Edit Cost Pool: {{ costpool.manufacturer.manufacturer_name }} - {{ costpool.category.product_category }}
+                            {% endif %}
+                        {% else %}
+                            Please enter your Cost Pool information:
+                        {% endif %}
+                    </th>
+                </tr>
+                
+                <tr>
+                    <td>Manufacturer:</td>
+                    <td>
+                        {{ form.manufacturer }}
+                        {% if form.manufacturer.errors %}
+                            <div class="error-message">{{ form.manufacturer.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Category:</td>
+                    <td>
+                        {{ form.category }}
+                        {% if form.category.errors %}
+                            <div class="error-message">{{ form.category.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Sub Category 1:</td>
+                    <td>
+                        {{ form.sub_category1 }}
+                        {% if form.sub_category1.errors %}
+                            <div class="error-message">{{ form.sub_category1.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Sub Category 2:</td>
+                    <td>
+                        {{ form.sub_category2 }}
+                        {% if form.sub_category2.errors %}
+                            <div class="error-message">{{ form.sub_category2.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Retail Markup:</td>
+                    <td>
+                        {{ form.retail }}
+                        {% if form.retail.errors %}
+                            <div class="error-message">{{ form.retail.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Builder Markup:</td>
+                    <td>
+                        {{ form.builder }}
+                        {% if form.builder.errors %}
+                            <div class="error-message">{{ form.builder.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Surplus Markup:</td>
+                    <td>
+                        {{ form.surplus }}
+                        {% if form.surplus.errors %}
+                            <div class="error-message">{{ form.surplus.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Date Entered:</td>
+                    <td>
+                        {{ form.date_entered }}
+                        {% if form.date_entered.errors %}
+                            <div class="error-message">{{ form.date_entered.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Date Updated:</td>
+                    <td>
+                        {{ form.date_updated }}
+                        {% if form.date_updated.errors %}
+                            <div class="error-message">{{ form.date_updated.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>Status:</td>
+                    <td>
+                        {{ form.status }}
+                        {% if form.status.errors %}
+                            <div class="error-message">{{ form.status.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+                
+                {% if costpool.id and not is_view_mode %}
+                <tr>
+                    <td>Update Selected Products:</td>
+                    <td>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="update_all_products" name="update_all_products" value="true">
+                            <label class="form-check-label" for="update_all_products">
+                                Update selected products with new multiplier values when saving
+                            </label>
+                        </div>
+                        <small class="text-muted">Only the checked products below will be updated. Uncheck products you want to skip.</small>
+                    </td>
+                </tr>
+                {% endif %}
+                
+                <tr>
+                    <td>&nbsp;</td>
+                    <td class="btn-container">
+                        {% if not is_view_mode %}
+                        <button type="submit" class="btn btn-primary">
+                            {% if costpool.id %}
+                                Save Changes
+                            {% else %}
+                                Create Cost Pool
+                            {% endif %}
+                        </button>
+                        {% else %}
+                        <a href="?mode=edit" class="btn btn-primary">
+                            Edit Cost Pool
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'product:costpools' %}" class="btn btn-light">
+                            Cancel
+                        </a>
+                    </td>
+                </tr>
+            </table>
+        </form>
+    </div>
+    
+    <!-- Linked Products Section (only show for existing cost pools) -->
+    {% if costpool.id and not is_view_mode %}
+    <div class="mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0">Associated Products</h4>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-outline-primary" onclick="selectAllProducts()">Select All</button>
+                <button type="button" class="btn btn-sm btn-outline-secondary" onclick="deselectAllProducts()">Deselect All</button>
+                <button type="button" class="btn btn-sm btn-success" onclick="updateSelectedProducts()">Update Selected Products</button>
+            </div>
+        </div>
+        
+        <!-- Products Table -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle mb-0" id="linked-products-table">
+                <thead class="sticky-header">
+                    <tr>
+                        <th width="50">
+                            <input type="checkbox" id="select-all-products" checked>
+                        </th>
+                        <th>Part No</th>
+                        <th>Description</th>
+                        <th>Category</th>
+                        <th>Sub Category 1</th>
+                        <th>Sub Category 2</th>
+                        <th>Current Retail</th>
+                        <th>Current Builder</th>
+                        <th>Current Surplus</th>
+                    </tr>
+                </thead>
+                <tbody id="linked-products-tbody">
+                    <!-- Products will be loaded here via AJAX -->
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Pagination for Products -->
+        <div id="products-pagination-container" class="mt-3">
+            <!-- Pagination will be loaded here via AJAX -->
+        </div>
+        
+        <!-- Loading indicator -->
+        <div id="products-loading" class="text-center py-4" style="display: none;">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading products...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading linked products...</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script type="text/javascript">
+    var isViewMode = {% if is_view_mode %}true{% else %}false{% endif %};
+    var isCreateMode = {% if not costpool.id %}true{% else %}false{% endif %};
+
+    // Handle form fields in view mode - make them look the same but disabled
+    document.addEventListener('DOMContentLoaded', function() {
+        if (isViewMode) {
+            const formFields = document.querySelectorAll('input, select, textarea');
+            formFields.forEach(function(field) {
+                // Disable the field
+                field.disabled = true;
+                
+                // Keep the same visual appearance but make it clear it's read-only
+                field.style.backgroundColor = '#f8f9fa';
+                field.style.cursor = 'not-allowed';
+                field.style.opacity = '0.8';
+                
+                // Add a subtle visual indicator that it's read-only
+                field.style.borderColor = '#dee2e6';
+            });
+            
+            // Also disable the form submission
+            const form = document.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    return false;
+                });
+            }
+        }
+        
+        // Handle create mode - ensure all required fields are properly marked
+        if (isCreateMode) {
+            // Add any create-specific logic here if needed
+            console.log('Create cost pool mode active');
+        }
+
+        // Set up chained dropdowns for category, sub_category1, and sub_category2
+        setupChainedDropdowns();
+    });
+
+    // Function to set up chained dropdowns
+    function setupChainedDropdowns() {
+        const categorySelect = document.getElementById('id_category');
+        const subCategory1Select = document.getElementById('id_sub_category1');
+        const subCategory2Select = document.getElementById('id_sub_category2');
+
+        if (categorySelect && subCategory1Select) {
+            // When category changes, update sub_category1 options
+            categorySelect.addEventListener('change', function() {
+                const categoryId = this.value;
+                if (categoryId) {
+                    loadSubCategories1(categoryId);
+                    // Clear sub_category2 when category changes
+                    if (subCategory2Select) {
+                        subCategory2Select.innerHTML = '<option value="">---------</option>';
+                        subCategory2Select.disabled = true;
+                    }
+                } else {
+                    // Clear sub_category1 and sub_category2 when no category is selected
+                    subCategory1Select.innerHTML = '<option value="">---------</option>';
+                    subCategory1Select.disabled = true;
+                    if (subCategory2Select) {
+                        subCategory2Select.innerHTML = '<option value="">---------</option>';
+                        subCategory2Select.disabled = true;
+                    }
+                }
+            });
+        }
+
+        if (subCategory1Select && subCategory2Select) {
+            // When sub_category1 changes, update sub_category2 options
+            subCategory1Select.addEventListener('change', function() {
+                const subCategory1Id = this.value;
+                if (subCategory1Id) {
+                    loadSubCategories2(subCategory1Id);
+                } else {
+                    // Clear sub_category2 when no sub_category1 is selected
+                    subCategory2Select.innerHTML = '<option value="">---------</option>';
+                    subCategory2Select.disabled = true;
+                }
+            });
+        }
+    }
+
+    // Function to load sub categories 1 based on selected category
+    function loadSubCategories1(categoryId) {
+        const subCategory1Select = document.getElementById('id_sub_category1');
+        
+        fetch(`/product/ajax/subcat1/${categoryId}/`)
+            .then(response => response.json())
+            .then(data => {
+                subCategory1Select.innerHTML = '<option value="">---------</option>';
+                if (data.subcategories && Array.isArray(data.subcategories)) {
+                    data.subcategories.forEach(subcat => {
+                        const option = document.createElement('option');
+                        option.value = subcat.id;
+                        option.textContent = subcat.name;
+                        subCategory1Select.appendChild(option);
+                    });
+                }
+                subCategory1Select.disabled = false;
+            })
+            .catch(error => {
+                console.error('Error loading sub categories 1:', error);
+                subCategory1Select.innerHTML = '<option value="">Error loading options</option>';
+            });
+    }
+
+    // Function to load sub categories 2 based on selected sub_category1
+    function loadSubCategories2(subCategory1Id) {
+        const subCategory2Select = document.getElementById('id_sub_category2');
+        
+        fetch(`/product/ajax/subcat2/${subCategory1Id}/`)
+            .then(response => response.json())
+            .then(data => {
+                subCategory2Select.innerHTML = '<option value="">---------</option>';
+                if (data.subcategories && Array.isArray(data.subcategories)) {
+                    data.subcategories.forEach(subcat => {
+                        const option = document.createElement('option');
+                        option.value = subcat.id;
+                        option.textContent = subcat.name;
+                        subCategory2Select.appendChild(option);
+                    });
+                }
+                subCategory2Select.disabled = false;
+            })
+            .catch(error => {
+                console.error('Error loading sub categories 2:', error);
+                subCategory2Select.innerHTML = '<option value="">Error loading options</option>';
+            });
+    }
+
+    // Function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Product management functions
+    var currentProductsPage = 1;
+    var totalProductsPages = 1;
+
+    // Load linked products when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        if (!isViewMode && !isCreateMode) {
+            loadLinkedProducts(1);
+        }
+    });
+
+    function loadLinkedProducts(page = 1) {
+        const costpoolId = {{ costpool.id|default:'null' }};
+        if (!costpoolId) return;
+
+        document.getElementById('products-loading').style.display = 'block';
+        document.getElementById('linked-products-tbody').innerHTML = '';
+        document.getElementById('products-pagination-container').innerHTML = '';
+
+        fetch(`/product/ajax/costpool-linked-products/${costpoolId}/?page=${page}`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('products-loading').style.display = 'none';
+                
+                if (data.products && data.products.length > 0) {
+                    renderProductsTable(data.products);
+                    renderProductsPagination(data.pagination);
+                    currentProductsPage = page;
+                    totalProductsPages = data.pagination.total_pages;
+                } else {
+                    document.getElementById('linked-products-tbody').innerHTML = 
+                        '<tr><td colspan="9" class="text-center text-muted py-4">No products linked to this CostPool</td></tr>';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading linked products:', error);
+                document.getElementById('products-loading').style.display = 'none';
+                document.getElementById('linked-products-tbody').innerHTML = 
+                    '<tr><td colspan="9" class="text-center text-danger py-4">Error loading products</td></tr>';
+            });
+    }
+
+    function renderProductsTable(products) {
+        const tbody = document.getElementById('linked-products-tbody');
+        tbody.innerHTML = '';
+
+        products.forEach(product => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>
+                    <input type="checkbox" class="product-checkbox" value="${product.id}" checked>
+                </td>
+                <td>${product.part_no}</td>
+                <td>${product.description || '-'}</td>
+                <td>${product.category || '-'}</td>
+                <td>${product.sub_category1 || '-'}</td>
+                <td>${product.sub_category2 || '-'}</td>
+                <td class="text-end">${product.retail_sell_multiplier ? product.retail_sell_multiplier.toFixed(2) : '-'}</td>
+                <td class="text-end">${product.builder_sell_multiplier ? product.builder_sell_multiplier.toFixed(2) : '-'}</td>
+                <td class="text-end">${product.surplus_sell_multiplier ? product.surplus_sell_multiplier.toFixed(2) : '-'}</td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        // Update select all checkbox
+        updateSelectAllCheckbox();
+    }
+
+    function renderProductsPagination(pagination) {
+        const container = document.getElementById('products-pagination-container');
+        if (pagination.total_pages <= 1) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let paginationHTML = '<nav aria-label="Products pagination"><ul class="pagination justify-content-center">';
+        
+        // Previous button
+        if (pagination.has_previous) {
+            paginationHTML += `<li class="page-item"><a class="page-link" href="#" onclick="loadLinkedProducts(${pagination.previous_page})">Previous</a></li>`;
+        } else {
+            paginationHTML += '<li class="page-item disabled"><span class="page-link">Previous</span></li>';
+        }
+
+        // Page numbers
+        for (let i = 1; i <= pagination.total_pages; i++) {
+            if (i === pagination.current_page) {
+                paginationHTML += `<li class="page-item active"><span class="page-link">${i}</span></li>`;
+            } else {
+                paginationHTML += `<li class="page-item"><a class="page-link" href="#" onclick="loadLinkedProducts(${i})">${i}</a></li>`;
+            }
+        }
+
+        // Next button
+        if (pagination.has_next) {
+            paginationHTML += `<li class="page-item"><a class="page-link" href="#" onclick="loadLinkedProducts(${pagination.next_page})">Next</a></li>`;
+        } else {
+            paginationHTML += '<li class="page-item disabled"><span class="page-link">Next</span></li>';
+        }
+
+        paginationHTML += '</ul></nav>';
+        container.innerHTML = paginationHTML;
+    }
+
+    function selectAllProducts() {
+        document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        document.getElementById('select-all-products').checked = true;
+    }
+
+    function deselectAllProducts() {
+        document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        document.getElementById('select-all-products').checked = false;
+    }
+
+    function updateSelectAllCheckbox() {
+        const checkboxes = document.querySelectorAll('.product-checkbox');
+        const selectAllCheckbox = document.getElementById('select-all-products');
+        
+        if (checkboxes.length === 0) {
+            selectAllCheckbox.checked = false;
+            return;
+        }
+
+        const checkedCount = document.querySelectorAll('.product-checkbox:checked').length;
+        selectAllCheckbox.checked = checkedCount === checkboxes.length;
+    }
+
+    function updateSelectedProducts() {
+        const selectedProducts = Array.from(document.querySelectorAll('.product-checkbox:checked'))
+            .map(checkbox => checkbox.value);
+
+        if (selectedProducts.length === 0) {
+            alert('Please select at least one product to update.');
+            return;
+        }
+
+        if (confirm(`Are you sure you want to update ${selectedProducts.length} selected products with the new CostPool multipliers?`)) {
+            const costpoolId = {{ costpool.id|default:'null' }};
+            if (!costpoolId) return;
+
+            fetch(`/product/ajax/update-costpool-products/${costpoolId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    product_ids: selectedProducts
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Successfully updated ${data.updated_count} products.`);
+                    loadLinkedProducts(currentProductsPage); // Refresh the table
+                } else {
+                    alert('Error updating products: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(error => {
+                console.error('Error updating products:', error);
+                alert('Error updating products. Please try again.');
+            });
+        }
+    }
+
+    // Handle select all checkbox
+    document.addEventListener('change', function(e) {
+        if (e.target.id === 'select-all-products') {
+            const isChecked = e.target.checked;
+            document.querySelectorAll('.product-checkbox').forEach(checkbox => {
+                checkbox.checked = isChecked;
+            });
+        } else if (e.target.classList.contains('product-checkbox')) {
+            updateSelectAllCheckbox();
+        }
+    });
+
+    // Handle form submission - collect selected product IDs
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('costpool-form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                // Collect selected product IDs
+                const selectedProducts = Array.from(document.querySelectorAll('.product-checkbox:checked'))
+                    .map(checkbox => checkbox.value);
+                
+                // Update hidden field with selected product IDs
+                document.getElementById('selected_products').value = selectedProducts.join(',');
+            });
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,456 @@
+{% extends 'base.html' %}
+{% load static %}
+
+
+{% block content %}
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_list.css' %}?v=1.1">
+<style>
+/* Fallback styles to ensure font sizes are correct */
+.table.table-bordered.table-hover th {
+    font-size: 0.875rem !important;
+}
+.table.table-bordered.table-hover td {
+    font-size: 0.875rem !important;
+}
+.form-check-label {
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+}
+</style>
+
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Jobs</h2>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <div class="mb-3">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <input type="text" class="form-control form-control-sm" placeholder="Search Jobs..." id="job-search-bar">
+                </div>
+                <div class="col-md-4">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="searchType" id="searchJobCode" value="job_code" checked>
+                        <label class="form-check-label" for="searchJobCode">
+                            Job Code
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="searchType" id="searchCustomerName" value="customer_name">
+                        <label class="form-check-label" for="searchCustomerName">
+                            Customer Name
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="searchType" id="searchInvoiceNumber" value="invoice_number">
+                        <label class="form-check-label" for="searchInvoiceNumber">
+                            Invoice
+                        </label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="searchType" id="searchPONumber" value="po_number">
+                        <label class="form-check-label" for="searchPONumber">
+                            PO Number
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-12">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="statusFilter" id="filterActive" value="active" checked>
+                        <label class="form-check-label" for="filterActive">
+                            Active Only
+                        </label>
+                </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="statusFilter" id="filterInactive" value="inactive">
+                        <label class="form-check-label" for="filterInactive">
+                            Inactive Only
+                        </label>
+                </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="statusFilter" id="filterAll" value="all">
+                        <label class="form-check-label" for="filterAll">
+                            All Jobs
+                        </label>
+                </div>
+                </div>
+        </div>
+    </div>
+
+        <table class="table table-bordered table-hover align-middle mb-0">
+            <thead class="sticky-header">
+                <tr>
+                    <th>ID</th>
+                    <th>Job Code</th>
+                    <th>Customer</th>
+                    <th>Description</th>
+                    <th>Active</th>
+                    <th>Sold</th>
+                    <th>More</th>
+                </tr>
+            </thead>
+            <tbody id="job-table-body">
+                <tr class="border-top-0 border-bottom-0">
+                    <td colspan="7" class="border-top-0 border-bottom-0 py-2">
+                        <a href="{% url 'job:job_create' %}" class="btn btn-sm btn-success">
+                            <i class="fas fa-plus me-1"></i>
+                            Add Job
+                        </a>
+                    </td>
+                </tr>
+                        {% for job in jobs %}
+                        <tr>
+                    <td>{{ job.id }}</td>
+                            <td>
+                        <strong>{{ job.job_code|default:'-' }}</strong>
+                            </td>
+                    <td>{{ job.customer }}</td>
+                    <td>
+                                {% if job.job_description %}
+                                    {{ job.job_description|truncatechars:50 }}
+                                {% else %}
+                                    <span class="text-muted">No description</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if job.active %}A{% else %}I{% endif %}
+                            </td>
+                            <td>
+                                {% if job.sold %}Sold{% else %}Pending{% endif %}
+                            </td>
+                    <td>
+                        <a href="{% url 'job:job_detail' job.pk %}" class="btn btn-sm btn-outline-primary">View</a>
+                        <a href="{% url 'job:job_update' job.pk %}" class="btn btn-sm btn-outline-info">Edit</a>
+                        <a href="{% url 'job:job_delete' job.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+    
+    <div class="mt-2 text-end text-muted small" style="margin-right: 0; padding-right: 0;">
+        Active: {{ active_jobs|default:0 }} | Sold: {{ sold_jobs|default:0 }} | Total: {{ total_jobs|default:0 }}
+    </div>
+    
+    <!-- Search Results Pagination (for AJAX search) -->
+    <div id="search-pagination"></div>
+
+            <!-- Pagination -->
+            {% if is_paginated %}
+            <nav aria-label="Job pagination" class="mt-3">
+                <ul class="pagination pagination-sm justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">&laquo; First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchBar = document.getElementById('job-search-bar');
+    const searchTypeRadios = document.querySelectorAll('input[name="searchType"]');
+    const statusFilterRadios = document.querySelectorAll('input[name="statusFilter"]');
+    
+    let currentSearchType = 'job_code';
+    let currentStatusFilter = 'active';
+    
+    console.log('Initial values - Search type:', currentSearchType, 'Status filter:', currentStatusFilter);
+    
+    // Handle search type changes
+    searchTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            currentSearchType = this.value;
+            console.log('Search type changed to:', currentSearchType);
+            if (searchBar.value.trim()) {
+                performSearch();
+            }
+        });
+    });
+    
+    // Handle search input with debouncing
+    let searchTimeout;
+    searchBar.addEventListener('input', function() {
+        const query = this.value.trim();
+        console.log('Search input:', query, 'length:', query.length);
+        
+        // Clear previous timeout
+        clearTimeout(searchTimeout);
+        
+        if (query.length >= 2) {
+            // Add a small delay to avoid too many API calls
+            searchTimeout = setTimeout(() => {
+                console.log('Triggering search for:', query);
+                performSearch();
+            }, 300);
+        } else if (query.length === 1) {
+            // For single character, do immediate client-side filtering
+            console.log('Single character search, immediate filtering');
+            performSearch();
+        } else if (query.length === 0) {
+            console.log('Clearing search');
+            clearSearch();
+        }
+    });
+    
+    // Handle status filter radio changes
+    statusFilterRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            currentStatusFilter = this.value;
+            console.log('Status filter changed to:', currentStatusFilter);
+            if (searchBar.value.trim()) {
+                performSearch();
+            }
+        });
+    });
+    
+    // Set initial values from checked radio buttons
+    const checkedSearchType = document.querySelector('input[name="searchType"]:checked');
+    const checkedStatusFilter = document.querySelector('input[name="statusFilter"]:checked');
+    
+    if (checkedSearchType) {
+        currentSearchType = checkedSearchType.value;
+        console.log('Initial search type from radio:', currentSearchType);
+    }
+    
+    if (checkedStatusFilter) {
+        currentStatusFilter = checkedStatusFilter.value;
+        console.log('Initial status filter from radio:', currentStatusFilter);
+    }
+    
+    // Test AJAX endpoint accessibility
+    console.log('Testing AJAX endpoint...');
+    fetch('/job/ajax/search/?q=test&type=job_code&status=active')
+        .then(response => {
+            console.log('AJAX endpoint test response status:', response.status);
+            if (response.ok) {
+                console.log('AJAX endpoint is accessible');
+            } else {
+                console.error('AJAX endpoint returned error:', response.status);
+            }
+        })
+        .catch(error => {
+            console.error('AJAX endpoint test failed:', error);
+        });
+    
+    function performSearch() {
+        const query = searchBar.value.trim();
+        const searchType = currentSearchType;
+        const statusFilter = currentStatusFilter;
+        
+        console.log('performSearch called with:', { query, searchType, statusFilter });
+        
+        if (query.length >= 2) {
+            // Make AJAX call to server for search
+            const url = `/job/ajax/search/?q=${encodeURIComponent(query)}&type=${searchType}&status=${statusFilter}`;
+            console.log('Making AJAX request to:', url);
+            
+            fetch(url, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Search results:', data);
+                if (data.jobs && Array.isArray(data.jobs)) {
+                    updateJobTable(data.jobs);
+                    updateSearchPagination(data.paginator, query, searchType, statusFilter);
+                } else {
+                    console.error('Invalid response format:', data);
+                    performClientSideSearch();
+                }
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+                // Fallback to client-side filtering if AJAX fails
+                performClientSideSearch();
+            });
+        } else if (query.length === 1) {
+            // For single character, do client-side filtering
+            console.log('Single character search, using client-side filtering');
+            performClientSideSearch();
+        } else if (query.length === 0) {
+            // Clear search and restore original table
+            clearSearch();
+        }
+    }
+    
+    function performClientSideSearch() {
+        const query = searchBar.value.trim();
+        const searchType = currentSearchType;
+        const statusFilter = currentStatusFilter;
+        
+        console.log('performClientSideSearch called with:', { query, searchType, statusFilter });
+        
+        const tbody = document.getElementById('job-table-body');
+        const rows = tbody.querySelectorAll('tr');
+        
+        rows.forEach((row, index) => {
+            // Skip the "Add Job" button row (first row)
+            if (index === 0) {
+                return;
+            }
+            
+            let showRow = true;
+            
+            // Apply search filter
+            if (query) {
+                let searchText = '';
+                if (searchType === 'job_code') {
+                    searchText = row.cells[1].textContent.toLowerCase();
+                    console.log('Checking job code:', searchText, 'against query:', query.toLowerCase(), 'includes:', searchText.includes(query.toLowerCase()));
+                } else if (searchType === 'customer_name') {
+                    searchText = row.cells[2].textContent.toLowerCase();
+                    console.log('Checking customer name:', searchText, 'against query:', query.toLowerCase(), 'includes:', searchText.includes(query.toLowerCase()));
+                } else if (searchType === 'invoice_number') {
+                    // For now, just show all rows since we don't have invoice number logic
+                    searchText = 'placeholder';
+                } else if (searchType === 'po_number') {
+                    // For now, just show all rows since we don't have PO number logic
+                    searchText = 'placeholder';
+                }
+                
+                if (!searchText.includes(query.toLowerCase())) {
+                    showRow = false;
+                    console.log('Hiding row because search text does not include query');
+                }
+            }
+            
+            // Apply status filter
+            if (statusFilter === 'active') {
+                const activeCell = row.cells[4];
+                if (activeCell && !activeCell.textContent.includes('A')) {
+                    showRow = false;
+                }
+            } else if (statusFilter === 'inactive') {
+                const activeCell = row.cells[4];
+                if (activeCell && !activeCell.textContent.includes('I')) {
+                    showRow = false;
+                }
+            }
+            // 'all' filter shows everything
+            
+            row.style.display = showRow ? '' : 'none';
+        });
+    }
+    
+    function updateJobTable(jobs) {
+        const tbody = document.getElementById('job-table-body');
+        const regularPagination = document.querySelector('nav[aria-label="Job pagination"]');
+        
+        tbody.innerHTML = '';
+        
+        jobs.forEach(job => {
+            const activeText = job.active ? 'A' : 'I';
+            const soldText = job.sold ? 'Sold' : 'Pending';
+            
+            tbody.innerHTML += `<tr>
+                <td>${job.id}</td>
+                <td><strong>${job.job_code}</strong></td>
+                <td>${job.customer}</td>
+                <td>${job.description}</td>
+                <td>${activeText}</td>
+                <td>${soldText}</td>
+                <td>
+                    <a href="${job.quotes_url}" class="btn btn-sm btn-outline-primary">View</a>
+                    <a href="${job.edit_url}" class="btn btn-sm btn-outline-info">Edit</a>
+                    <a href="${job.delete_url}" class="btn btn-sm btn-outline-danger">Delete</a>
+                </td>
+            </tr>`;
+        });
+        
+        // Hide regular pagination when searching
+        if (regularPagination) {
+            regularPagination.style.display = 'none';
+        }
+    }
+    
+    function updateSearchPagination(paginator, query, searchType, statusFilter) {
+        const searchPagination = document.getElementById('search-pagination');
+        
+        if (paginator.num_pages > 1) {
+            let paginationHtml = '<nav aria-label="Search pagination" class="mt-3"><ul class="pagination pagination-sm justify-content-center">';
+            
+            if (paginator.has_previous) {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="searchPage(${paginator.previous_page_number}, '${query}', '${searchType}', '${statusFilter}')">Previous</a></li>`;
+            }
+            
+            paginationHtml += `<li class="page-item active"><span class="page-link">Page ${paginator.current_page} of ${paginator.num_pages}</span></li>`;
+            
+            if (paginator.has_next) {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="#" onclick="searchPage(${paginator.next_page_number}, '${query}', '${searchType}', '${statusFilter}')">Next</a></li>`;
+            }
+            
+            paginationHtml += '</ul></nav>';
+            searchPagination.innerHTML = paginationHtml;
+        } else {
+            searchPagination.innerHTML = '';
+        }
+    }
+    
+    function searchPage(page, query, searchType, statusFilter) {
+        const url = `/job/ajax/search/?q=${encodeURIComponent(query)}&type=${searchType}&status=${statusFilter}&page=${page}`;
+        
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                updateJobTable(data.jobs);
+                updateSearchPagination(data.paginator, query, searchType, statusFilter);
+            })
+            .catch(error => {
+                console.error('Page search error:', error);
+            });
+    }
+    
+    function clearSearch() {
+        // Clear search pagination
+        document.getElementById('search-pagination').innerHTML = '';
+        
+        // Show regular pagination
+        const regularPagination = document.querySelector('nav[aria-label="Job pagination"]');
+        if (regularPagination) {
+            regularPagination.style.display = '';
+        }
+        
+        // Reload the page to restore original table
+        window.location.reload();
+    }
+});
+</script>
+{% endblock %} 

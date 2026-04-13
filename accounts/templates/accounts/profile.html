@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Profile</h2>
+        </div>
+    </div>
+    <div class="col-12">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-lg-3 col-md-4 text-center">
+                        <div class="mb-3">
+                            <i class="fa fa-user-circle fa-5x text-muted"></i>
+                        </div>
+                        <h5>{% if user.first_name or user.last_name %}{{ user.first_name }} {{ user.last_name }}{% else %}{{ user.username }}{% endif %}</h5>
+                        <p class="text-muted">{{ user.email|default:"No email provided" }}</p>
+                        {% if user.first_name or user.last_name %}
+                        <small class="text-muted">@{{ user.username }}</small>
+                        {% endif %}
+                    </div>
+                    <div class="col-lg-9 col-md-8">
+                        <div class="row">
+                            <div class="col-lg-6 col-md-12">
+                        <h6 class="text-muted mb-3">Account Information</h6>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex">
+                                <div class="me-3"><strong>Username:</strong></div>
+                                <div>{{ user.username }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex">
+                                <div class="me-3"><strong>Email:</strong></div>
+                                <div>{{ user.email|default:"Not provided" }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex">
+                                <div class="me-3"><strong>First Name:</strong></div>
+                                <div>{{ user.first_name|default:"Not provided" }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex">
+                                <div class="me-3"><strong>Last Name:</strong></div>
+                                <div>{{ user.last_name|default:"Not provided" }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex">
+                                <div class="me-3"><strong>Date Joined:</strong></div>
+                                <div>{{ user.date_joined|date:"F d, Y" }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex">
+                                <div class="me-3"><strong>Last Login:</strong></div>
+                                <div>{{ user.last_login|date:"F d, Y g:i A"|default:"Never" }}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex">
+                                <div class="me-3"><strong>Staff Status:</strong></div>
+                                <div>
+                                    {% if user.is_staff %}
+                                        <span class="badge bg-success">Office Staff</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Regular User</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-6 col-md-6 col-sm-12">
+                        <h6 class="text-muted mb-3">Personal Information</h6>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex">
+                                <div class="me-3"><strong>Date of Birth:</strong></div>
+                                <div>{% if user.profile and user.profile.date_of_birth %}{{ user.profile.date_of_birth|date:"F d, Y" }}{% else %}Not provided{% endif %}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex">
+                                <div class="me-3"><strong>Gender:</strong></div>
+                                <div>{% if user.profile and user.profile.gender %}{{ user.profile.get_gender_display }}{% else %}Not provided{% endif %}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex">
+                                <div class="me-3"><strong>Pronoun:</strong></div>
+                                <div>{% if user.profile and user.profile.pronoun %}{{ user.profile.get_pronoun_display }}{% else %}Not provided{% endif %}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex">
+                                <div class="me-3"><strong>Location:</strong></div>
+                                <div>{% if user.profile and user.profile.location %}{{ user.profile.location }}{% else %}Not provided{% endif %}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="d-flex">
+                                <div class="me-3"><strong>Timezone:</strong></div>
+                                <div>{% if user.profile and user.profile.timezone %}{{ user.profile.timezone }}{% else %}Not provided{% endif %}</div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

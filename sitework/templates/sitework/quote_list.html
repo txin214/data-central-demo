@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Sitework Quote List{% endblock %}
+{% block content %}
+<!-- quote_list.html-->
+<div class="mb-3">
+    <a class="btn btn-primary btn-sm" type="button" href="{% url 'sitework:create_url' %}">Create</a>
+</div>
+
+<!-- Search Form -->
+<div class="mb-3">
+    <form method="GET" class="form-inline">
+        <div class="form-group mr-2">
+            <input type="text" name="q" class="form-control" placeholder="Search quotes..." value="{{ request.GET.q }}">
+        </div>
+        <button type="submit" class="btn btn-secondary btn-sm">Search</button>
+        {% if request.GET.q %}
+            <a href="{% url 'sitework:list_url' %}" class="btn btn-outline-secondary btn-sm ml-2">Clear</a>
+        {% endif %}
+    </form>
+</div>
+
+{% if request.GET.q %}
+    <p class="text-muted">Found {{ quotes.count }} results for "{{ request.GET.q }}"</p>
+{% endif %}
+
+<ul>
+    {% for q in quotes %}
+    <li>
+        <a class="btn btn-primary btn-sm "  type="button" href="{% url 'sitework:show_url' qte=q.id %}">Update</a>
+      
+        <a class="btn btn-outline-primary btn-sm "  type="button" href="{% url 'sitework:subcat_form' cat=1 qte=q.id %}">Sitework</a>
+
+        <a class="btn btn-sm btn-danger"  type="button" href="{% url 'sitework:delete_url' quote_id=q.id %}">DELETE</a>
+        <a class="btn btn-sm btn-outline-primary "  type="button" href="{% url 'sitework:show_report' qte=q.id %}">Breakdown Report</a>
+        <a class="btn btn-sm btn-outline-primary "  type="button" href="{% url 'sitework:show_report_simple' qte=q.id %}">Customer Report</a>
+        # {{ q.id }} {{q.customer.last_name}}-{{q.quotedesc}}  
+    </li>
+    {% endfor %}
+</ul>
+
+{% endblock %}

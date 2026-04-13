@@ -1,0 +1,26 @@
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+
+ 
+ <!-- FONT
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link href="//fonts.googleapis.com/css?family=Ubuntu+Sans+Mono:400,300,600" rel="stylesheet" type="text/css">
+
+  <!-- CSS
+  –––––––––––––––––––––––––––––––––––––––––––––––––– -->
+  <link rel="stylesheet" href="{% static 'crm/normalize.css' %}">
+  <link rel="stylesheet" href="{% static 'crm/skeleton.css' %}">
+</head>
+<body>
+     <div class="container">
+        <img style="vertical-align: bottom;" src="{% static 'crm/ologo.png' %}" width="225" alt="logo" ><a class="button" href="{% url "crm:home" %}">Customer</a> <a class="button" href="{% url "sitework:home" %}">Site Work</a>  <a class="button" href="/admin/">Admin</a>      
+        <h3 div style="font-weight: bold;">{% block title %}{% endblock %}</h3>        
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

@@ -1,0 +1,13 @@
+<form hx-post="{% url 'job:job_sitework_comment_post' job_id=data.job.id %}" hx-target="this" hx-swap="outerHTML">
+    {% csrf_token %}
+    <input type="hidden" name="quoteid" value="{{ data.qte }}">
+    <input type="hidden" name="subcat" value="{{ data.subcat.id }}">
+    
+    <div class="input-group">
+        <textarea class="form-control" name="commentInput" rows="3" placeholder="Enter comment...">{{ data.comment }}</textarea>
+        <div class="input-group-append">
+            <button class="btn btn-primary" type="submit">Save</button>
+            <button class="btn btn-secondary" type="button" onclick="this.closest('form').remove()">Cancel</button>
+        </div>
+    </div>
+</form>

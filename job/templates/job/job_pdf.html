@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Job {{ job.job_code }} - {{ job.customer.first_name }} {{ job.customer.last_name }}</title>
+    <style>
+        /* Page setup */
+        @page {
+            size: A4;
+            margin: 20mm;
+            @top-center {
+                content: "Allen Kitchen & Bath - Job {{ job.job_code }}";
+                font-size: 12px;
+                color: #666;
+            }
+            @bottom-center {
+                content: "Page " counter(page) " of " counter(pages);
+                font-size: 12px;
+                color: #666;
+            }
+        }
+
+        /* Typography */
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #000;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* Header styling */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+
+        .company-info {
+            text-align: right;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        /* Section headers */
+        .section-header {
+            background-color: #808080;
+            color: white;
+            padding: 8px;
+            margin: 20px 0 10px 0;
+            text-align: center;
+            font-weight: bold;
+            font-size: 16px;
+            page-break-after: avoid;
+        }
+
+        /* Content sections */
+        .section-content {
+            margin-bottom: 20px;
+            page-break-inside: avoid;
+        }
+
+        .info-row {
+            margin: 8px 0;
+        }
+
+        .info-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 150px;
+        }
+
+        /* Table styling with better pagination */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            page-break-inside: auto;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        th {
+            background-color: #f5f5f5;
+            font-weight: bold;
+            page-break-after: avoid;
+        }
+
+        tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+        }
+
+        /* Force page break after every 15 table rows to prevent footer overlap */
+        tbody tr:nth-child(15n) {
+            page-break-after: always;
+        }
+
+        /* Ensure table headers repeat on new pages */
+        thead {
+            display: table-header-group;
+        }
+
+        /* Better spacing for long lists */
+        .category-section {
+            max-height: none;
+            page-break-inside: auto;
+        }
+
+        /* Category styling */
+        .category-header {
+            background-color: #f0f0f0;
+            font-weight: bold;
+            font-size: 14px;
+            padding: 10px;
+            margin: 15px 0 5px 0;
+            border-left: 4px solid #333;
+        }
+
+        .subtotal {
+            text-align: right;
+            font-weight: bold;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        /* Hide sections conditionally */
+        .hide-section {
+            display: none !important;
+        }
+
+        /* Indented content */
+        .indented {
+            margin-left: 40px;
+        }
+
+        /* Page breaks */
+        .page-break {
+            page-break-before: always;
+        }
+
+        /* Footer protection */
+        .footer-safe {
+            margin-bottom: 30mm;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div>
+            <img src="{{ logo_url }}" alt="Allen Kitchen & Bath Logo" style="width: 150px; height: auto;">
+        </div>
+        <div class="company-info">
+            <div>800-227-8575</div>
+            <div>2219 S. Stoughton Rd. Madison WI 53716 | 608-274-9933</div>
+            <div>18525 W. Bluemound Rd. Brookfield WI 53045 | 262-395-7100</div>
+        </div>
+    </div>
+
+    <!-- Project Information Section -->
+    <div class="section-header">Project Information</div>
+    <div class="section-content">
+        <div class="info-row">
+            <span class="info-label">Job Code:</span>
+            <span style="font-size: 20px; font-weight: bold;">{{ job.job_code }}</span>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <strong>Billing Information</strong>
+            <div class="indented">
+                <div class="info-row">
+                    <span class="info-label">Builder:</span>
+                    {{ job.customer.assigned_staff|default:'' }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Customer:</span>
+                    {{ job.customer.first_name }} {{ job.customer.last_name }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date:</span>
+                    {{ job.datesold|date:"m/d/Y"|default:'' }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Address:</span>
+                    {{ job.customer.address }}, {{ job.customer.city }} {{ job.customer.state }} {{ job.customer.zip }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Phone:</span>
+                    {{ job.customer.home_phone|default:job.customer.cellphone|default:'' }}
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <strong>Job Contact Information</strong>
+            <div class="indented">
+                <div class="info-row">
+                    <span class="info-label">Job Type:</span>
+                    {{ job.jobtype.name|default:'' }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Description:</span>
+                    {{ job.job_description|default:'' }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Sales Person:</span>
+                    {{ job.soldby.get_full_name|default:'' }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Carpenter:</span>
+                    {{ job.carpenter.get_full_name|default:'' }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Week of:</span>
+                    {{ job.startdate|date:"m/d/Y"|default:'' }} (Approximate Start/Install Date)
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Permit Township:</span>
+                    {{ job.township|default:'' }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product Proposed Section -->
+    {% if show_products and job.product_quotes.exists %}
+    <div class="page-break"></div>
+    <div class="section-header">Product Proposed</div>
+    
+    {% for quote in job.product_quotes.all %}
+        <div class="section-content">
+            <div class="info-row">
+                <span class="info-label">Product Quote:</span>
+                {{ quote.name }}
+            </div>
+            
+            {% for category in categories_data %}
+            <div class="category-header">{{ category.name }}</div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 20%;">Part Number</th>
+                        <th style="width: 10%;">QTY</th>
+                        <th style="width: 70%;">Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item_type, item in category.items %}
+                    <tr>
+                        <td>
+                            {% if item_type == 'product' %}
+                                {{ item.product.part_no }}
+                            {% else %}
+                                {{ item.adhoc.part_no }}
+                            {% endif %}
+                        </td>
+                        <td>{{ item.quantity }}</td>
+                        <td>
+                            {% if item_type == 'product' %}
+                                {{ item.product.description|safe }}
+                            {% else %}
+                                {{ item.adhoc.description|safe }}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <div class="subtotal">
+                Section Subtotal: {{ category.subtotal }}
+            </div>
+            {% endfor %}
+        </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Sitework Section -->
+    {% if show_sitework and job.sitework_quote %}
+    <div class="page-break"></div>
+    <div class="section-header">Sitework Customer Copy</div>
+    
+    <div class="section-content">
+        <div class="info-row">
+            <span class="info-label">Sitework Quote:</span>
+            {{ job.sitework_quote.quotedesc }}
+        </div>
+        
+        {% for category in sitework_categories_data %}
+        <div class="category-header">{{ category.name }}</div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 40%;">Work Description</th>
+                    <th style="width: 10%;">QTY</th>
+                    <th style="width: 20%;">Unit Amount</th>
+                    <th style="width: 20%;">Price</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in category.items %}
+                <tr>
+                    <td>{{ item.workdesc|safe }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.unit_amount_str }}</td>
+                    <td>{{ item.price_str }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        <div class="subtotal">
+            Section Subtotal: {{ category.subtotal }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Contract Summary Section -->
+    {% if show_contract %}
+    <div class="page-break"></div>
+    <div class="section-header">Contract Summary</div>
+    
+    <div class="section-content">
+        <div style="margin-bottom: 15px;">
+            <strong>Contract Information</strong>
+            <div class="indented">
+                <div class="info-row">
+                    <span class="info-label">Contract Date:</span>
+                    {{ job.datesold|date:"m/d/Y"|default:"" }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Contract Amount:</span>
+                    {{ contract_amount_str }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Estimated Days:</span>
+                    {{ job.estdays|default:"" }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Job Status:</span>
+                    {{ job.active|yesno:"Active,Inactive" }}
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 15px;">
+            <strong>Project Timeline</strong>
+            <div class="indented">
+                <div class="info-row">
+                    <span class="info-label">Start Date:</span>
+                    {{ job.startdate|date:"m/d/Y"|default:"" }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Completion Date:</span>
+                    {{ job.completDate|date:"m/d/Y"|default:"" }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Cabinet Needed Date:</span>
+                    {{ job.cabneededdate|date:"m/d/Y"|default:"" }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Promised Date:</span>
+                    {{ job.promised|date:"m/d/Y"|default:"" }}
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <strong>Contact Information</strong>
+            <div class="indented">
+                <div class="info-row">
+                    <span class="info-label">Coordinator:</span>
+                    {{ job.coordinator.get_full_name|default:"" }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Sales Person:</span>
+                    {{ job.soldby.get_full_name|default:"" }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Carpenter:</span>
+                    {{ job.carpenter.get_full_name|default:"" }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Customer Information & Terms -->
+    {% if show_customer_info %}
+    <div class="page-break"></div>
+    <div class="section-header">Customer Information & Terms</div>
+    
+    <div class="section-content footer-safe">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+            <div>
+                <span class="info-label">Job Code:</span>
+                {{ job.job_code }}
+            </div>
+            <div>
+                <span class="info-label">Job Type:</span>
+                {{ job.jobtype.name|default:'' }}
+            </div>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; margin-bottom: 15px;">
+            <div>
+                <span class="info-label">Customer:</span>
+                {{ job.customer.first_name }} {{ job.customer.last_name }}
+            </div>
+            <div>
+                <span class="info-label">Address:</span>
+                {{ job.address|default:job.customer.address }}, {{ job.city|default:job.customer.city|upper }}, {{ job.state|default:job.customer.state|default:'' }} {{ job.zip|default:job.customer.zip|default:'' }}
+            </div>
+        </div>
+
+        <!-- Terms and Conditions would go here -->
+        <div style="margin-top: 30px; font-size: 11px; line-height: 1.6;">
+            <strong>Terms and Conditions</strong>
+            <p>Standard terms and conditions content would be included here...</p>
+        </div>
+    </div>
+    {% endif %}
+</body>
+</html>

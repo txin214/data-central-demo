@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Sitework Items {{ data.third }} {% endblock %}
+{% block content %}
+<!-- sitework_cat_items.html Testing -->
+<div class="container text-center">/
+    <div class="row align-items-start">
+      <div class="col-sm-4">
+        <!-- Lefthand list of sitework categories -->
+        <div class="list-group row-gap-0 mt-0 ms-0 ">
+            {% for sw in data.first %}
+            {% if sw.id == data.third %}
+              <li class="list-group-item lh-1 list-group-item-primary active d-flex justify-content-between align-items-center" >
+            {% else %}
+              <li class="list-group-item  lh-1 list-group-item-primary d-flex justify-content-between align-items-center" >
+            {% endif %}
+              <a href="{% url 'sitework:subcat_detail' cat=sw.id %}" class="list-group-item list-group-item-action" aria-current="true">
+                {{ sw.name }}
+            </a>
+              <span class="badge bg-secondary rounded-pill">0</span>
+            </li>
+          {% endfor %}
+          </div>
+    </div>
+      <div class="col-sm-8">
+        <!-- This is the righthand detail of the selected category  -->
+        <table class="table table-striped table-hover table-sm">
+          <thead>
+            <tr>
+              <th>Qty</th>
+              <th>ea</th>
+              <th>Description</th>
+              <th>Base</th>
+              <th>Per Item</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for sw in data.second %}
+              {% if sw.basecost > 0 or sw.unitamount > 0 %}
+                <!-- Normal Row -->
+                <tr class="table-default lh-1 ">
+                <td> 0 {{data.third}}.{{sw.id}} </td><td>{{ sw.quantitydesc|upper}}</td>
+                <td>{{ sw.workdesc}}</td><td>{{sw.basecost}}</td><td> {{sw.unitamount}}</td>
+              </tr>
+              {% elif sw.quantitydesc == '--' %}
+                <!--Group Description Row w/blank row above for spacing -->
+                <tr class=" lh-1 "><td></td><td></td><td></td><td></td></tr>
+                <tr class="table-secondary  lh-1 ">
+                <td></td><td></td><td><strong>{{ sw.workdesc}}</strong></td><td></td><td></td>
+              </tr>
+              {% else  %}
+                <!--Notes Row -->
+                <tr class="table-default  lh-1 ">
+                <td> 0 {{sw.orderby}} </td><td>{{ sw.quantitydesc|upper}}</td>
+                <td>{{ sw.workdesc|lower|capfirst}}</td><td>{{sw.basecost}}</td><td> {{sw.unitamount}}</td>                
+              </tr>
+              {% endif %}    
+            {% endfor %}
+          </tbody>
+        </table>
+          </div>
+    </div>
+  </div>
+
+
+{% endblock content %}

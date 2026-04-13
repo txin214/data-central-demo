@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load account_extras %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/table_styles.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Company Information</h2>
+        </div>
+    </div>
+    
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 1rem;">
+        <select id="jobFunctionDropdown" class="form-select form-select-sm" style="width: 180px; flex-shrink: 0;">
+            <option value="">Job Function</option>
+        </select>
+        <select id="accessLevelDropdown" class="form-select form-select-sm" style="width: 180px; flex-shrink: 0;">
+            <option value="">Access Level</option>
+        </select>
+        <div style="flex: 1; display: flex; justify-content: flex-end; margin-left: auto;">
+            <input id="searchInput" type="text" class="form-control form-control-sm search-input" placeholder="Search Employees..." style="width: 100%;">
+        </div>
+    </div>
+    
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle mb-0">
+            <thead class="sticky-header">
+                <tr>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Job Function</th>
+                    <th>Access Level</th>
+                    <th>Position</th>
+                    <th>Location</th>
+                    <th>Desk Phone</th>
+                    <th>Cell Phone</th>
+                    <th>Email</th>
+                </tr>
+            </thead>
+            <tbody id="employeeTableBody">
+                {% for role_description in sorted_roles %}
+                    {% for employee in employees_by_role|lookup:role_description %}
+                    <tr>
+                        <td>{{ employee.user.first_name|default:"-" }}</td>
+                        <td>{{ employee.user.last_name|default:"-" }}</td>
+                        <td>{{ role_description }}</td>
+                        <td>{{ employee.role.get_name_display }}</td>
+                        <td>
+                            {% if employee.title and employee.title != "No title" %}
+                                {{ employee.title }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if employee.location and employee.location != "No location" %}
+                                {{ employee.location }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if employee.deskphone and employee.deskphone != "No phone" %}
+                                <a href="tel:{{ employee.deskphone }}" class="text-decoration-none">
+                                    {{ employee.deskphone }}
+                                </a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if employee.cellphone != "No phone" %}
+                                <a href="tel:{{ employee.cellphone }}" class="text-decoration-none">
+                                    {{ employee.cellphone }}
+                                </a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if employee.email != "No email" %}
+                                <a href="mailto:{{ employee.email }}" class="text-decoration-none">
+                                    {{ employee.email }}
+                                </a>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    {% if not employees_by_role %}
+    <div class="text-center py-5">
+        <i class="fa fa-users fa-3x text-muted mb-3"></i>
+        <h5 class="text-muted">No employees found</h5>
+        <p class="text-muted">There are currently no active employees in the system.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// AJAX functionality for employee filtering
+document.addEventListener('DOMContentLoaded', function() {
+    // Populate dropdowns on page load
+    populateJobFunctions();
+    populateAccessLevels();
+    
+    // Add event listeners
+    document.getElementById('jobFunctionDropdown').addEventListener('change', filterEmployees);
+    document.getElementById('accessLevelDropdown').addEventListener('change', filterEmployees);
+    document.getElementById('searchInput').addEventListener('input', debounce(filterEmployees, 300));
+});
+
+// Utility function for populating dropdowns
+function populateDropdown(selectId, data, valueField, textField, defaultText) {
+    const select = document.getElementById(selectId);
+    select.innerHTML = `<option value="">${defaultText}</option>`;
+    
+    data.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item[valueField];
+        option.textContent = item[textField];
+        select.appendChild(option);
+    });
+}
+
+// Populate job functions dropdown
+function populateJobFunctions() {
+    fetch('/accounts/ajax/job-functions/')
+        .then(res => res.json())
+        .then(data => {
+            populateDropdown('jobFunctionDropdown', data.job_functions, 'value', 'label', 'Job Function');
+        })
+        .catch(error => console.error('Error fetching job functions:', error));
+}
+
+// Populate access levels dropdown
+function populateAccessLevels() {
+    fetch('/accounts/ajax/access-levels/')
+        .then(res => res.json())
+        .then(data => {
+            populateDropdown('accessLevelDropdown', data.access_levels, 'value', 'label', 'Access Level');
+        })
+        .catch(error => console.error('Error fetching access levels:', error));
+}
+
+// Filter employees with AJAX
+function filterEmployees() {
+    const jobFunction = document.getElementById('jobFunctionDropdown').value;
+    const accessLevel = document.getElementById('accessLevelDropdown').value;
+    const keywords = document.getElementById('searchInput').value;
+    
+    const params = new URLSearchParams({
+        job_function: jobFunction,
+        access_level: accessLevel,
+        keywords: keywords
+    });
+    
+    fetch(`/accounts/ajax/filter-employees/?${params}`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('employeeTableBody').innerHTML = data.html;
+        })
+        .catch(error => console.error('Error filtering employees:', error));
+}
+
+// Debounce function for search input
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+</script>
+{% endblock %}

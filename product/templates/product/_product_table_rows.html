@@ -1,0 +1,34 @@
+{% load static %}
+<tr class="border-top-0 border-bottom-0">
+    <td colspan="11" class="border-top-0 border-bottom-0 py-2">
+        <a href="{% url 'product:product-create' %}" class="btn btn-sm btn-success">
+            <i class="fas fa-plus me-1"></i>
+            Add Product
+        </a>
+    </td>
+</tr>
+{% for product, primary_image in products_with_images %}
+<tr>
+    <td>
+        {% if primary_image %}
+            <img src="{{ primary_image.image.url }}" alt="{{ product.description }}" class="product-img-thumb">
+        {% else %}
+            <img src="{% static 'product/image-not-found.png' %}" alt="No image" class="product-img-thumb">
+        {% endif %}
+    </td>
+    <td>{{ product.part_no }}</td>
+    <td>{{ product.description }}</td>
+    <td>{% if product.unit_material_cost and product.unit_material_cost != 0 %}${{ product.unit_material_cost|floatformat:2 }}{% else %}-{% endif %}</td>
+    <td>{% if product.retail_sell and product.retail_sell != 0 %}${{ product.retail_sell|floatformat:2 }}{% else %}-{% endif %}</td>
+    <td>{% if product.category %}{{ product.category.product_category }}{% else %}Other{% endif %}</td>
+    <td>{% if product.manufacturer %}{{ product.manufacturer.manufacturer_name }}{% else %}-{% endif %}</td>
+    <td>{% if product.sub_category1 %}{{ product.sub_category1 }}{% else %}-{% endif %}</td>
+    <td>{% if product.sub_category2 %}{{ product.sub_category2 }}{% else %}-{% endif %}</td>
+    <td>{% if product.status %}Active{% else %}Inactive{% endif %}</td>
+    <td>
+        <a href="{% url 'product:product-detail2' product.uuid %}" class="btn btn-sm btn-outline-info">View</a>
+        <a href="{% url 'product:product-update2' product.uuid %}" class="btn btn-sm btn-outline-warning">Edit</a>
+        <a href="{% url 'product:product-delete' product.uuid %}" class="btn btn-sm btn-outline-danger">Delete</a>
+    </td>
+</tr>
+{% endfor %} 

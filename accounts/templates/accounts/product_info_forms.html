@@ -1,0 +1,384 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extrahead %}
+<style>
+    .forms-section {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        padding: 0;
+        margin-bottom: 20px;
+    }
+    
+    .forms-section-header {
+        background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%);
+        color: #000;
+        padding: 12px 20px;
+        border-radius: 8px 8px 0 0;
+        font-weight: bold;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .forms-list {
+        list-style: none;
+        padding: 20px;
+        margin: 0;
+    }
+    
+    .forms-list li {
+        padding: 10px 0;
+        border-bottom: 1px solid #e9ecef;
+        display: flex;
+        align-items: flex-start;
+    }
+    
+    .forms-list li:last-child {
+        border-bottom: none;
+    }
+    
+    .form-number {
+        font-weight: bold;
+        margin-right: 15px;
+        min-width: 20px;
+        flex-shrink: 0;
+    }
+    
+    .form-content {
+        flex: 1;
+    }
+    
+    .form-link {
+        color: #000;
+        text-decoration: underline;
+        font-size: 14px;
+    }
+    
+    .form-link:hover {
+        color: #0056b3;
+    }
+    
+    .form-note {
+        color: #6c757d;
+        font-size: 12px;
+        font-style: italic;
+        margin-top: 4px;
+        padding-left: 0;
+    }
+    
+    .info-note {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        padding: 15px;
+        margin: 20px 0;
+        font-size: 13px;
+        color: #495057;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Product Information Forms</h2>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Main Content Column -->
+        <div class="col-md-12">
+            <!-- Allen Top Pricing Section -->
+            <div class="forms-section">
+                <div class="forms-section-header">
+                    ALLEN TOP PRICING
+                </div>
+                <ul class="forms-list">
+                    <li>
+                        <span class="form-number">1</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/Countertops%202010R.pdf" class="form-link" target="_blank">New 2010 Countertop Pricing and Groupings</a>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Product Pricing Section -->
+            <div class="forms-section">
+                <div class="forms-section-header">
+                    PRODUCT PRICING
+                </div>
+                <ul class="forms-list">
+                    <li>
+                        <span class="form-number">1</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/Daltile-01-01-25.pdf" class="form-link" target="_blank">DALTILE 2025 Price List</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">1</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/DALTILE_Z30_11.24.pdf" class="form-link" target="_blank">DALTILE 2024 Price List</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">1</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/MARAZZI_Z30_11.24.pdf" class="form-link" target="_blank">Marazzi Tile 2024 Catalog Price List</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">1</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/Forevermark-Catalog-Final_2023-Single-Pages.pdf" class="form-link" target="_blank">Forevermark Cabinetry 2023 Catalog</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">1</span>
+                        <div class="form-content">
+                            <a href="#" class="form-link">LEXCO Anthology 2022 Price List</a>
+                            <div class="form-note">Dealer Pricing not Retail</div>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">1</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/Waypoint_Spec_Price_Guide_Summer_2022.pdf" class="form-link" target="_blank">Waypoint Summer 2022 Product Launch</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">1</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/Daltile_PriceBook_11_01_23.pdf" class="form-link" target="_blank">DALTILE 2023 Price List</a>
+                            <div class="form-note">Pricelist Effective November 2023</div>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">1</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/alle185bro22.ods" class="form-link" target="_blank">Adura Pricing Spreadsheet January 2024</a>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Additional Pricing Items -->
+            <div class="forms-section">
+                <ul class="forms-list">
+                    <li>
+                        <span class="form-number">-</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/2023_TSG_Forevermark_Pricelist_1023.xlsx" class="form-link" target="_blank">Forevermark Price List. October 2023</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">-</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/Olympia_2022_PriceBook.pdf" class="form-link" target="_blank">Lexco Price List. January 2022</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">-</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/Adura_20220103.xlsx" class="form-link" target="_blank">Adura Pricing Spreadsheet January 2022</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">-</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/SCHLUTER-PRICING.pdf" class="form-link" target="_blank">Walcro Schluter Price List. Dealer Pricelist November 2021</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">-</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/AMEROCK-0322.pdf" class="form-link" target="_blank">Amerock Hardware Catalog HDL Hardware Distributors LTD Pricelist 2021</a>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Terazzo & Marble Section -->
+            <div class="forms-section">
+                <ul class="forms-list">
+                    <li>
+                        <span class="form-number">2</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/TilePricing-Dealer.pdf" class="form-link" target="_blank">Terazzo & Marble 2012 Price Guide</a>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- MANISCALO Section -->
+            <div class="forms-section">
+                <ul class="forms-list">
+                    <li>
+                        <span class="form-number">3</span>
+                        <div class="form-content">
+                            <a href="#" class="form-link">MANISCALO</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number"></span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/VogueBayDealerwithDisplayPricelist%203-8-12.pdf" class="form-link" target="_blank">Vogue Bay Dealer Display price list</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number"></span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/ManiscalcoDealerPriceBook6.11.2011.pdf" class="form-link" target="_blank">Maniscalo Dealer Price Book 6-11 (PDF)</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number"></span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/FanFareDEALERPRICINGDECEMBER2011.xls" class="form-link" target="_blank">FanFare Dealer Pricing 12/11 (Excel)</a>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- AKDO Section -->
+            <div class="forms-section">
+                <ul class="forms-list">
+                    <li>
+                        <span class="form-number">4</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/AKDOPriceBook2010Corp.pdf" class="form-link" target="_blank">AKDO Price Book 2010</a>
+                            <div class="form-note">2Mb in size</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- DALTILE Section -->
+            <div class="forms-section">
+                <ul class="forms-list">
+                    <li>
+                        <span class="form-number">5</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/Daltile-info.pdf" class="form-link" target="_blank">DALTILE tile sizing charts</a>
+                            <div class="form-note">281Kb</div>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">6</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/florida04-15-11.pdf" class="form-link" target="_blank">Florida Tile pricing</a>
+                            <span> as of 6/1/2011. Please check their <a href="https://www.jaeckledistributors.com/error/notfound?aspxerrorpath=/d24signup" class="form-link" style="display: inline;" target="_blank">website</a> for current pricing:</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Merillat Pricing and conversions Section -->
+            <div class="forms-section">
+                <div class="forms-section-header">
+                    MERILLAT PRICING AND CONVERSIONS
+                </div>
+                <ul class="forms-list">
+                    <li>
+                        <span class="form-number">1</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/Prairie%20Style%20Door%20SKU%20Conversions.pdf" class="form-link" target="_blank">Prairie Door style SKU conversions</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">2</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/Merillat%20_Classic%20Replacement%20Conversion_Fronts.pdf" class="form-link" target="_blank">Merillat Classic Replacement Conversion Fronts</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">3</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/Merillat%20_Classic%20Replacement%20Conversion_Doors.pdf" class="form-link" target="_blank">Merillat Classic Replacement Conversion Doors</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">4</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/ManiscalcoDEALERpricelist5-2010.pdf" class="form-link" target="_blank">ManiscalcoDEALERpricelist5-2010</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">5</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/Merillat%20Classic%20Replacement%20Shelfs.pdf" class="form-link" target="_blank">Merillat Classic Replacement Shelfs</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">6</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/Merillat%20Essentials_%20Replacement%20Conversion_Doors.pdf" class="form-link" target="_blank">Merillat Essentials Replacement Conversion Doors</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">7</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/Merillat%20Essentials_%20Replacement%20Conversion_Fronts.pdf" class="form-link" target="_blank">Merillat Essentials Replacement Conversion Fronts</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">8</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/Order%20Entry%20Cheat%20Sheet%20QBAC%201014-10.xls" class="form-link" target="_blank">Order Entry Cheat Sheet QBAC 1014-10</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">9</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/proCAB_Merillat_User_Guide_5-9-2011.pdf" class="form-link" target="_blank">ProCAB User Documentation</a>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- OTHER Section -->
+            <div class="forms-section">
+                <div class="forms-section-header">
+                    OTHER
+                </div>
+                <ul class="forms-list">
+                    <li>
+                        <span class="form-number">1</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/Jaeckle_SPIFF_REDEM_FORM.pdf" class="form-link" target="_blank">Jaeckle Spiff Redemption Form</a>
+                            <div class="form-note">Current SPIFF form for LM Flooring SPIFF. Print Form and Fax to # at the bottom of form.</div>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">2</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/2010Dealer_HomeCentedoorcrossoverchart.xls" class="form-link" target="_blank">2010 Dealer Home Center Door Cross Over Chart</a>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="form-number">3</span>
+                        <div class="form-content">
+                            <a href="https://dcimage.sfo3.digitaloceanspaces.com/FORMS/reflectionInGlass.pdf" class="form-link" target="_blank">Reflections in Glass</a>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Information Note -->
+            <div class="info-note">
+                <strong>Note:</strong> Remember to open with LibreOffice not Excel
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+
+
+
+
+

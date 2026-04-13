@@ -1,0 +1,101 @@
+{% extends 'job/base_job.html' %}
+{% load static %}
+
+{% block job_content %}
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.1">
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_forms.css' %}?v=1.0">
+
+<div class="card mb-3 mt-3">
+    <div class="card-header">
+        <h6 class="card-title mb-0">
+            {% if is_edit %}Edit{% else %}Create{% endif %} Sale
+        </h6>
+    </div>
+    <div class="card-body">
+        <form method="POST">
+            {% csrf_token %}
+            
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger py-1 mb-2 small">{{ form.non_field_errors }}</div>
+            {% endif %}
+            
+            <div class="row">
+                <!-- Product Code -->
+                <div class="col-md-6 mb-2">
+                    <label class="form-label small" for="{{ form.product_code.id_for_label }}">{{ form.product_code.label }}</label>
+                    {{ form.product_code }}
+                    {% if form.product_code.errors %}
+                        <div class="text-danger small">{{ form.product_code.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Sale Amount -->
+                <div class="col-md-6 mb-2">
+                    <label class="form-label small" for="{{ form.sale_amount.id_for_label }}">{{ form.sale_amount.label }}</label>
+                    {{ form.sale_amount }}
+                    {% if form.sale_amount.errors %}
+                        <div class="text-danger small">{{ form.sale_amount.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Sale Date -->
+                <div class="col-md-6 mb-2">
+                    <label class="form-label small" for="{{ form.sale_date.id_for_label }}">{{ form.sale_date.label }}</label>
+                    {{ form.sale_date }}
+                    {% if form.sale_date.errors %}
+                        <div class="text-danger small">{{ form.sale_date.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <!-- Tax -->
+                <div class="col-md-6 mb-2">
+                    <label class="form-label small" for="{{ form.tax.id_for_label }}">{{ form.tax.label }}</label>
+                    {{ form.tax }}
+                    {% if form.tax.errors %}
+                        <div class="text-danger small">{{ form.tax.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Comment -->
+                <div class="col-md-12 mb-2">
+                    <label class="form-label small" for="{{ form.comment.id_for_label }}">{{ form.comment.label }}</label>
+                    {{ form.comment }}
+                    {% if form.comment.errors %}
+                        <div class="text-danger small">{{ form.comment.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Notes -->
+                <div class="col-md-12 mb-2">
+                    <label class="form-label small" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                        <div class="text-danger small">{{ form.notes.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="row mt-3">
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary btn-sm">
+                        <i class="fas fa-{% if is_edit %}save{% else %}plus{% endif %} me-1"></i>
+                        {% if is_edit %}Update{% else %}Create{% endif %} Sale
+                    </button>
+                    <a href="{% url 'job:job_sales' job.id %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-times me-1"></i>
+                        Cancel
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

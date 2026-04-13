@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ job.job_code }} - Products{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="container-fluid">
+    <!-- Compact Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h5 class="mb-0">{{ job.job_code }} - Products</h5>
+            <small class="text-muted">{{ job.customer }}</small>
+        </div>
+        <div class="btn-group btn-group-sm" role="group">
+            <a href="{% url 'job:job_quotes' job.pk %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Job
+            </a>
+            <a href="{% url 'job:job_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-list"></i> All Jobs
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Product Search and Results (Left Side - 3/5) -->
+        <div class="col-md-7">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-search"></i> Search Products
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form id="searchForm" class="row g-2">
+                        <div class="col-md-4">
+                            <input type="text" id="keywords" name="keywords" class="form-control form-control-sm" placeholder="Search products..." value="{{ request.GET.keywords }}">
+                        </div>
+                        <div class="col-md-3">
+                            <select id="category" name="category" class="form-select form-select-sm">
+                                <option value="">All Categories</option>
+                                {% for cat in categories %}
+                                    <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ cat.product_category }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select id="manufacturer" name="manufacturer" class="form-select form-select-sm">
+                                <option value="">All Manufacturers</option>
+                                {% for man in manufacturers %}
+                                    <option value="{{ man.id }}" {% if request.GET.manufacturer == man.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ man.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="button" onclick="searchProducts()" class="btn btn-primary btn-sm w-100">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="table-responsive mt-3">
+                        <table class="table table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th class="small">Part No</th>
+                                    <th class="small">Description</th>
+                                    <th class="small">Category</th>
+                                    <th class="small">Manufacturer</th>
+                                    <th class="small">Price</th>
+                                    <th class="small">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in products %}
+                                <tr>
+                                    <td><strong class="small">{{ product.part_no }}</strong></td>
+                                    <td class="small">{{ product.description|truncatechars:50 }}</td>
+                                    <td class="small">{{ product.category.product_category|default:"-" }}</td>
+                                    <td class="small">{{ product.manufacturer.name|default:"-" }}</td>
+                                    <td class="small">${{ product.unit_total_cost|floatformat:2|default:"0.00" }}</td>
+                                    <td>
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" name="quantity_{{ product.id }}" value="1" min="1" class="form-control form-control-sm" style="width: 60px;">
+                                            <button class="btn btn-sm btn-primary" onclick="addProductToJob({{ product.id }}, '{{ product.part_no }}', this.previousElementSibling.value)">
+                                                <i class="fas fa-plus"></i> Add
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-muted">
+                                        No products found. Try adjusting your search criteria.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Products in Quote (Right Side - 2/5) -->
+        <div class="col-md-5">
+            <!-- Quick Navigation -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Navigation</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'job:job_quotes' job.pk %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Job Details
+                        </a>
+                        <a href="{% url 'job:job_list' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-list"></i> View All Jobs
+                        </a>
+                        <a href="{% url 'job:job_update' job.pk %}" class="btn btn-outline-info">
+                            <i class="fas fa-edit"></i> Edit Job
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Current Products in Quote -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Current Products in Quote</h5>
+                </div>
+                <div class="card-body">
+                    {% if existing_quotes %}
+                        <div class="list-group">
+                            {% for product_quote in existing_quotes %}
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1">{{ product_quote.customer }}</h6>
+                                        <p class="mb-1 text-muted">Quote #{{ product_quote.id }}</p>
+                                        <small class="text-muted">${{ product_quote.subtotal|floatformat:2 }}</small>
+                                    </div>
+                                    <div class="btn-group" role="group">
+                                        <a href="{% url 'product:product_quote_report' product_quote.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <form method="post" action="{% url 'job:remove_product_quote' job.pk product_quote.id %}" style="display: inline;">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove this product quote from job?')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted text-center">No products added to this job yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function addProductToJob(productId, productName, quantity = 1) {
+    console.log('Adding product:', productId, productName, quantity);
+    
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    console.log('CSRF Token:', csrfToken);
+    
+    // Create a new product quote for this job via AJAX
+    fetch(`{% url 'job:add_product_to_job_ajax' job.pk %}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrfToken
+        },
+        body: `product_id=${productId}&quantity=${quantity}`

@@ -1,0 +1,577 @@
+{% extends 'job/base_job.html' %}
+{% load static %}
+
+{% block job_content %}
+
+  <div class="row mt-3" style="height: calc(100vh - 200px); ">
+    <div class="col-12">
+      <div class="card h-100 shadow-sm">
+        <div class="card-header">
+          <h6 class="card-title mb-0">Job Print Settings</h5>
+        </div>
+        <div class="card-body p-4">
+          {% if error %}
+            <div class="alert alert-danger">
+              <h4>Error generating print preview</h4>
+              <p>{{ error }}</p>
+            </div>
+          {% else %}
+            <!-- Job Information -->
+            <div class="mb-4">
+              <h6 class="mb-3 border-bottom pb-2">Job Information</h6>
+              <div class="row">
+                <div class="col-md-6">
+                  <table class="table table-sm">
+                    <tr>
+                      <td class="fw-bold small">Job Code:</td>
+                      <td class="small">{{ job.job_code|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                      <td class="fw-bold small">Job Description:</td>
+                      <td class="small">{{ job.job_description|default:"N/A" }}</td>
+                    </tr>
+                  </table>
+                </div>
+                <div class="col-md-6">
+                  <table class="table table-sm">
+                    <tr>
+                      <td class="fw-bold small">Date Sold:</td>
+                      <td class="small">{{ job.datesold|date:"m/d/Y" }}</td>
+                    </tr>
+                    <tr>
+                      <td class="fw-bold small">Sale Amount:</td>
+                      <td class="small">${{ job.saleamount|floatformat:2 }}</td>
+                    </tr>
+                    {% if job.storelocation %}
+                    <tr>
+                      <td class="fw-bold small">Store Location:</td>
+                      <td class="small">{{ job.storelocation.name }}</td>
+                    </tr>
+                    {% endif %}
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Customer Information -->
+            <div class="mb-4">
+              <h6 class="mb-3 border-bottom pb-2">Customer Information</h6>
+              <div class="row">
+                <div class="col-md-6">
+                  <table class="table table-sm">
+                    <tr>
+                      <td class="fw-bold small">Customer Name:</td>
+                      <td class="small">{{ job.customer.first_name }} {{ job.customer.last_name }}</td>
+                    </tr>
+                    <tr>
+                      <td class="fw-bold small">Address:</td>
+                      <td class="small">{{ job.customer.address|default:"N/A" }}</td>
+                    </tr>
+                  </table>
+                </div>
+                <div class="col-md-6">
+                  <table class="table table-sm">
+                    <tr>
+                      <td class="fw-bold small">City, State ZIP:</td>
+                      <td class="small">{{ job.customer.city }}, {{ job.customer.state }} {{ job.customer.zip_code }}</td>
+                    </tr>
+                    <tr>
+                      <td class="fw-bold small">Phone:</td>
+                      <td class="small">{{ job.customer.phone|default:"N/A" }}</td>
+                    </tr>
+                    <tr>
+                      <td class="fw-bold small">Email:</td>
+                      <td class="small">{{ job.customer.email|default:"N/A" }}</td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Product Proposed Section -->
+            {% if product_quotes_data %}
+            <div class="mb-4">
+              <h6 class="mb-3 border-bottom pb-2">Product Proposed</h6>
+              {% for quote in product_quotes_data %}
+                <div class="mb-4">
+                  <h6 class="mb-3 text-muted">Product Quote: {{ quote.name }}</h6>
+                  
+                  {% for category in quote.categories %}
+                    <div class="category-section mb-3">
+                      <div class="category-header d-flex align-items-center justify-content-between bg-light p-2" 
+                           onclick="toggleCategory('category_{{ forloop.parentloop.counter }}_{{ forloop.counter }}')" 
+                           style="cursor: pointer;">
+                        <h6 class="mb-0 fw-bold small">{{ category.name }}</h6>
+                        <i class="fas fa-eye" id="icon_category_{{ forloop.parentloop.counter }}_{{ forloop.counter }}"></i>
+                      </div>
+                      
+                      <div class="category-content category-section" id="category_{{ forloop.parentloop.counter }}_{{ forloop.counter }}" style="display: block;">
+                        <div class="table-responsive">
+                          <table class="table table-sm table-bordered product-table">
+                            <colgroup>
+                              <col style="width:18%">
+                              <col style="width:8%">
+                              <col style="width:74%">
+                            </colgroup>
+                            <thead class="table-light">
+                              <tr>
+                                <th class="small">Part Number</th>
+                                <th class="small">QTY</th>
+                                <th class="small">Description</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {% for item in category.items %}
+                                <tr>
+                                  <td class="small">{{ item.part_no }}</td>
+                                  <td class="small">{{ item.quantity }}</td>
+                                  <td class="small" style="word-break: break-word;">
+                                    {{ item.description }}
+                                    {% if item.note %}
+                                      <div class="mt-1"><em class="text-muted">Note: {{ item.note }}</em></div>
+                                    {% endif %}
+                                  </td>
+                                </tr>
+                              {% endfor %}
+                              <tr class="table-secondary fw-bold">
+                                <td colspan="2" class="small">Section Subtotal:</td>
+                                <td class="small">{{ category.subtotal }}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                  
+                  <!-- Quote Totals -->
+                  <div class="mt-3 text-end">
+                    <table class="table table-sm table-borderless d-inline-block w-auto">
+                      <tbody>
+                        <tr>
+                          <td class="text-end fw-bold small pe-2">Subtotal:</td>
+                          <td class="text-end small">{{ quote.subtotal_price }}</td>
+                        </tr>
+                        {% if quote.tax_rate > 0 %}
+                        <tr>
+                          <td class="text-end fw-bold small pe-2">Tax:</td>
+                          <td class="text-end small">{{ quote.tax_amount }}</td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                          <td class="text-end fw-bold small pe-2">Total:</td>
+                          <td class="text-end small">{{ quote.total_price }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Sitework Section -->
+            {% if sitework_data %}
+            <div class="mb-4">
+              <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-2">
+                <h6 class="mb-0">Sitework Customer Copy</h6>
+                <i class="fas fa-eye" id="icon_sitework_prices" onclick="toggleSiteworkPrices()" style="cursor: pointer;" title="Toggle price visibility"></i>
+              </div>
+              
+              <div id="sitework_content">
+                {% for category in sitework_data.categories %}
+                  <div class="category-section mb-3">
+                    <h6 class="mb-2 fw-bold small">{{ category.name }}</h6>
+                    
+                    <div class="sitework-items">
+                      {% for item in category.items %}
+                        <div class="small mb-1">{{ item.description }}</div>
+                      {% endfor %}
+                    </div>
+                    
+                    <!-- Price table (hidden by default) -->
+                    <div class="sitework-prices" style="display: none;">
+                      <div class="table-responsive">
+                        <table class="table table-sm table-bordered sitework-table">
+                          <colgroup>
+                            <col style="width:65%">
+                            <col style="width:10%">
+                            <col style="width:25%">
+                          </colgroup>
+                          <thead class="table-light">
+                            <tr>
+                              <th class="small">Work Description</th>
+                              <th class="small">QTY</th>
+                              <th class="small">Unit Price</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {% for item in category.items %}
+                              <tr>
+                                <td class="small">{{ item.description }}</td>
+                                <td class="small">{{ item.quantity }}</td>
+                                <td class="small">{{ item.unit_price }}</td>
+                              </tr>
+                            {% endfor %}
+                            <tr class="table-secondary fw-bold">
+                              <td colspan="2" class="small">Section Subtotal:</td>
+                              <td class="small">{{ category.subtotal }}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+              
+              <!-- Site Work Totals (always visible, format depends on price visibility) -->
+              <div class="mt-3 text-end" id="sitework_totals">
+                <!-- When prices are hidden, show only Site Work Total -->
+                <div class="sitework-total-simple">
+                  <strong>Site Work Total: {{ sitework_data.total_price }}</strong>
+                </div>
+                <!-- When prices are shown, show breakdown -->
+                <div class="sitework-total-breakdown" style="display: none;">
+                  <div><strong>Site Work Sub Total: {{ sitework_data.subtotal_price }}</strong></div>
+                  <div><strong>Contingency Fund: {{ sitework_data.contingency_price }}</strong></div>
+                  <div><strong>Over Head Fee: {{ sitework_data.overhead_price }}</strong></div>
+                  <div><strong>Site Work Total: {{ sitework_data.total_price }}</strong></div>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            <!-- Contract Summary -->
+            <div class="mb-4">
+              <h6 class="mb-3 border-bottom pb-2">Contract Summary</h6>
+              
+              <table class="table table-sm table-bordered">
+                <tbody>
+                  {% for quote in product_quotes_data %}
+                  <tr>
+                    <td class="small fw-bold" style="width: 50%;">Product Quote - Subtotal:</td>
+                    <td class="small text-end" style="width: 50%;">{{ quote.subtotal_price }}</td>
+                  </tr>
+                  <tr>
+                    <td class="small fw-bold" style="width: 50%;">Product Quote - Tax:</td>
+                    <td class="small text-end" style="width: 50%;">{{ quote.tax_amount }}</td>
+                  </tr>
+                  <tr>
+                    <td class="small fw-bold" style="width: 50%;">Product Quote - Total:</td>
+                    <td class="small text-end" style="width: 50%;">{{ quote.total_price }}</td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td class="small fw-bold" style="width: 50%;">Product Quote - Subtotal:</td>
+                    <td class="small text-end" style="width: 50%;">$0.00</td>
+                  </tr>
+                  <tr>
+                    <td class="small fw-bold" style="width: 50%;">Product Quote - Tax:</td>
+                    <td class="small text-end" style="width: 50%;">$0.00</td>
+                  </tr>
+                  <tr>
+                    <td class="small fw-bold" style="width: 50%;">Product Quote - Total:</td>
+                    <td class="small text-end" style="width: 50%;">$0.00</td>
+                  </tr>
+                  {% endfor %}
+                  {% if sitework_data %}
+                  <tr>
+                    <td class="small fw-bold" style="width: 50%;">Sitework Total:</td>
+                    <td class="small text-end" style="width: 50%;">{{ sitework_data.total_price }}</td>
+                  </tr>
+                  {% else %}
+                  <tr>
+                    <td class="small fw-bold" style="width: 50%;">Sitework Total:</td>
+                    <td class="small text-end" style="width: 50%;">$0.00</td>
+                  </tr>
+                  {% endif %}
+                  {% if change_orders_count > 0 %}
+                  <tr>
+                    <td class="small fw-bold" style="width: 50%;">Change Orders:</td>
+                    <td class="small text-end" style="width: 50%;">{{ change_orders_total }}</td>
+                  </tr>
+                  {% endif %}
+                  <tr>
+                    <td class="small fw-bold" style="width: 50%;">Project Total:</td>
+                    <td class="small fw-bold text-end" style="width: 50%;">{{ total_contract_amount }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+  // Add some custom styling for the collapsible categories
+  const style = document.createElement('style');
+  style.textContent = `
+    .category-header {
+      transition: background-color 0.2s ease;
+    }
+    .category-header:hover {
+      background-color: #e9ecef !important;
+    }
+    .category-content {
+      transition: all 0.3s ease;
+    }
+    .fas.fa-eye {
+      transition: transform 0.2s ease;
+    }
+    .fas.fa-eye.rotated {
+      transform: rotate(180deg);
+    }
+  `;
+  document.head.appendChild(style);
+});
+
+// Track hidden categories
+let hiddenCategories = new Set();
+// Track sitework prices visibility
+let siteworkPricesVisible = false;
+
+// Function to toggle sitework prices visibility
+function toggleSiteworkPrices() {
+  const pricesDivs = document.querySelectorAll('.sitework-prices');
+  const itemsDivs = document.querySelectorAll('.sitework-items');
+  const icon = document.getElementById('icon_sitework_prices');
+  
+  const totalSimple = document.querySelector('.sitework-total-simple');
+  const totalBreakdown = document.querySelector('.sitework-total-breakdown');
+  
+  if (siteworkPricesVisible) {
+    // Hide prices, show items only
+    pricesDivs.forEach(div => div.style.display = 'none');
+    itemsDivs.forEach(div => div.style.display = 'block');
+    if (totalSimple) totalSimple.style.display = 'block';
+    if (totalBreakdown) totalBreakdown.style.display = 'none';
+    icon.classList.remove('fa-eye-slash');
+    icon.classList.add('fa-eye');
+    siteworkPricesVisible = false;
+  } else {
+    // Show prices, hide items list
+    pricesDivs.forEach(div => div.style.display = 'block');
+    itemsDivs.forEach(div => div.style.display = 'none');
+    if (totalSimple) totalSimple.style.display = 'none';
+    if (totalBreakdown) totalBreakdown.style.display = 'block';
+    icon.classList.remove('fa-eye');
+    icon.classList.add('fa-eye-slash');
+    siteworkPricesVisible = true;
+  }
+  
+  // Update PDF preview URL
+  updatePdfPreviewUrl();
+}
+
+// Function to toggle category visibility
+function toggleCategory(categoryId) {
+  const content = document.getElementById(categoryId);
+  const icon = document.getElementById('icon_' + categoryId);
+  
+  if (content.style.display === 'none') {
+    // Show category
+    content.style.display = 'block';
+    icon.classList.remove('rotated');
+    hiddenCategories.delete(categoryId);
+  } else {
+    // Hide category
+    content.style.display = 'none';
+    icon.classList.add('rotated');
+    hiddenCategories.add(categoryId);
+  }
+  
+  // Update PDF preview URL with hidden categories
+  updatePdfPreviewUrl();
+}
+
+// Function to convert category ID to PDF format
+function convertCategoryIdToPdfFormat(categoryId) {
+  // Extract quote and category info from the category ID
+  // Format: category_1_1 -> QuoteName_CategoryName
+  // Format: sitework_category_1 -> Sitework_CategoryName
+  const categoryElement = document.getElementById(categoryId);
+  if (!categoryElement) return null;
+  
+  // Check if it's a sitework category
+  if (categoryId.startsWith('sitework_category_')) {
+    let categorySection = categoryElement.closest('.category-section');
+    if (!categorySection) return null;
+    
+    // If we resolved to the content block, step up to the parent section that holds the header
+    if (categorySection.classList.contains('category-content')) {
+      categorySection = categorySection.parentElement;
+    }
+    
+    // Support h6/h5/h4 heading levels
+    const categoryHeader = categorySection.querySelector('.category-header h6, .category-header h5, .category-header h4');
+    if (categoryHeader) {
+      const categoryName = categoryHeader.textContent.trim();
+      return `Sitework_${categoryName}`;
+    }
+    return null;
+  }
+  
+  // Handle product categories
+  // The categoryElement is the content div with class 'category-section'
+  // We need to find the parent .category-section that contains the header
+  let categorySection = categoryElement;
+  
+  // If the current element is the content div, find the parent section
+  if (categoryElement.classList.contains('category-content')) {
+    categorySection = categoryElement.parentElement;
+  }
+  
+  if (!categorySection || !categorySection.classList.contains('category-section')) {
+    return null;
+  }
+  
+  // The category header is in the same .category-section as the content
+  // Header tags vary; try h6 first, then fall back
+  const categoryHeader = categorySection.querySelector('.category-header h6, .category-header h5, .category-header h4');
+  const quoteSection = categorySection.closest('.mb-4');
+  const quoteHeader = quoteSection ? quoteSection.querySelector('h6, h5, h4') : null;
+  
+  if (categoryHeader && quoteHeader) {
+    const categoryName = categoryHeader.textContent.trim();
+    const quoteName = quoteHeader.textContent.replace('Product Quote: ', '').trim();
+    return `${quoteName}_${categoryName}`;
+  }
+  
+  return null;
+}
+
+// Function to update PDF preview URL with hidden categories
+function updatePdfPreviewUrl() {
+  const hiddenArray = Array.from(hiddenCategories);
+  const pdfFormattedCategories = hiddenArray.map(convertCategoryIdToPdfFormat).filter(Boolean);
+  let params = [];
+  
+  // Add hidden categories parameter
+  if (pdfFormattedCategories.length > 0) {
+    params.push('hidden_categories=' + encodeURIComponent(pdfFormattedCategories.join(',')));
+  }
+  
+  // Add sitework hide_prices parameter
+  if (!siteworkPricesVisible) {
+    params.push('hide_sitework_prices=true');
+  }
+  
+  const queryString = params.length > 0 ? '?' + params.join('&') : '';
+  const pdfPreviewUrl = '{% url "job:job_pdf_generate" job.id %}' + queryString + (queryString ? '&preview=true' : '?preview=true');
+  
+  // Debug logging (remove in production)
+  // console.log('Hidden categories (original):', hiddenArray);
+  // console.log('Hidden categories (PDF format):', pdfFormattedCategories);
+  // console.log('Sitework prices visible:', siteworkPricesVisible);
+  // console.log('PDF Preview URL:', pdfPreviewUrl);
+  
+  // Update the Print Preview button URL
+  const printPreviewBtn = document.getElementById('printPreviewBtn');
+  if (printPreviewBtn) {
+    printPreviewBtn.href = pdfPreviewUrl;
+  }
+  
+  // Also update the download button URL
+  const downloadBtn = document.querySelector('a[onclick*="downloadContract"]');
+  if (downloadBtn) {
+    const downloadQueryString = params.length > 0 ? '?' + params.join('&') : '';
+    downloadBtn.setAttribute('data-url', '{% url "job:job_pdf_generate" job.id %}' + downloadQueryString);
+  }
+}
+
+// Function to handle contract download
+function downloadContract(link) {
+  try {
+    // Show loading state
+    const originalText = link.innerHTML;
+    link.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Generating PDF...';
+    link.style.pointerEvents = 'none';
+    
+    // Add hidden categories and sitework prices visibility to download URL
+    const hiddenArray = Array.from(hiddenCategories);
+    const pdfFormattedCategories = hiddenArray.map(convertCategoryIdToPdfFormat).filter(Boolean);
+    let params = [];
+    
+    // Add hidden categories parameter
+    if (pdfFormattedCategories.length > 0) {
+      params.push('hidden_categories=' + encodeURIComponent(pdfFormattedCategories.join(',')));
+    }
+    
+    // Add sitework hide_prices parameter
+    if (!siteworkPricesVisible) {
+      params.push('hide_sitework_prices=true');
+    }
+    
+    const queryString = params.length > 0 ? '?' + params.join('&') : '';
+    const downloadUrl = '{% url "job:job_pdf_generate" job.id %}' + queryString;
+    
+    // Method 1: Try using fetch API for better error handling
+    fetch(downloadUrl)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.blob();
+      })
+      .then(blob => {
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const downloadLink = document.createElement('a');
+        downloadLink.href = url;
+        downloadLink.download = 'job_{{ job.job_code }}_contract.pdf';
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        window.URL.revokeObjectURL(url);
+        
+        // Reset button
+        link.innerHTML = originalText;
+        link.style.pointerEvents = 'auto';
+      })
+      .catch(error => {
+        console.error('Download error:', error);
+        // Fallback to iframe method
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = downloadUrl;
+        document.body.appendChild(iframe);
+        
+        setTimeout(() => {
+          document.body.removeChild(iframe);
+          link.innerHTML = originalText;
+          link.style.pointerEvents = 'auto';
+        }, 3000);
+      });
+    
+    // Prevent default link behavior
+    return false;
+  } catch (error) {
+    console.error('Download error:', error);
+    // Fallback to normal link behavior
+    return true;
+  }
+}
+
+// Initialize PDF preview URL when page loads
+document.addEventListener('DOMContentLoaded', function() {
+  updatePdfPreviewUrl();
+});
+</script>
+
+<!-- Bottom Right Buttons -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1000;">
+  <div class="d-flex gap-2">
+    <a id="printPreviewBtn" href="{% url 'job:job_pdf_generate' job.id %}?preview=true" target="_blank" class="btn btn-primary">
+      <i class="fas fa-eye me-1"></i>Print Preview
+    </a>
+    <a href="{% url 'job:job_pdf_generate' job.id %}" class="btn btn-success" onclick="downloadContract(this); return false;">
+      <i class="fas fa-download me-1"></i>Download Contract
+    </a>
+  </div>
+</div>
+{% endblock job_content %}

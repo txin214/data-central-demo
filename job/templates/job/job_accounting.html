@@ -1,0 +1,355 @@
+{% extends 'job/base_job.html' %}
+{% load static %}
+
+{% block job_content %}
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.1">
+
+    <!-- Combined Sales and Change Orders Table -->
+    <div class="table-responsive mt-3">
+        <table class="table table-bordered table-hover align-middle mb-0">
+            <thead class="sticky-header">
+                <tr>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Product Code</th>
+                    <th>Tax</th>
+                    <th>Description</th>
+                    <th>Sold By</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Sales Rows -->
+                {% for group in grouped_sales %}
+                {% if group.count > 1 %}
+                <!-- Grouped row with expand/collapse -->
+                <tr class="group-header" data-group-id="group-{{ forloop.counter }}">
+                    <td>
+                        Sale
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none expand-btn" data-target="group-{{ forloop.counter }}">
+                            <i class="fas fa-chevron-right me-1"></i>
+                        </button>
+                        {{ group.sale_date|date:"M d, Y"|default:"-" }}
+                    </td>
+                    <td>
+                        {% if group.product_code %}
+                        {{ group.product_code.code }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ group.tax|default:"-" }}
+                    </td>
+                    <td>
+                        {% if group.sales %}
+                            {% with first_sale=group.sales|first %}
+                                {% if first_sale.comment %}
+                                    {{ first_sale.comment }}
+                                {% elif group.product_code %}
+                                    {{ group.product_code.description|default:"-" }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% elif group.product_code %}
+                            {{ group.product_code.description|default:"-" }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if group.sales %}
+                            {% with first_sale=group.sales|first %}
+                                {% if first_sale.created_by %}
+                                    {{ first_sale.created_by.first_name }} {{ first_sale.created_by.last_name }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ group.total|floatformat:2 }}
+                        <small class="text-muted d-block">({{ group.count }} items)</small>
+                    </td>
+                </tr>
+                <!-- Individual sales rows (collapsed by default) -->
+                {% for sale in group.sales %}
+                <tr class="group-item group-{{ forloop.parentloop.counter }}" style="display: none;">
+                    <td class="ps-4">
+                        <small class="text-muted">Sale</small>
+                    </td>
+                    <td class="ps-4">
+                        <small class="text-muted">{{ sale.sale_date|date:"M d, Y"|default:"-" }}</small>
+                    </td>
+                    <td class="ps-4">
+                        <small class="text-muted">-</small>
+                    </td>
+                    <td class="ps-4">
+                        <small>{{ sale.get_tax_display|default:"-" }}</small>
+                    </td>
+                    <td class="ps-4">
+                        {% if sale.comment %}
+                            <small>{{ sale.comment }}</small>
+                        {% elif sale.product_code %}
+                            <small>{{ sale.product_code.description|default:"-" }}</small>
+                        {% else %}
+                            <small>-</small>
+                        {% endif %}
+                    </td>
+                    <td class="ps-4">
+                        <small>
+                            {% if sale.created_by %}
+                                {{ sale.created_by.first_name }} {{ sale.created_by.last_name }}
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </small>
+                    </td>
+                    <td class="ps-4">
+                        <small>{{ sale.sale_amount|floatformat:2 }}</small>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% else %}
+                <!-- Single sale row (no grouping needed) -->
+                <tr>
+                    <td>
+                        Sale
+                    </td>
+                    <td>{{ group.sale_date|date:"M d, Y"|default:"-" }}</td>
+                    <td>
+                        {% if group.product_code %}
+                        {{ group.product_code.code }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ group.tax|default:"-" }}
+                    </td>
+                    <td>
+                        {% if group.sales %}
+                            {% with first_sale=group.sales|first %}
+                                {% if first_sale.comment %}
+                                    {{ first_sale.comment }}
+                                {% elif group.product_code %}
+                                    {{ group.product_code.description|default:"-" }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% elif group.product_code %}
+                            {{ group.product_code.description|default:"-" }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if group.sales %}
+                            {% with first_sale=group.sales|first %}
+                                {% if first_sale.created_by %}
+                                    {{ first_sale.created_by.first_name }} {{ first_sale.created_by.last_name }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            {% endwith %}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ group.total|floatformat:2 }}
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+                
+                <!-- Change Orders Rows -->
+                {% for change_order in change_orders %}
+                <tr>
+                    <td>
+                        Change Order
+                    </td>
+                    <td>{{ change_order.order_date|date:"M d, Y" }}</td>
+                    <td>
+                        {% if change_order.product_code %}
+                        {{ change_order.product_code.code }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if change_order.tax %}
+                            {{ change_order.get_tax_display }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ change_order.description|truncatewords:15 }}
+                        {% if change_order.notes %}
+                        <br><small class="text-muted">{{ change_order.notes|truncatewords:10 }}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if change_order.created_by %}
+                            {{ change_order.created_by.first_name }} {{ change_order.created_by.last_name }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if change_order.amount is not None %}
+                            {% if change_order.amount >= 0 %}
+                            +{{ change_order.amount|floatformat:2 }}
+                            {% else %}
+                            {{ change_order.amount|floatformat:2 }}
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+                
+                {% if not grouped_sales and not change_orders %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-3">
+                        <p class="text-muted small">No sales or change orders added to this job yet.</p>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+            {% if grouped_sales or change_orders %}
+            <tfoot>
+                <tr>
+                    <td colspan="6" class="text-end"><strong>Total Sales:</strong></td>
+                    <td>{{ total_sales_amount|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td colspan="6" class="text-end"><strong>Total Change Orders:</strong></td>
+                    <td>{{ total_change_amount|floatformat:2 }}</td>
+                </tr>
+                <tr>
+                    <td colspan="6" class="text-end"><strong>Grand Total:</strong></td>
+                    <td>{{ grand_total|floatformat:2 }}</td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+    
+    <!-- Payments Table -->
+    <div class="table-responsive mt-4">
+        <table class="table table-bordered table-hover align-middle mb-0">
+            <thead class="sticky-header">
+                <tr>
+                    <th>Date</th>
+                    <th>Account</th>
+                    <th>Discount</th>
+                    <th>Comment</th>
+                    <th>Created By</th>
+                    <th>Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for payment in payments %}
+                <tr>
+                    <td>{{ payment.date|date:"M d, Y" }}</td>
+                    <td>
+                        {% if payment.account_category %}
+                        {{ payment.account_category.description }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if payment.discount %}
+                        {{ payment.discount|floatformat:2 }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ payment.comment|truncatewords:15|default:"-" }}
+                    </td>
+                    <td>
+                        {% if payment.by %}
+                            {{ payment.by.first_name }} {{ payment.by.last_name }}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ payment.amount|floatformat:2 }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-3">
+                        <i class="fas fa-money-bill-wave fa-2x text-muted mb-2"></i>
+                        <p class="text-muted small">No payments added to this job yet.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            {% if payments %}
+            <tfoot>
+                <tr>
+                    <td colspan="5" class="text-end"><strong>Total Paid:</strong></td>
+                    <td><strong>{{ total_payment_amount|floatformat:2 }}</strong></td>
+                </tr>
+                <tr>
+                    <td colspan="5" class="text-end"><strong>Discounts:</strong></td>
+                    <td><strong>{{ total_discount|floatformat:2 }}</strong></td>
+                </tr>
+                <tr>
+                    <td colspan="5" class="text-end"><strong>Total:</strong></td>
+                    <td><strong>{{ payment_total|floatformat:2 }}</strong></td>
+                </tr>
+                <tr>
+                    <td colspan="5" class="text-end"><strong>Due Now:</strong></td>
+                    <td><strong>{{ due_now|floatformat:2 }}</strong></td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle expand/collapse for grouped sales
+    const tableBody = document.querySelector('table tbody');
+    if (tableBody) {
+        tableBody.addEventListener('click', function(e) {
+            const expandBtn = e.target.closest('.expand-btn');
+            if (expandBtn) {
+                const targetId = expandBtn.dataset.target;
+                const icon = expandBtn.querySelector('i');
+                const groupItems = document.querySelectorAll(`.group-item.${targetId}`);
+                
+                groupItems.forEach(item => {
+                    if (item.style.display === 'none') {
+                        item.style.display = '';
+                        icon.classList.remove('fa-chevron-right');
+                        icon.classList.add('fa-chevron-down');
+                    } else {
+                        item.style.display = 'none';
+                        icon.classList.remove('fa-chevron-down');
+                        icon.classList.add('fa-chevron-right');
+                    }
+                });
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
+

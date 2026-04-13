@@ -1,0 +1,445 @@
+{% extends 'job/base_job.html' %}
+{% load static %}
+
+{% block job_content %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<style>
+    /* Keep inputs visually consistent with job app */
+    .form-label.small { font-size: .8rem; }
+    .form-control.form-control-sm, .form-select.form-select-sm { font-size: .875rem; }
+    /* Calendar/date inputs same width across the page */
+    .top-entry-date { width: 160px; }
+    /* Make flatpickr look consistent with Bootstrap small controls */
+    .flatpickr-input.form-control.form-control-sm { background-color: #fff; }
+    /* Redesigned table: subtle row separators only */
+    .te-table { border-collapse: separate; border-spacing: 0; width: 100%; }
+    .te-table thead th { background: #f8f9fa; font-weight: 600; font-size: .875rem; position: sticky; top: 0; z-index: 1; }
+    .te-table th, .te-table td { font-size: .875rem; vertical-align: middle; padding: .4rem .5rem; border: 0; }
+    .te-table tbody tr + tr td { border-top: 1px solid #e9ecef; }
+    .te-table .row-index { width: 36px; color: #6c757d; }
+    .te-muted { color: #6c757d; font-size: .8rem; }
+    .te-small-input { width: 60px; }
+    .sticky-col { position: sticky; left: 0; background: #fff; z-index: 1; }
+    .overflow-x-auto { overflow-x: auto; }
+    .min-w-day { min-width: 220px; }
+    /* Month view: narrower columns */
+    .te-schedule.month-view .min-w-day { min-width: 120px; }
+    /* Weekend styling */
+    .te-schedule th.weekend,
+    .te-schedule td.weekend {
+      background-color: #f8f9fa;
+      color: #6c757d;
+    }
+    /* Holiday styling */
+    .te-schedule th.holiday,
+    .te-schedule td.holiday {
+      background-color: #fff3cd;
+      border-left: 3px solid #ffc107;
+    }
+    .te-schedule th.holiday.weekend,
+    .te-schedule td.holiday.weekend {
+      background-color: #ffeaa7;
+    }
+    /* Add separation between slots in the same date cell */
+    .slot-item {
+      padding: 4px 0;
+      margin-bottom: 6px;
+      border-bottom: 1px solid #dee2e6;
+    }
+    .slot-item:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    /* Main schedule lighter table */
+    .te-schedule { border-collapse: separate; border-spacing: 0; width: 100%; }
+    .te-schedule thead th { background: #f8f9fa; font-weight: 600; font-size: .875rem; position: sticky; top: 0; z-index: 1; }
+    .te-schedule th, .te-schedule td { font-size: .875rem; vertical-align: top; padding: .45rem .5rem; border: 0; }
+    .te-schedule tbody tr + tr td { border-top: 1px solid #e9ecef; }
+    .te-schedule th + th, .te-schedule td + td { border-left: 1px solid #e9ecef; }
+    /* Calendar navigation */
+    .te-cal-nav .btn { min-width: 64px; }
+    .te-cal-nav .date-range { font-weight: 600; color: #495057; }
+</style>
+
+<!-- Create New Top -->
+<form method="post" class="card mt-3 mb-3">
+  {% csrf_token %}
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h6 class="mb-0">Create New Top</h6>
+  </div>
+  <div class="card-body">
+    <div class="row g-2 align-items-end">
+      <div class="col-auto">
+        <label class="form-label small mb-1">Template Date</label>
+        <input name="template_date" type="text" class="form-control form-control-sm top-entry-date" placeholder="YYYY-MM-DD">
+      </div>
+      <div class="col-auto">
+        <label class="form-label small mb-1">Fabrication Date</label>
+        <input name="fabrication_date" type="text" class="form-control form-control-sm top-entry-date" placeholder="YYYY-MM-DD">
+      </div>
+      <div class="col-auto">
+        <label class="form-label small mb-1">Top Install Date</label>
+        <input name="install_date" type="text" class="form-control form-control-sm top-entry-date" placeholder="YYYY-MM-DD">
+      </div>
+      <div class="col-auto">
+        <label class="form-label small mb-1">Room</label>
+        <select name="room" class="form-select form-select-sm">
+          <option>Kitchen</option>
+          <option>Master Bath</option>
+          <option>Main Bath</option>
+          <option>Powder Room Bath</option>
+          <option>Laundry</option>
+          <option>Other</option>
+          <option>Cabinet Mod</option>
+          <option>Trim Prep</option>
+          <option>Baseent Bath</option>
+          <option>Guest Bath</option>
+          <option>Boy's Bath</option>
+          <option>Girl's Bath</option>
+          <option>Work Order</option>
+          <option>Bar</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <label class="form-label small mb-1">Type</label>
+        <select name="top_type" class="form-select form-select-sm text-capitalize">
+          <option>Solid Surface</option>
+          <option>Laminate</option>
+          <option>Quartz Tops</option>
+          <option>Stone Tops</option>
+          <option>woodworking</option>
+          <option>Silestone</option>
+          <option>Tub Surround</option>
+          <option>Shower Door</option>
+          <option>LED LIGHTS</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <label class="form-label small mb-1">Team Name</label>
+        <select name="team" class="form-select form-select-sm" style="min-width: 220px;">
+          <option value="">Select an active team...</option>
+          {% for t in teams %}
+            <option value="{{ t.id }}">{{ t.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <label class="form-label small mb-1">Fab</label>
+        <input name="fab" type="number" class="form-control form-control-sm te-small-input" value="0">
+      </div>
+      <div class="col-auto">
+        <label class="form-label small mb-1">Inst</label>
+        <input name="inst" type="number" class="form-control form-control-sm te-small-input" value="0">
+      </div>
+      <div class="col-12 col-md-6 mt-2">
+        <label class="form-label small mb-1">Note</label>
+        <input name="notes" type="text" class="form-control form-control-sm" placeholder="Notes...">
+      </div>
+      <div class="col-auto mt-2">
+        <button class="btn btn-primary btn-sm" type="submit">Save</button>
+        <a href="{% url 'job:job_top_entry' job.id %}" class="btn btn-outline-secondary btn-sm" type="button">Cancel</a>
+      </div>
+    </div>
+  </div>
+  <div class="card-footer py-2">
+    <span class="te-muted">Customer: {{ job.customer }} &nbsp;•&nbsp; Job: {{ job.job_code }}</span>
+  </div>
+  </form>
+
+<!-- Current Top Detail -->
+<div class="card mb-3">
+  <div class="card-header"><h6 class="mb-0">Current Top Detail</h6></div>
+  <div class="card-body p-0 table-responsive">
+      <table class="te-table mb-0 align-middle">
+        <thead>
+          <tr>
+            <th class="row-index">#</th>
+            <th>Template Date</th>
+            <th>Revised Template Date</th>
+            <th>Fab Date</th>
+            <th>Install Date</th>
+            <th>Room</th>
+            <th>Type</th>
+            <th>Team</th>
+            <th>Fab</th>
+            <th>Inst</th>
+            <th style="width:60px;">Done</th>
+            <th style="width:80px;" class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if tops %}
+            {% for t in tops %}
+            <tr>
+              <td class="text-center row-index">{{ forloop.counter }}</td>
+              <td>{{ t.template_date|default:"-" }}</td>
+              <td><!-- no revised column now --></td>
+              <td>{{ t.fabrication_date|default:"-" }}</td>
+              <td>{{ t.install_date|default:"-" }}</td>
+              <td>{{ t.room }}</td>
+              <td>{{ t.top_type }}</td>
+              <td>{% if t.team %}{{ t.team.name }}{% else %}-{% endif %}</td>
+              <td>{{ t.fab_count }}</td>
+              <td>{{ t.install_count }}</td>
+              <td class="text-center"><input class="form-check-input" type="checkbox" {% if t.done %}checked{% endif %} disabled></td>
+              <td class="text-center">
+                <div class="d-flex gap-2 justify-content-center">
+                  <a href="{% url 'job:job_top_batch_shift' job.id t.id %}?next={{ request.get_full_path|urlencode }}" class="btn btn-info btn-sm" style="min-width: 70px;">Shift</a>
+                  <form method="post" action="{% url 'job:job_top_delete' job.id t.id %}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this top entry? This will also delete all associated schedule slots.');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm" style="min-width: 70px;">Delete</button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td></td>
+              <td colspan="13"><span class="te-muted">Notes:</span> {{ t.notes|default:"" }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="14" class="text-center text-muted py-3">No top entries yet. Create one above.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+  </div>
+  <div class="card-footer py-2">
+    <span class="text-muted small">Entries are created using the form above.</span>
+  </div>
+</div>
+
+<!-- Main Schedule -->
+<div class="card mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h6 class="mb-0">Main Schedule</h6>
+    <div class="d-flex gap-2 align-items-center">
+      <select class="form-select form-select-sm" id="viewModeFilter" onchange="filterByViewMode(this.value)" style="width: auto;">
+        <option value="week" {% if view_mode == 'week' %}selected{% endif %}>Week View</option>
+        <option value="month" {% if view_mode == 'month' %}selected{% endif %}>Month View</option>
+      </select>
+      <select class="form-select form-select-sm" id="eventTypeFilter" onchange="filterByEventType(this.value)" style="width: auto;">
+        <option value="" {% if not event_filter %}selected{% endif %}>All Events</option>
+        <option value="top" {% if event_filter == 'top' %}selected{% endif %}>Top</option>
+        <option value="remodel" {% if event_filter == 'remodel' %}selected{% endif %}>Remodel</option>
+        <option value="delivery" {% if event_filter == 'delivery' %}selected{% endif %}>Delivery</option>
+      </select>
+      <select class="form-select form-select-sm" id="teamFilter" onchange="filterByTeam(this.value)" style="width: auto;">
+        <option value="" {% if not team_filter %}selected{% endif %}>All Teams</option>
+        {% for team in teams %}
+          <option value="{{ team.id }}" {% if team_filter|stringformat:"s" == team.id|stringformat:"s" %}selected{% endif %}>{{ team.name }}</option>
+        {% endfor %}
+      </select>
+      <a href="{% url 'job:job_event_create' job.id %}" class="btn btn-primary btn-sm">
+        <i class="fas fa-plus"></i> Add Event
+      </a>
+    </div>
+  </div>
+  <div class="card-body p-0 overflow-x-auto">
+      <table class="te-schedule mb-0 {% if view_mode == 'month' %}month-view{% endif %}" id="teSchedule">
+      <thead>
+        <tr>
+          <th class="sticky-col" style="min-width:220px;">Team Name</th>
+          {% for info in date_info %}
+            <th class="text-center min-w-day {% if info.is_weekend %}weekend{% endif %} {% if info.is_holiday %}holiday{% endif %}">
+              <span class="te-day-name">{{ info.date|date:"D" }}</span><br>
+              <span class="te-muted">{{ info.date|date:"m/d/Y" }}</span>
+              {% if info.is_holiday %}
+                <br><span class="badge bg-warning text-dark small">{{ info.holiday_name }}</span>
+              {% endif %}
+            </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in schedule_rows %}
+        <tr>
+          <td class="sticky-col">{{ row.team.name }}</td>
+          {% for cell in row.cells %}
+            <td class="align-top {% if cell.date_info.is_weekend %}weekend{% endif %} {% if cell.date_info.is_holiday %}holiday{% endif %}">
+              {% if cell.items %}
+                {% for it in cell.items %}
+                  <div class="small slot-item">
+                    <a href="{% url 'job:top_slot_edit' job.id it.id %}?next={{ request.get_full_path|urlencode }}" class="text-decoration-none {% if it.confirmed %}text-success{% else %}text-danger{% endif %}">{{ it.label }}</a>
+                  </div>
+                {% endfor %}
+              {% endif %}
+            </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer py-2">
+    <div class="d-flex align-items-center justify-content-center gap-2 te-cal-nav">
+      {% if view_mode == 'month' %}
+        <a href="{% url 'job:job_top_entry' job.id %}?view=month&month={{ prev_view|date:'Y-m-d' }}{% if event_filter %}&filter={{ event_filter }}{% endif %}{% if team_filter %}&team={{ team_filter }}{% endif %}" class="btn btn-outline-primary btn-sm">← Prev Month</a>
+        <span class="te-muted">{{ view_start_date|date:"F Y" }}</span>
+        <a href="{% url 'job:job_top_entry' job.id %}?view=month&month={{ next_view|date:'Y-m-d' }}{% if event_filter %}&filter={{ event_filter }}{% endif %}{% if team_filter %}&team={{ team_filter }}{% endif %}" class="btn btn-outline-primary btn-sm">Next Month →</a>
+      {% else %}
+        <a href="{% url 'job:job_top_entry' job.id %}?view=week&week={{ prev_view|date:'Y-m-d' }}{% if event_filter %}&filter={{ event_filter }}{% endif %}{% if team_filter %}&team={{ team_filter }}{% endif %}" class="btn btn-outline-primary btn-sm">← Prev Week</a>
+        <span class="te-muted">{{ view_start_date|date:"M d" }} - {{ view_end_date|date:"M d, Y" }}</span>
+        <a href="{% url 'job:job_top_entry' job.id %}?view=week&week={{ next_view|date:'Y-m-d' }}{% if event_filter %}&filter={{ event_filter }}{% endif %}{% if team_filter %}&team={{ team_filter }}{% endif %}" class="btn btn-outline-primary btn-sm">Next Week →</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    if (window.flatpickr) {
+      flatpickr('.top-entry-date', {
+        dateFormat: 'Y-m-d',
+        altInput: true,
+        altFormat: 'M j, Y',
+        allowInput: true,
+        wrap: false,
+        disableMobile: true
+      });
+    }
+
+    // Simple, front-end-only week navigation for the schedule header
+    const dayEls = [
+      document.getElementById('teDay0'),
+      document.getElementById('teDay1'),
+      document.getElementById('teDay2'),
+      document.getElementById('teDay3'),
+      document.getElementById('teDay4')
+    ];
+    const navLinks = document.querySelectorAll('.te-cal-nav [data-shift], .te-cal-nav [data-month]');
+
+    function formatMDY(d) {
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      return `${mm}/${dd}/${yyyy}`;
+    }
+
+    function getMonday(date) {
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = (day === 0 ? -6 : 1) - day; // shift Sunday to previous week
+      d.setDate(d.getDate() + diff);
+      d.setHours(0,0,0,0);
+      return d;
+    }
+
+    let currentMonday = getMonday(new Date());
+
+    function renderHeader() {
+      for (let i = 0; i < 5; i++) {
+        const d = new Date(currentMonday);
+        d.setDate(d.getDate() + i);
+        if (dayEls[i]) dayEls[i].textContent = formatMDY(d);
+      }
+    }
+
+    navLinks.forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const monthShiftAttr = link.getAttribute('data-month');
+        const weekShiftAttr = link.getAttribute('data-shift');
+        if (monthShiftAttr !== null) {
+          const m = parseInt(monthShiftAttr, 10);
+          const temp = new Date(currentMonday);
+          temp.setMonth(temp.getMonth() + m);
+          currentMonday = getMonday(temp);
+        } else if (weekShiftAttr !== null) {
+          const shift = parseInt(weekShiftAttr, 10);
+          if (shift === 0) {
+            currentMonday = getMonday(new Date());
+          } else {
+            currentMonday.setDate(currentMonday.getDate() + shift);
+          }
+        }
+        renderHeader();
+      });
+    });
+
+    renderHeader();
+  });
+
+  function filterByViewMode(viewMode) {
+    const url = new URL(window.location.href);
+    const weekParam = url.searchParams.get('week') || '';
+    const monthParam = url.searchParams.get('month') || '';
+    const filterParam = url.searchParams.get('filter') || '';
+    const teamParam = url.searchParams.get('team') || '';
+    
+    url.searchParams.set('view', viewMode);
+    
+    // Clear week/month params when switching views
+    url.searchParams.delete('week');
+    url.searchParams.delete('month');
+    
+    // Preserve filter and team parameters
+    if (filterParam) {
+      url.searchParams.set('filter', filterParam);
+    }
+    if (teamParam) {
+      url.searchParams.set('team', teamParam);
+    }
+    
+    window.location.href = url.toString();
+  }
+
+  function filterByEventType(eventType) {
+    const url = new URL(window.location.href);
+    const viewMode = url.searchParams.get('view') || 'week';
+    const weekParam = url.searchParams.get('week') || '';
+    const monthParam = url.searchParams.get('month') || '';
+    const teamParam = url.searchParams.get('team') || '';
+    
+    if (eventType) {
+      url.searchParams.set('filter', eventType);
+    } else {
+      url.searchParams.delete('filter');
+    }
+    
+    // Preserve view mode and date parameters
+    url.searchParams.set('view', viewMode);
+    if (viewMode === 'month' && monthParam) {
+      url.searchParams.set('month', monthParam);
+    } else if (viewMode === 'week' && weekParam) {
+      url.searchParams.set('week', weekParam);
+    }
+    if (teamParam) {
+      url.searchParams.set('team', teamParam);
+    }
+    
+    window.location.href = url.toString();
+  }
+
+  function filterByTeam(teamId) {
+    const url = new URL(window.location.href);
+    const viewMode = url.searchParams.get('view') || 'week';
+    const weekParam = url.searchParams.get('week') || '';
+    const monthParam = url.searchParams.get('month') || '';
+    const filterParam = url.searchParams.get('filter') || '';
+    
+    if (teamId) {
+      url.searchParams.set('team', teamId);
+    } else {
+      url.searchParams.delete('team');
+    }
+    
+    // Preserve view mode and date parameters
+    url.searchParams.set('view', viewMode);
+    if (viewMode === 'month' && monthParam) {
+      url.searchParams.set('month', monthParam);
+    } else if (viewMode === 'week' && weekParam) {
+      url.searchParams.set('week', weekParam);
+    }
+    if (filterParam) {
+      url.searchParams.set('filter', filterParam);
+    }
+    
+    window.location.href = url.toString();
+  }
+</script>
+{% endblock %}
+
+

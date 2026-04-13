@@ -1,0 +1,675 @@
+{% extends "base.html" %}
+{% load product_filters %}
+{% load static %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/pagination.css' %}">
+<link rel="stylesheet" href="{% static 'css/table_styles.css' %}">
+{% endblock %}
+
+{% block content %}
+<style>
+    .table-responsive {
+        overflow-x: auto;
+        padding-right: 0;
+    }
+    .product-img-thumb {
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
+        border-radius: 4px;
+        background: #fff;
+        border: 1px solid #eee;
+    }
+    .action-bar {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+        gap: 12px;
+        width: 100%;
+    }
+    .action-bar .form-select {
+        flex-shrink: 0;
+        width: 180px;
+    }
+    .action-bar .search-container {
+        flex: 1;
+        display: flex;
+        justify-content: flex-end;
+        margin-left: auto;
+        padding-right: 0;
+    }
+    .table th, .table td {
+        white-space: nowrap;
+    }
+    
+</style>
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Products</h2>
+        </div>
+    </div>
+    <div id="categoryBreadcrumb" class="mb-2 fw-bold text-primary"></div>
+    <div class="action-bar">
+        <select id="categoryDropdown" class="form-select form-select-sm"></select>
+        <select id="subcat1Dropdown" class="form-select form-select-sm" disabled><option value="">Subcategory 1</option></select>
+        <select id="subcat2Dropdown" class="form-select form-select-sm" disabled><option value="">Subcategory 2</option></select>
+        <select id="manufacturerDropdown" class="form-select form-select-sm"></select>
+        <div class="search-container">
+            <input id="searchInput" type="text" class="form-control form-control-sm search-input" placeholder="Search Products...">
+        </div>
+    </div>
+    
+    <!-- Status Filter and Clear Button -->
+    <div class="mb-3">
+        <div class="row">
+            <div class="col-md-6">
+                <button id="clear-filters" class="btn btn-outline-secondary btn-sm"><i class="fa fa-refresh me-1"></i>Clear Filters</button>
+            </div>
+            <div class="col-md-6">
+                <div class="d-flex justify-content-end">
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="statusFilterType" id="statusActive" value="active" checked>
+                        <label class="form-check-label small text-muted" for="statusActive">Active Only</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="statusFilterType" id="statusInactive" value="inactive">
+                        <label class="form-check-label small text-muted" for="statusInactive">Inactive Only</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="statusFilterType" id="statusAll" value="all">
+                        <label class="form-check-label small text-muted" for="statusAll">All Products</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle mb-0">
+            <thead class="sticky-header">
+                <tr>
+                    <th>Image</th>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Unit Cost</th>
+                    <th>Unit Price</th>
+                    <th>Category</th>
+                    <th>Manufacturer</th>
+                    <th>Subcategory 1</th>
+                    <th>Subcategory 2</th>
+                    <th>Status</th>
+                    <th>More</th>
+                </tr>
+            </thead>
+            <tbody id="productTableBody">
+                <tr class="border-top-0 border-bottom-0">
+                    <td colspan="11" class="border-top-0 border-bottom-0 py-2">
+                        <a href="{% url 'product:product-create' %}" class="btn btn-sm btn-success">
+                            <i class="fas fa-plus me-1"></i>
+                            Add Product
+                        </a>
+                    </td>
+                </tr>
+                {% for product, primary_image in products_with_images %}
+                <tr>
+                    <td>
+                        {% if primary_image %}
+                            <img src="{{ primary_image.image.url }}" alt="{{ product.description }}" class="product-img-thumb">
+                        {% else %}
+                            <img src="{% static 'product/image-not-found.png' %}" alt="No image" class="product-img-thumb">
+                        {% endif %}
+                    </td>
+                    <td>{{ product.part_no }}</td>
+                    <td>{{ product.description }}</td>
+                    <td>{% if product.unit_material_cost and product.unit_material_cost != 0 %}${{ product.unit_material_cost|floatformat:2 }}{% else %}-{% endif %}</td>
+                    <td>{% if product.retail_sell and product.retail_sell != 0 %}${{ product.retail_sell|floatformat:2 }}{% else %}-{% endif %}</td>
+                    <td>{% if product.category %}{{ product.category.product_category }}{% else %}Other{% endif %}</td>
+                    <td>{% if product.manufacturer %}{{ product.manufacturer.manufacturer_name }}{% else %}-{% endif %}</td>
+                    <td>{% if product.sub_category1 %}{{ product.sub_category1 }}{% else %}-{% endif %}</td>
+                    <td>{% if product.sub_category2 %}{{ product.sub_category2 }}{% else %}-{% endif %}</td>
+                    <td>{% if product.status %}A{% else %}I{% endif %}</td>
+                    <td>
+                        <a href="{% url 'product:product-detail2' product.uuid %}" class="btn btn-sm btn-outline-info">View</a>
+                        <a href="{% url 'product:product-update2' product.uuid %}" class="btn btn-sm btn-outline-warning">Edit</a>
+                        <a href="{% url 'product:product-delete' product.uuid %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="mt-2 text-end text-muted small">
+        COUNT <span id="productCount">{{ products_with_images|length }}</span> / <span id="totalCount">{{ total_count }}</span>
+        <span class="ms-2" id="pageRange">Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ total_count }} products</span>
+    </div>
+    
+    <!-- Regular pagination (shown when no search/filter is active) -->
+    <nav aria-label="Product pagination" class="mt-2 d-flex justify-content-center" id="regularPagination" style="display: none;">
+        <div class="d-flex align-items-center gap-2">
+            <!-- Page jump input -->
+            <div class="d-flex align-items-center gap-1 page-jump-container">
+                <span class="text-muted small">Go to:</span>
+                <input type="number" id="pageJumpInput" class="form-control form-control-sm" style="width: 70px;" min="1" max="{{ page_obj.paginator.num_pages }}" placeholder="Page">
+                <button class="btn btn-sm btn-outline-primary" onclick="jumpToPage()">Go</button>
+            </div>
+            
+            <!-- Pagination controls -->
+            <ul class="pagination pagination-sm mb-0">
+                <!-- First page -->
+                {% if page_obj.number > 1 %}
+                    <li class="page-item">
+                        <a class="page-link regular-page-link" href="#" data-page="1" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+                
+                <!-- Previous page -->
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link regular-page-link" href="#" data-page="{{ page_obj.previous_page_number }}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+                
+                <!-- Page numbers with smart range -->
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > page_obj.number|add:'-4' and num < page_obj.number|add:'4' %}
+                        <li class="page-item">
+                            <a class="page-link regular-page-link" href="#" data-page="{{ num }}">{{ num }}</a>
+                        </li>
+                    {% elif num == page_obj.number|add:'-4' or num == page_obj.number|add:'4' %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                <!-- Next page -->
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link regular-page-link" href="#" data-page="{{ page_obj.next_page_number }}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+                
+                <!-- Last page -->
+                {% if page_obj.number < page_obj.paginator.num_pages %}
+                    <li class="page-item">
+                        <a class="page-link regular-page-link" href="#" data-page="{{ page_obj.paginator.num_pages }}" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+            
+            <!-- Page info -->
+            <span class="text-muted small ms-2">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </div>
+    </nav>
+    
+    <!-- Search results pagination (hidden by default) -->
+    <div id="searchPagination" class="mt-2 d-flex justify-content-end" style="display: none;"></div>
+</div>
+<script>
+// --- AJAX Dropdowns and Search ---
+// Utility function for populating dropdowns
+function populateDropdown(selectId, data, valueField, textField, defaultText) {
+    const select = document.getElementById(selectId);
+    select.innerHTML = `<option value="">${defaultText}</option>`;
+    
+    data.forEach(item => {
+        const option = document.createElement('option');
+        option.value = item[valueField];
+        option.textContent = item[textField];
+        select.appendChild(option);
+    });
+}
+
+function updateBreadcrumb() {
+    const cat = document.getElementById('categoryDropdown');
+    const sub1 = document.getElementById('subcat1Dropdown');
+    const sub2 = document.getElementById('subcat2Dropdown');
+    let parts = [];
+    if (cat.value) parts.push(cat.options[cat.selectedIndex].text);
+    if (sub1.value) parts.push(sub1.options[sub1.selectedIndex].text);
+    if (sub2.value) parts.push(sub2.options[sub2.selectedIndex].text);
+    document.getElementById('categoryBreadcrumb').textContent = parts.join(' > ');
+}
+function fetchCategories() {
+    fetch('/product/ajax/categories/')
+        .then(res => res.json())
+        .then(data => {
+            populateDropdown('categoryDropdown', data.categories, 'id', 'name', 'Category');
+        });
+}
+function fetchSubcat1(categoryId) {
+    fetch(`/product/ajax/subcat1/${categoryId}/`)
+        .then(res => res.json())
+        .then(data => {
+            populateDropdown('subcat1Dropdown', data.subcategories, 'id', 'name', 'Subcategory 1');
+            document.getElementById('subcat1Dropdown').disabled = false;
+            document.getElementById('subcat2Dropdown').innerHTML = '<option value="">Subcategory 2</option>';
+            document.getElementById('subcat2Dropdown').disabled = true;
+        });
+}
+function fetchSubcat2(subcat1Id) {
+    fetch(`/product/ajax/subcat2/${subcat1Id}/`)
+        .then(res => res.json())
+        .then(data => {
+            populateDropdown('subcat2Dropdown', data.subcategories, 'id', 'name', 'Subcategory 2');
+            document.getElementById('subcat2Dropdown').disabled = false;
+        });
+}
+function fetchManufacturers() {
+    fetch('/product/ajax/manufacturers/')
+        .then(res => res.json())
+        .then(data => {
+            populateDropdown('manufacturerDropdown', data.manufacturers, 'id', 'name', 'Manufacturer');
+        });
+}
+function fetchProducts(page = 1) {
+    const category = document.getElementById('categoryDropdown').value;
+    const subcat1 = document.getElementById('subcat1Dropdown').value;
+    const subcat2 = document.getElementById('subcat2Dropdown').value;
+    const manufacturer = document.getElementById('manufacturerDropdown').value;
+    const keywords = document.getElementById('searchInput').value;
+    const statusFilter = document.querySelector('input[name="statusFilterType"]:checked').value;
+    
+    // Check if any filter is active (excluding default 'active' status)
+    const hasFilters = category || subcat1 || subcat2 || manufacturer || keywords.trim() || statusFilter !== 'active';
+    console.log('Filter status:', { category, subcat1, subcat2, manufacturer, keywords: keywords.trim(), statusFilter, hasFilters });
+    console.log('Keywords length:', keywords.trim().length);
+    
+    fetch(`/product/ajax/filter/?category=${category}&subcat1=${subcat1}&subcat2=${subcat2}&manufacturer=${manufacturer}&keywords=${encodeURIComponent(keywords)}&status=${statusFilter}&page=${page}`)
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('productTableBody').innerHTML = data.html;
+            document.getElementById('productCount').textContent = data.count;
+            document.getElementById('totalCount').textContent = data.total_count;
+            
+            // Update page range display
+            const startIndex = (data.paginator.current_page - 1) * 16 + 1;
+            const endIndex = Math.min(startIndex + data.count - 1, data.total_count);
+            document.getElementById('pageRange').textContent = `Showing ${startIndex}–${endIndex} of ${data.total_count} products`;
+            
+            // Always hide both paginations first, then show the appropriate one
+            const regularPagination = document.getElementById('regularPagination');
+            const searchPagination = document.getElementById('searchPagination');
+            
+            regularPagination.style.display = 'none';
+            searchPagination.style.display = 'none';
+            
+            console.log('Both paginations hidden, hasFilters:', hasFilters);
+            
+            // Use setTimeout to ensure proper hiding before showing
+            setTimeout(() => {
+                if (hasFilters) {
+                    // Show search pagination
+                    console.log('Showing search pagination, regular hidden:', regularPagination.style.display);
+                    // Force hide regular pagination
+                    regularPagination.style.display = 'none';
+                    regularPagination.style.visibility = 'hidden';
+                    updateSearchPagination(data.paginator, category, subcat1, subcat2, manufacturer, keywords);
+                } else {
+                    // Show regular pagination
+                    console.log('Showing regular pagination, search hidden:', searchPagination.style.display);
+                    // Force hide search pagination
+                    searchPagination.style.display = 'none';
+                    searchPagination.style.visibility = 'hidden';
+                    regularPagination.style.display = 'flex';
+                    regularPagination.style.visibility = 'visible';
+                    // Update regular pagination with new page info
+                    updateRegularPagination(data.paginator);
+                }
+            }, 50);
+        });
+}
+
+function updateSearchPagination(paginator, category, subcat1, subcat2, manufacturer, keywords) {
+    const searchPagination = document.getElementById('searchPagination');
+    const regularPagination = document.getElementById('regularPagination');
+    
+    console.log('updateSearchPagination called, num_pages:', paginator.num_pages);
+    console.log('Regular pagination display before:', regularPagination.style.display);
+    
+    // Ensure regular pagination is hidden
+    regularPagination.style.display = 'none';
+    
+    if (paginator.num_pages > 1) {
+        console.log('Creating search pagination HTML');
+        let paginationHTML = `
+            <div class="d-flex align-items-center gap-2 justify-content-center w-100">
+                <!-- Page jump input -->
+                <div class="d-flex align-items-center gap-1 page-jump-container">
+                    <span class="text-muted small">Go to:</span>
+                    <input type="number" id="searchPageJumpInput" class="form-control form-control-sm" style="width: 70px;" min="1" max="${paginator.num_pages}" placeholder="Page">
+                    <button class="btn btn-sm btn-outline-primary" onclick="jumpToSearchPage()">Go</button>
+                </div>
+                
+                <!-- Pagination controls -->
+                <nav aria-label="Search results pagination">
+                    <ul class="pagination pagination-sm mb-0">
+        `;
+        
+        // First page
+        if (paginator.current_page > 1) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link search-page-link" href="#" data-page="1" aria-label="First">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+            `;
+        }
+        
+        // Previous button
+        if (paginator.has_previous) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link search-page-link" href="#" data-page="${paginator.previous_page_number}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            `;
+        }
+        
+        // Page numbers with smart range
+        for (let num of paginator.page_range) {
+            if (num == paginator.current_page) {
+                paginationHTML += `
+                    <li class="page-item active">
+                        <span class="page-link">${num}</span>
+                    </li>
+                `;
+            } else if (num > paginator.current_page - 4 && num < paginator.current_page + 4) {
+                paginationHTML += `
+                    <li class="page-item">
+                        <a class="page-link search-page-link" href="#" data-page="${num}">${num}</a>
+                    </li>
+                `;
+            } else if (num == paginator.current_page - 4 || num == paginator.current_page + 4) {
+                paginationHTML += `
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                `;
+            }
+        }
+        
+        // Next button
+        if (paginator.has_next) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link search-page-link" href="#" data-page="${paginator.next_page_number}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            `;
+        }
+        
+        // Last page
+        if (paginator.current_page < paginator.num_pages) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link search-page-link" href="#" data-page="${paginator.num_pages}" aria-label="Last">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+            `;
+        }
+        
+        paginationHTML += `
+                    </ul>
+                </nav>
+                
+                <!-- Page info -->
+                <span class="text-muted small ms-2">
+                    Page ${paginator.current_page} of ${paginator.num_pages}
+                </span>
+            </div>
+        `;
+        
+        searchPagination.innerHTML = paginationHTML;
+        searchPagination.style.display = 'flex';
+        searchPagination.style.visibility = 'visible';
+        
+        // Double-check that regular pagination is hidden
+        const regularPagination = document.getElementById('regularPagination');
+        regularPagination.style.display = 'none';
+        regularPagination.style.visibility = 'hidden';
+        
+        console.log('Search pagination set to visible, regular hidden:', regularPagination.style.display);
+        
+        // Add event listeners to pagination links
+        document.querySelectorAll('.search-page-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const page = this.getAttribute('data-page');
+                fetchProducts(page);
+            });
+        });
+    } else {
+        console.log('Hiding search pagination (only 1 page)');
+        searchPagination.style.display = 'none';
+    }
+}
+
+// Page jump functions
+function jumpToPage() {
+    const input = document.getElementById('pageJumpInput');
+    const page = parseInt(input.value);
+    if (page && page >= 1) {
+        // Use AJAX for regular pagination too
+        fetchProducts(page);
+    }
+}
+
+function jumpToSearchPage() {
+    const input = document.getElementById('searchPageJumpInput');
+    const page = parseInt(input.value);
+    if (page && page >= 1) {
+        // Search pagination - use AJAX to fetch the page
+        fetchProducts(page);
+    }
+}
+
+function updateRegularPagination(paginator) {
+    // Update the page jump input max value
+    const pageJumpInput = document.getElementById('pageJumpInput');
+    if (pageJumpInput) {
+        pageJumpInput.setAttribute('max', paginator.num_pages);
+    }
+    
+    // Update the page info text
+    const pageInfoSpan = document.querySelector('#regularPagination .text-muted.small.ms-2');
+    if (pageInfoSpan) {
+        pageInfoSpan.textContent = `Page ${paginator.current_page} of ${paginator.num_pages}`;
+    }
+    
+    // Update pagination links with current page info
+    const paginationUl = document.querySelector('#regularPagination .pagination');
+    if (paginationUl) {
+        let paginationHTML = '';
+        
+        // First page
+        if (paginator.current_page > 1) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link regular-page-link" href="#" data-page="1" aria-label="First">
+                        <span aria-hidden="true">&laquo;&laquo;</span>
+                    </a>
+                </li>
+            `;
+        }
+        
+        // Previous page
+        if (paginator.has_previous) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link regular-page-link" href="#" data-page="${paginator.previous_page_number}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            `;
+        }
+        
+        // Page numbers with smart range
+        for (let num of paginator.page_range) {
+            if (num == paginator.current_page) {
+                paginationHTML += `
+                    <li class="page-item active">
+                        <span class="page-link">${num}</span>
+                    </li>
+                `;
+            } else if (num > paginator.current_page - 4 && num < paginator.current_page + 4) {
+                paginationHTML += `
+                    <li class="page-item">
+                        <a class="page-link regular-page-link" href="#" data-page="${num}">${num}</a>
+                    </li>
+                `;
+            } else if (num == paginator.current_page - 4 || num == paginator.current_page + 4) {
+                paginationHTML += `
+                    <li class="page-item disabled">
+                        <span class="page-link">...</span>
+                    </li>
+                `;
+            }
+        }
+        
+        // Next page
+        if (paginator.has_next) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link regular-page-link" href="#" data-page="${paginator.next_page_number}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            `;
+        }
+        
+        // Last page
+        if (paginator.current_page < paginator.num_pages) {
+            paginationHTML += `
+                <li class="page-item">
+                    <a class="page-link regular-page-link" href="#" data-page="${paginator.num_pages}" aria-label="Last">
+                        <span aria-hidden="true">&raquo;&raquo;</span>
+                    </a>
+                </li>
+            `;
+        }
+        
+        paginationUl.innerHTML = paginationHTML;
+        
+        // Reattach event listeners to the new pagination links
+        attachRegularPaginationListeners();
+    }
+}
+
+function clearAllFilters() {
+    // Reset all dropdowns
+    document.getElementById('categoryDropdown').value = '';
+    document.getElementById('subcat1Dropdown').innerHTML = '<option value="">Subcategory 1</option>';
+    document.getElementById('subcat1Dropdown').disabled = true;
+    document.getElementById('subcat2Dropdown').innerHTML = '<option value="">Subcategory 2</option>';
+    document.getElementById('subcat2Dropdown').disabled = true;
+    document.getElementById('manufacturerDropdown').value = '';
+    document.getElementById('searchInput').value = '';
+    
+    // Reset status filter to active
+    document.getElementById('statusActive').checked = true;
+    
+    // Update breadcrumb
+    updateBreadcrumb();
+    
+    // Fetch products with cleared filters
+    fetchProducts(1);
+}
+
+// Function to attach event listeners for regular pagination links
+function attachRegularPaginationListeners() {
+    document.querySelectorAll('.regular-page-link').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const page = this.getAttribute('data-page');
+            fetchProducts(page);
+        });
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    fetchCategories();
+    fetchManufacturers();
+    updateBreadcrumb();
+    
+    // Show regular pagination on initial load (no filters active)
+    document.getElementById('regularPagination').style.display = 'flex';
+    document.getElementById('categoryDropdown').addEventListener('change', function() {
+        const val = this.value;
+        if (val) fetchSubcat1(val); else {
+            document.getElementById('subcat1Dropdown').innerHTML = '<option value="">Subcategory 1</option>';
+            document.getElementById('subcat1Dropdown').disabled = true;
+            document.getElementById('subcat2Dropdown').innerHTML = '<option value="">Subcategory 2</option>';
+            document.getElementById('subcat2Dropdown').disabled = true;
+        }
+        fetchProducts(1); // Reset to first page
+        updateBreadcrumb();
+    });
+    document.getElementById('subcat1Dropdown').addEventListener('change', function() {
+        const val = this.value;
+        if (val) fetchSubcat2(val); else {
+            document.getElementById('subcat2Dropdown').innerHTML = '<option value="">Subcategory 2</option>';
+            document.getElementById('subcat2Dropdown').disabled = true;
+        }
+        fetchProducts(1); // Reset to first page
+        updateBreadcrumb();
+    });
+    document.getElementById('subcat2Dropdown').addEventListener('change', function() {
+        fetchProducts(1); // Reset to first page
+        updateBreadcrumb();
+    });
+    document.getElementById('manufacturerDropdown').addEventListener('change', function() {
+        fetchProducts(1); // Reset to first page
+    });
+    document.getElementById('searchInput').addEventListener('input', function() {
+        clearTimeout(window._searchTimeout);
+        window._searchTimeout = setTimeout(() => fetchProducts(1), 300); // Reset to first page
+    });
+    
+    // Add status filter event listeners
+    document.querySelectorAll('input[name="statusFilterType"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            fetchProducts(1); // Reset to first page
+        });
+    });
+    
+    // Add clear filters button event listener
+    document.getElementById('clear-filters').addEventListener('click', clearAllFilters);
+    
+    // Attach regular pagination listeners on page load
+    attachRegularPaginationListeners();
+    
+    // Add keyboard support for page jump inputs
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            const activeElement = document.activeElement;
+            if (activeElement.id === 'pageJumpInput') {
+                jumpToPage();
+            } else if (activeElement.id === 'searchPageJumpInput') {
+                jumpToSearchPage();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}
