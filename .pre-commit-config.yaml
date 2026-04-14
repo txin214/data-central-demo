@@ -1,3 +1,7 @@
+# .pre-commit-config.yaml
+repos:  # <--- Ensure this key is present and correctly indented
+  - repo: git@github.com:bwhitford/allenkit-dc.git
+    rev: "v0.1.0"  # Replace with the latest tag from GitHub
     hooks:
-    -   id: django-upgrade
+    -   id: allenkit-dc
     args: ["--target-version", "5.0"]

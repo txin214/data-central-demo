@@ -91,10 +91,10 @@ DEBUG = True
 # DEBUG = False
 
 ##ALLOWED_HOSTS = ['64.23.141.122','127.0.0.1','192.168.252.193','testserver','localhost']
-ALLOWED_HOSTS = ['allenkit-dc.fly.dev','127.0.0.1','localhost']
+ALLOWED_HOSTS = ['dc.allenkit.com','allenkit-dc.fly.dev','127.0.0.1','localhost']
 #ALLOWED_HOSTS = ['127.0.0.1','localhost']
 # for fly.io
-CSRF_TRUSTED_ORIGINS = ['https://allenkit-dc.fly.dev']
+CSRF_TRUSTED_ORIGINS = ['https://dc.allenkit.com','https://allenkit-dc.fly.dev']
 
 # Google Maps API Key for Maps Embed and Weather
 GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', 'AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8')
