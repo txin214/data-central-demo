@@ -168,14 +168,28 @@ CELERY_TASK_TIME_LIMIT = 30 * 60
 
 
 # current LOCAL versionm run "redis-server" in a terminal
-#CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
 # current with upstash
 #CELERY_BROKER_URL = 'redis://default:12f880528ed2419f9951f9ee4c922fc8@fly-falling-wind-1391.upstash.io:6379/0'
-CELERY_BROKER_URL ='redis://default:41da53354d064f858c4351214738c197@fly-allenkit-dc-redis.upstash.io:6379'
+#CELERY_BROKER_URL ='redis://default:41da53354d064f858c4351214738c197@fly-allenkit-dc-redis.upstash.io:6379'
 
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "WARNING",
+    },
+}
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases

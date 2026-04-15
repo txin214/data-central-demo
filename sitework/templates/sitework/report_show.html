@@ -5,9 +5,10 @@
 <div class="container py-3">
   <div class="row mb-3">
     <div class="col-12">
-      Customer: <strong>{{ customer }}</strong><br>
-      <strong>{{ customer2 }}</strong>
-      Report Date: {% now "jS F Y" %}
+      <strong>Customer:</strong> {{ customer }} {{ customer2 }}<br>
+      <strong>Room:</strong> {{ room }}
+      <strong>Description:</strong>{{ desc }}<br>
+      <strong>Quoted By:</strong> {{ quotedby }} &nbsp; &nbsp; <strong>Report Date:</strong> {% now "jS F Y" %}
     </div>
   </div>
 

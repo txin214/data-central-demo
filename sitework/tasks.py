@@ -6,6 +6,7 @@ from celery import shared_task
 from celery import Celery
 from django.conf import settings
 
+
 celery_app = Celery("tasks", broker=settings.CELERY_BROKER_URL, backend=settings.CELERY_BROKER_URL)
 
 
@@ -20,8 +21,8 @@ def subcreate(swquote_id):
     for c in cats:
         subcats = SiteworkSubCat.objects.filter(siteworkcat=c, status="A").order_by('orderby')
         for s in subcats:
-            print ("quote create sitework item: ",c.id," ",s.id)
+            # print ("quote create sitework item: ",c.id," ",s.id)
             #SiteworkQuoteLine.objects.add_lineitem(s.id, swquote_id)
             qitem = SiteworkQuoteLine.objects.add_lineitem(s.id, swquote_id)
-            #qitem.save()
+
     return None

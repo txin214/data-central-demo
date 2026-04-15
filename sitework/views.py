@@ -140,6 +140,11 @@ def report_show(request,qte:int):
     if my_verbose>0: print ("xxnew total: ",f"${my_total:8,.2f}")
 
     context['total'] = f"${my_total:8,.2f}"
+    context['desc'] = quote.quotedesc
+    if quote.kbflag == "Both": context['room'] = "Kitchen and Bath"
+    if quote.kbflag == "K": context['room'] = "Kitchen"
+    if quote.kbflag == "B": context['room'] = "Bath"
+    context['quotedby'] = quote.quotedby.first_name + " " + quote.quotedby.last_name
     context['customer'] = quote.customer.first_name + " " + quote.customer.last_name
     context['customer2'] = ""
     if quote.customer.first_name2 or quote.customer.last_name2:
@@ -250,6 +255,11 @@ def report_show_simple(request,qte:int):
     if my_verbose>0: print ("xxnew total: ",f"${my_total:8,.2f}")
 
     context['total'] = f"${my_total:8,.2f}"
+    context['desc'] = quote.quotedesc
+    if quote.kbflag == "Both": context['room'] = "Kitchen and Bath"
+    if quote.kbflag == "K": context['room'] = "Kitchen"
+    if quote.kbflag == "B": context['room'] = "Bath"
+    context['quotedby'] = quote.quotedby.first_name + " " + quote.quotedby.last_name
     context['customer'] = quote.customer.first_name + " " + quote.customer.last_name
     context['customer2'] = ""
     if quote.customer.first_name2 or quote.customer.last_name2:
@@ -263,6 +273,7 @@ def report_show_simple(request,qte:int):
    
     template_name = 'sitework/report_show_simple.html'
     return TemplateResponse(request,template_name, context)
+
 @login_required
 def quote_create(request):
     form = SiteworkQuoteForm()
