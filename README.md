@@ -14,9 +14,9 @@ MARCH 2026 Changed to use PostgreSQL instead of SQLite.
 - Quote Generation
 
 ## Tech Stack
-
-- Django 4.2.3
-- SQLite Database
+- Python 3.14.3
+- Django 6.0.4
+- PostgreSQL 17.9
 - HTMX for dynamic interactions
 - Bootstrap for UI
 - Dynamic Breadcrumbs
