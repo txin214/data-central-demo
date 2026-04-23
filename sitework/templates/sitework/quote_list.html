@@ -2,6 +2,21 @@
 {% block title %}Sitework Quote List{% endblock %}
 {% block content %}
 <!-- quote_list.html-->
+
+<!-- Progress Bar for Quote Creation -->
+{% if task_id %}
+<div id="progress-container" class="alert alert-info mb-3">
+    <h6>Creating Quote Items for Quote #{{ new_quote_id }}...</h6>
+    <div class="progress" style="height: 25px;">
+        <div id="progress-bar" class="progress-bar progress-bar-striped progress-bar-animated"
+             role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+            0%
+        </div>
+    </div>
+    <small id="progress-message" class="mt-1 d-block">Initializing...</small>
+</div>
+{% endif %}
+
 <div class="mb-3">
     <a class="btn btn-primary btn-sm" type="button" href="{% url 'sitework:create_url' %}">Create</a>
 </div>
@@ -37,5 +52,54 @@
     </li>
     {% endfor %}
 </ul>
+
+{% if task_id %}
+<script>
+    const progressBar = document.getElementById('progress-bar');
+    const progressMessage = document.getElementById('progress-message');
+    const progressContainer = document.getElementById('progress-container');
+    const statusUrl = "{% url 'sitework:task_status' task_id=task_id %}";
+
+    function updateProgress() {
+        fetch(statusUrl)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Task status:', data);
+                const percent = data.percent || 0;
+                progressBar.style.width = percent + '%';
+                progressBar.setAttribute('aria-valuenow', percent);
+                progressBar.textContent = percent + '%';
+                progressMessage.textContent = data.status || data.state;
+
+                if (data.state === 'SUCCESS') {
+                    progressBar.classList.remove('progress-bar-animated');
+                    progressBar.classList.add('bg-success');
+                    progressContainer.classList.remove('alert-info');
+                    progressContainer.classList.add('alert-success');
+                    progressMessage.textContent = 'Quote creation completed!';
+                    setTimeout(() => {
+                        progressContainer.style.display = 'none';
+                    }, 3000);
+                } else if (data.state === 'FAILURE' || data.state === 'ERROR') {
+                    progressBar.classList.remove('progress-bar-animated');
+                    progressBar.classList.add('bg-danger');
+                    progressContainer.classList.remove('alert-info');
+                    progressContainer.classList.add('alert-danger');
+                    progressMessage.textContent = 'Error: ' + (data.status || 'Task failed');
+                } else {
+                    // Continue polling while PENDING or PROGRESS
+                    setTimeout(updateProgress, 1000);
+                }
+            })
+            .catch(error => {
+                console.error('Error checking task status:', error);
+                progressMessage.textContent = 'Error checking progress...';
+                setTimeout(updateProgress, 2000);
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', updateProgress);
+</script>
+{% endif %}
 
 {% endblock %}

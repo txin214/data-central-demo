@@ -3,6 +3,7 @@
 {% block title %}Sitework Quote # {{ qte }} {{ qcust }}-{{ qdesc }} {% endblock %}
 
 {% block content %}
+
 <a class="btn btn-sm btn-outline-danger "  type="button" href="{% url 'sitework:show_report' qte=qte %}">Report</a>
 
 <!-- sitework/subcat_form.html  Production. shows left and right sides -->
@@ -180,9 +181,6 @@
   </div>
 
 <!--  </div>  -->
-
-
-
 
 
 {% endblock content %}

@@ -1,9 +1,12 @@
+import json
 from django.shortcuts import redirect, get_object_or_404, render
 from django.db.models import Q
 from django.contrib.auth.decorators import login_required
 from django.template.response import TemplateResponse
-from django.http import HttpResponseNotFound, HttpResponse
+from django.http import HttpResponseNotFound, HttpResponse, JsonResponse
 from django.views.decorators.csrf import ensure_csrf_cookie
+from celery.result import AsyncResult
+from allenkit1.celery import app as celery_app
 
 #rom crm.models import Customer
 from sitework.models import *
@@ -285,11 +288,26 @@ def quote_create(request):
             newquote=form.save()
             print ("quote create save ", form.is_bound  )
             # start the task to create subitems
-            subcreate.delay_on_commit(newquote.id)
-            return redirect('/sitework/list') # go back to list
+            # first determine total count of items to be created
+            count=0
+            cats = SiteworkCat.objects.order_by('orderby')
+            for c in cats:
+                subcats = SiteworkSubCat.objects.filter(siteworkcat=c, status="A").order_by('orderby')
+                for s in subcats:
+                    count=count+1 
+            print("BAFFLEGAB:", count)
+
+            task = subcreate.delay(newquote.id, count)
+            print(f"Task ID: {task.id}")
+            # Store task_id in session for progress tracking
+            request.session['last_task_id'] = task.id
+            request.session['last_quote_id'] = newquote.id
+            # Redirect to list with task info for progress bar
+            return redirect(f"/sitework/list/?task_id={task.id}&quote_id={newquote.id}")
     print ("keep going after create form")
     template_name = 'sitework/quote_show.html'
     context = {'form' : form}
+
     return TemplateResponse(request,template_name, context)
 
 # list of sitework quotes 
@@ -313,8 +331,17 @@ def quote_list(request):
     else:
         quotes = SiteworkQuote.objects.order_by('quotedesc')
 
+    # Get task_id from query params (for progress bar after quote creation)
+    task_id = request.GET.get('task_id')
+    quote_id = request.GET.get('quote_id')
+
     template_name = 'sitework/quote_list.html'
-    context = { 'quotes' : quotes,  'num_visits': num_visits,}
+    context = {
+        'quotes': quotes,
+        'num_visits': num_visits,
+        'task_id': task_id,
+        'new_quote_id': quote_id,
+    }
     return TemplateResponse(request, template_name, context)
 
 # delete sitework quote
@@ -366,7 +393,7 @@ def subcat_form(request,cat:int,qte:int):
     )
     for sw in second:
         sw.groupdesc = group_desc_by_group.get(sw.group, "")
-        print("sw.group:", sw.group, "sw.groupdesc:", sw.groupdesc)
+        #print("sw.group:", sw.group, "sw.groupdesc:", sw.groupdesc)
 
     context = {
         "cat": cat,
@@ -738,3 +765,57 @@ def comment_post(request):
         print(f"ERROR updating comment: {e}")
 
     return render(request,'sitework/comment_results.html',context)
+
+
+@login_required
+def task_status(request, task_id):
+    """Return the status of a Celery task as JSON."""
+    #print(f"DEBUG: task_status called for task_id={task_id}")
+    #print(f"DEBUG: celery_app.backend={celery_app.backend}")
+    try:
+        result = celery_app.AsyncResult(task_id)
+        # Safely get result info
+        try:
+            info = result.info
+        except Exception as e:
+            info = f"Error getting info: {e}"
+        #print(f"DEBUG: result.state={result.state}, result.info={info}")
+        response = {
+            'state': result.state,
+            'current': 0,
+            'total': 0,
+            'percent': 0,
+            'status': result.state,
+        }
+        if result.state == 'PENDING':
+            response['status'] = 'Pending...'
+        elif result.state == 'PROGRESS':
+            try:
+                meta = result.info or {}
+            except Exception:
+                meta = {}
+            response['current'] = meta.get('current', 0)
+            response['total'] = meta.get('total', 0)
+            response['percent'] = meta.get('percent', 0)
+            response['status'] = f"Processing {meta.get('current', 0)} of {meta.get('total', 0)} items..."
+        elif result.state == 'SUCCESS':
+            try:
+                task_result = result.result or {}
+            except Exception:
+                task_result = {}
+            if isinstance(task_result, dict):
+                response['current'] = task_result.get('current', 0)
+                response['total'] = task_result.get('total', 0)
+            response['percent'] = 100
+            response['status'] = 'Completed!'
+        elif result.state == 'FAILURE':
+            response['status'] = 'Failed'
+        else:
+            response['status'] = result.state
+        return JsonResponse(response)
+    except Exception as e:
+        return JsonResponse({
+            'error': str(e),
+            'state': 'ERROR',
+            'status': f'Error: {str(e)}'
+        }, status=500)

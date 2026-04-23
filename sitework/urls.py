@@ -43,6 +43,9 @@ urlpatterns = [
     # save the value 
     path('comment_post/', views.comment_post, name='comment_post'),  
 
+    # Celery task status endpoint for progress bar
+    path('task-status/<str:task_id>/', views.task_status, name='task_status'),
+
 ]
 # + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
 

@@ -90,8 +90,8 @@ class SiteworkQuote(models.Model):
     job = models.ForeignKey('job.Job', on_delete=models.CASCADE, null=True, blank=True, related_name='sitework_quotes')
     quotedate = models.DateField(blank=True, default=datetime.now)
     quotedesc = models.CharField(max_length=250, blank=True, null=True)
-    status = models.CharField(max_length=1,blank=True)
-    kbflag = models.CharField(max_length=10, choices=KBFLAG_CHOICES, blank=True, null=True)
+    status = models.CharField(max_length=1,blank=True, default='A')
+    kbflag = models.CharField(max_length=10, choices=KBFLAG_CHOICES, blank=True, default='BOTH',null=True)
     overheadpercent = models.FloatField(blank=True, null=True)
     is_primary = models.BooleanField(default=False, help_text="Primary sitework quote for this job")
 
@@ -107,7 +107,7 @@ class SiteworkQuote(models.Model):
         for c in cats:
             subcats = SiteworkSubCat.objects.filter(siteworkcat=c, status="A").order_by('orderby')
             for s in subcats:
-                print ("quote create sitework item: ",c.id," ",s.id)
+                #print ("quote create sitework item: ",c.id," ",s.id)
                 SiteworkQuoteLine.objects.add_lineitem(s.calckey, self.id)
     
     
@@ -187,11 +187,11 @@ class QuoteLineManager(models.Manager):
         }
         obj, created = self.get_or_create(
             quote=qute,
-#            subcat=stuff,
-subcatkey=stuff.calckey,
+            #subcat=stuff,
+            subcatkey=stuff.calckey,
             defaults=create_defaults,
         )
-        print("debug: create_flag= ", created, "calckey= ", obj.calckey, "group= ", obj.group)
+        #print("debug: create_flag= ", created, "calckey= ", obj.calckey, "group= ", obj.group)
         return obj
 
     def calc_price(self,quoteid):

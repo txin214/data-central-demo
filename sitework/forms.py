@@ -65,7 +65,17 @@ class SiteworkQuoteForm(forms.ModelForm):
             self.fields['kbflag'].widget = forms.Select(attrs={'style': 'width: 150px;'})
             # Remove the empty choice (---------)
             self.fields['kbflag'].choices = [choice for choice in self.fields['kbflag'].choices if choice[0] != '']
-        
+            self.fields['kbflag'].initial = 'Both'
+        if 'overheadpercent' in self.fields:
+            self.fields['overheadpercent'].widget = forms.NumberInput(attrs={'style': 'width: 150px;'})
+            self.fields['overheadpercent'].initial = 40.0
+        if 'status' in self.fields:
+            self.fields['status'].widget = forms.Select(attrs={'style': 'width: 150px;'})
+            # Remove the empty choice (---------)
+            self.fields['status'].choices = [choice for choice in self.fields['status'].choices if choice[0] != '']
+            self.fields['status'].initial = 'A'
+        # NOTE: Eventually need to grab default store location and pre-select the Market
+        #
         # Filter quotedby field to show users with active roles (same as employee list)
         # Exclude users with NONE type roles (No Category) like "bill"
         if 'quotedby' in self.fields:
@@ -86,12 +96,5 @@ class SiteworkQuoteForm(forms.ModelForm):
                 return str(user.username)
             
             self.fields['quotedby'].label_from_instance = format_user_label
-    #customer = models.ForeignKey(Customer,on_delete=models.CASCADE,null=True)
-    #quotedate = models.DateField(blank=True)
-    #quotedesc = models.CharField(max_length=250,blank=False)
-    #status = models.CharField(max_length=1,blank=True)
-    #kbflag = models.CharField(max_length=1,blank=True)
-    #overheadpercent = models.FloatField(blank=False)
-    #market = models.ForeignKey(Market,on_delete=models.CASCADE,null=True)
     #FUTURE quoteby fk Users
     #FUTURE fk-jobid
