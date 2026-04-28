@@ -394,6 +394,14 @@ def subcat_form(request,cat:int,qte:int):
     for sw in second:
         sw.groupdesc = group_desc_by_group.get(sw.group, "")
         #print("sw.group:", sw.group, "sw.groupdesc:", sw.groupdesc)
+        # lookup the subcat by calckey
+        sw.attached = SiteworkSubCatImage.objects.filter(calckey=sw.calckey).first()
+        if sw.attached:
+            sw.image_url = sw.attached.get_url()
+            sw.image_thumb = sw.attached.get_url()
+            if sw.image_url.endswith("pdf"):
+                sw.image_thumb = "/media/sitework_images/PDF_file.png"
+            print("BILLY sw.image_url:", sw.image_url," calckey:", sw.calckey)
 
     context = {
         "cat": cat,

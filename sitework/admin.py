@@ -21,6 +21,18 @@ class TzDateTimeWidget(widgets.DateTimeWidget):
 
 
 
+
+class SiteworkSubCatImageResource (resources.ModelResource):
+    class Meta:
+        model = SiteworkSubCatImage
+
+class SiteworkSubCatImageAdmin(ImportExportModelAdmin):
+    resource_classes = [SiteworkSubCatImageResource]        
+    search_fields = ['desc','calckey']
+
+admin.site.register(SiteworkSubCatImage,SiteworkSubCatImageAdmin)
+
+
 class SiteworkQuoteLineResource (resources.ModelResource):
     class Meta:
         model = SiteworkQuoteLine

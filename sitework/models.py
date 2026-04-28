@@ -1,11 +1,12 @@
 # sitework/models.py
 from django.db import models
 from django.db.models import Prefetch
+from django.db.models import Q
 from datetime import datetime
 from django.utils import timezone
 from django.contrib.auth.models import User
 from crm.models import Customer
-
+import os
 
 # sitework markets for labor calcs
 class Market(models.Model):
@@ -73,6 +74,41 @@ class SiteworkSubCatGroup(models.Model):
 
     def __str__(self):
         return f"{self.desc}"    
+
+def sitework_image_upload_to(instance, filename):
+    # Extract file extension
+    ext = os.path.splitext(filename)[1]    
+    # Return path: sitework_images/{new_filename}
+    return os.path.join('sitework_images', filename)
+
+## An optional image andor PDF document associated with a sitework subcategory
+class SiteworkSubCatImage(models.Model):
+    # id
+    image = models.ImageField(upload_to=sitework_image_upload_to, default="",blank=True)
+    doc = models.FileField(upload_to=sitework_image_upload_to, default="",blank=True)
+    name = models.CharField(max_length=250,blank=False,default="")
+    desc = models.CharField(max_length=250,blank=False,default="")
+    # calckey is used to search SiteworkSubCat,like a foreignkey
+    calckey = models.IntegerField(blank=False,default=0,unique=False)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)  
+   
+    def get_url(self):
+        if self.image:
+            return self.image.url  # "/media/sitework_images/name.jpg"
+        elif self.doc:
+            return self.doc.url  # "/media/sitework_images/name.pdf"
+        return ""
+
+    def __str__(self):
+        if self.image:
+            return f'{self.desc} : {self.calckey} Image'
+        elif self.doc:
+            return f'{self.desc} : {self.calckey} Document'
+        return f'{self.desc} : {self.calckey} Image'
+    
+    
 
 
 class SiteworkQuote(models.Model):

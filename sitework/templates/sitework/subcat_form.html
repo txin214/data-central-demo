@@ -96,8 +96,13 @@
                 {% endif %}
               </button>
                </td>
-                <td>{{ sw.quantitydesc|upper}}</td>
-                <td>{{ sw.workdesc}}</td><td>
+                <td>{{ sw.quantitydesc|upper}}</td> 
+                <td>{{ sw.workdesc}}
+                  {% if sw.attached %}
+                  <a href="{{ sw.image_url }}"><img src="{{ sw.image_thumb }}" style="width: 100px; height: 100px;" alt="Thumbnail"></a>
+               {% endif %}  
+                </td>
+                <td>
                   <button class="btn btn-light"
                 hx-get="{% url 'sitework:basecost_popup' qte=qte cat=cat subcat=sw.id basecost=sw.basecost %}"
                 hx-target="this" hx-swap="outerHTML">
@@ -155,7 +160,13 @@
                     </button>                    
                       &nbsp;
                   </td>
-                  <td></td><td>{{ sw.workdesc}}</td>
+                  <td></td><td>{{ sw.workdesc}}
+                  {% if sw.attached %}
+                  <a href="{{ sw.image_url }}"><img src="{{ sw.image_thumb }}" style="width: 100px; height: 100px;" alt="Thumbnail"></a>
+                  {% endif %}  
+
+
+                  </td>
                   <td>
                    
                   </td>
