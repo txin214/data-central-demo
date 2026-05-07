@@ -209,16 +209,16 @@ gmp-place-autocomplete::part(input) {
                                     {% with cust_code=job.customer.cust_code|default:'XXXXX' %}
                                         <div class="d-flex align-items-center" id="job_code_container">
                                             <span class="form-control form-control-sm border-0 bg-transparent p-0 me-1" style="width: auto; min-width: fit-content;" id="job_code_prefix">{{ cust_code }}-</span>
-                                            <input type="text" 
-                                                   id="job_code_suffix" 
-                                                   name="job_code_suffix" 
-                                                   class="form-control form-control-sm" 
-                                                   value="" 
-                                                   maxlength="10" 
-                                                   pattern="[A-Z]*" 
-                                                   style="width: 100px; text-transform: uppercase;"
-                                                   placeholder="Optional"
-                                                   oninput="this.value = this.value.toUpperCase().replace(/[^A-Z]/g, ''); updateJobCode();">
+                                            <select id="job_code_suffix" 
+                                                    name="job_code_suffix" 
+                                                    class="form-control form-control-sm" 
+                                                    style="width: 100px;"
+                                                    onchange="updateJobCode();">
+                                                <option value="">Select...</option>
+                                                {% for choice_value, choice_label in job_suffix_choices %}
+                                                    <option value="{{ choice_value }}" {% if job.job_code and choice_value in job.job_code %}selected{% endif %}>{{ choice_label }}</option>
+                                                {% endfor %}
+                                            </select>
                                             <input type="hidden" id="job_code_full" name="job_code" value="{{ job.job_code|default:'' }}">
                                         </div>
                                     {% endwith %}
@@ -233,38 +233,6 @@ gmp-place-autocomplete::part(input) {
                         <!-- Address Information Section -->
                         <h6 class="small text-muted mb-2" style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">Address Information</h6>
                         <div class="row">
-                            <div class="col-md-2 mb-2">
-                                <label class="form-label small">State</label>
-                                {% if is_edit_mode %}
-                                    {{ form.state }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.state|default:'Not specified' }}" readonly>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-2 mb-2">
-                                <label class="form-label small">Zip</label>
-                                {% if is_edit_mode %}
-                                    {{ form.zip }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.zip|default:'Not specified' }}" readonly>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-4 mb-2">
-                                <label class="form-label small">City</label>
-                                {% if is_edit_mode %}
-                                    {{ form.city }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.city|default:'Not specified' }}" readonly>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-4 mb-2">
-                                <label class="form-label small">County</label>
-                                {% if is_edit_mode %}
-                                    {{ form.county }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.county.name|default:'Not specified' }}" readonly>
-                                {% endif %}
-                            </div>
                             <div class="col-md-12 mb-2">
                                 <label class="form-label small">Address</label>
                                 {% if is_edit_mode %}
@@ -302,7 +270,40 @@ gmp-place-autocomplete::part(input) {
                                     <input type="text" class="form-control form-control-sm" value="{{ job.address|default:'Not specified' }}" readonly>
                                 {% endif %}
                             </div>
-                        </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label small">City</label>
+                                {% if is_edit_mode %}
+                                    {{ form.city }}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-sm" value="{{ job.city|default:'Not specified' }}" readonly>
+                                {% endif %}
+                            </div>
+
+                            <div class="col-md-2 mb-2">
+                                <label class="form-label small">State</label>
+                                {% if is_edit_mode %}
+                                    {{ form.state }}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-sm" value="{{ job.state|default:'Not specified' }}" readonly>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2 mb-2">
+                                <label class="form-label small">Zip</label>
+                                {% if is_edit_mode %}
+                                    {{ form.zip }}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-sm" value="{{ job.zip|default:'Not specified' }}" readonly>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <label class="form-label small">County</label>
+                                {% if is_edit_mode %}
+                                    {{ form.county }}
+                                {% else %}
+                                    <input type="text" class="form-control form-control-sm" value="{{ job.county.name|default:'Not specified' }}" readonly>
+                                {% endif %}
+                            </div>
+                                                    </div>
                         
                         <hr class="my-3">
                         
@@ -321,9 +322,7 @@ gmp-place-autocomplete::part(input) {
                         <!-- Important Dates Section -->
                         <h6 class="small text-muted mb-2" style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">Important Dates</h6>
                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="row">
-                                    <div class="col-md-6 mb-2">
+                                    <div class="col-md-3 mb-2">
                                         <label class="form-label small">Date Sold</label>
                                         {% if is_edit_mode %}
                                             {{ form.datesold }}
@@ -331,7 +330,7 @@ gmp-place-autocomplete::part(input) {
                                             <input type="text" class="form-control form-control-sm" value="{{ job.datesold|date:'Y-m-d'|default:'Not set' }}" readonly>
                                         {% endif %}
                                     </div>
-                                    <div class="col-md-6 mb-2">
+                                    <div class="col-md-3 mb-2">
                                         <label class="form-label small">Start Date</label>
                                         {% if is_edit_mode %}
                                             {{ form.startdate }}
@@ -339,7 +338,7 @@ gmp-place-autocomplete::part(input) {
                                             <input type="text" class="form-control form-control-sm" value="{{ job.startdate|date:'Y-m-d'|default:'Not set' }}" readonly>
                                         {% endif %}
                                     </div>
-                                    <div class="col-md-6 mb-2">
+                                    <div class="col-md-3 mb-2">
                                         <label class="form-label small">Completion</label>
                                         {% if is_edit_mode %}
                                             {{ form.completDate }}
@@ -347,52 +346,6 @@ gmp-place-autocomplete::part(input) {
                                             <input type="text" class="form-control form-control-sm" value="{{ job.completDate|date:'Y-m-d'|default:'Not set' }}" readonly>
                                         {% endif %}
                                     </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label class="form-label small">Initial Contact</label>
-                                        {% if is_edit_mode %}
-                                            {{ form.initalcontactdate }}
-                                        {% else %}
-                                            <input type="text" class="form-control form-control-sm" value="{{ job.initalcontactdate|date:'Y-m-d'|default:'Not set' }}" readonly>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="row">
-                                    <div class="col-md-6 mb-2">
-                                        <label class="form-label small">Initial Measure</label>
-                                        {% if is_edit_mode %}
-                                            {{ form.initialmeasuredate }}
-                                        {% else %}
-                                            <input type="text" class="form-control form-control-sm" value="{{ job.initialmeasuredate|date:'Y-m-d'|default:'Not set' }}" readonly>
-                                        {% endif %}
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label class="form-label small">Cabinet Needed</label>
-                                        {% if is_edit_mode %}
-                                            {{ form.cabneededdate }}
-                                        {% else %}
-                                            <input type="text" class="form-control form-control-sm" value="{{ job.cabneededdate|date:'Y-m-d'|default:'Not set' }}" readonly>
-                                        {% endif %}
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label class="form-label small">Top Install</label>
-                                        {% if is_edit_mode %}
-                                            {{ form.topinstalldate }}
-                                        {% else %}
-                                            <input type="text" class="form-control form-control-sm" value="{{ job.topinstalldate|date:'Y-m-d'|default:'Not set' }}" readonly>
-                                        {% endif %}
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label class="form-label small">Promised</label>
-                                        {% if is_edit_mode %}
-                                            {{ form.promised }}
-                                        {% else %}
-                                            <input type="text" class="form-control form-control-sm" value="{{ job.promised|date:'Y-m-d'|default:'Not set' }}" readonly>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                         
                         <!-- Form Actions for Edit Mode -->
@@ -567,6 +520,8 @@ gmp-place-autocomplete::part(input) {
                                     </div>
                                 {% else %}
                                     <p class="small text-muted mb-0">No schedule slots for this job.</p>
+                                    <a href="{% url 'job:job_event_create' job.pk %}">Schedule event</a> 
+                                    
                                 {% endif %}
                             </div>
                         </div>
@@ -807,7 +762,7 @@ waitForJQuery(function() {
     // Handle form submission
     // Update job code by combining prefix and suffix
     function updateJobCode() {
-        var prefix = $('#job_code_prefix').text().trim();
+        var prefix = $('#job_code_prefix').text().trim().toUpperCase();
         var suffix = $('#job_code_suffix').val().toUpperCase().replace(/[^A-Z]/g, '');
         // Combine prefix and suffix with dash (suffix can be empty or multiple letters)
         // Prefix already includes the dash, so just append suffix

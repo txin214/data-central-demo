@@ -1460,6 +1460,7 @@ def add_components(request):
 
     return JsonResponse({'success': False}, status=400)
 
+@login_required
 def product_quote_list(request):
     """View to list product quotes with the option to use original or current prices."""
     from crm.models import Customer

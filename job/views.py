@@ -2097,20 +2097,36 @@ class JobDetailUpdateView(DetailView):
         context['google_maps_api_key'] = getattr(settings, 'GOOGLE_MAPS_API_KEY', '')
         context['google_places_api_key'] = getattr(settings, 'GOOGLE_PLACES_API_KEY', '')
         
+        # Add JOB_SUFFIX_CHOICES for the job code suffix dropdown
+        context['job_suffix_choices'] = Job.JOB_SUFFIX_CHOICES
+        
         return context
     
     def post(self, request, *args, **kwargs):
         """Handle form submission for updates."""
         self.object = self.get_object()
         form = JobForm(request.POST, instance=self.object)
-        
+
         if form.is_valid():
             job_instance = form.save(commit=False)
-            
-            # Handle job_code update if provided (from the editable letter field)
-            if 'job_code' in request.POST and request.POST['job_code']:
-                job_instance.job_code = request.POST['job_code']
-            
+
+            # Handle job_code update from prefix + suffix
+            job_code_suffix = request.POST.get('job_code_suffix', '')
+            if job_code_suffix:
+                # Ensure customer has cust_code
+                if not job_instance.customer.cust_code:
+                    job_instance.customer.save()
+                    job_instance.customer.refresh_from_db()
+
+                cust_code = job_instance.customer.cust_code if job_instance.customer.cust_code else "XXXXX"
+                job_instance.job_code = f"{cust_code}-{job_code_suffix}"
+            else:
+                # If no suffix, just use the customer code
+                if not job_instance.customer.cust_code:
+                    job_instance.customer.save()
+                    job_instance.customer.refresh_from_db()
+                job_instance.job_code = job_instance.customer.cust_code
+
             job_instance.save()
             messages.success(request, 'Job updated successfully!')
             return redirect('job:job_detail', pk=self.object.pk)
@@ -3479,6 +3495,7 @@ def job_customer_detail(request, job_id):
     expected_cust_code = f"{last_name_part}{first_name_part}"
     
     # Update cust_code if it doesn't match or doesn't exist
+    print(f"Customer: Expected cust_code: {expected_cust_code} vs customer.cust_code {customer.cust_code}")
     if not customer.cust_code or customer.cust_code != expected_cust_code:
         customer.cust_code = expected_cust_code
         customer.save(update_fields=['cust_code'])

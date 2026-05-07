@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- dashboard_home.html -->
+<div class="container-fluid mt-4">
+     <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <p class="lead">Overview of all application modules</p>
+            <p class="lead">{{ now }}</p>
+        </div>
+
+    <div class="row">
+ 
+        <!-- Job Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                 <h5><strong><em>Job</em></strong></h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Job Management</p>
+                    <h2 class="display-4">{{ job_count }}</h2>
+                    <p class="text-muted">Jobs</p>
+                    <a href="{% url 'job:job_list' %}" class="btn btn-primary">View Jobs</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                 <h5><strong><em>Schedule</em></strong></h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Job Tasks next 10 days</p>
+                    <h2 class="display-4">0</h2>
+                    <p class="text-muted">Tasks</p>
+                    <a href="{% url 'job:master_scheduler' %}" class="btn btn-primary">View Jobs</a> 
+                </div>
+            </div>
+        </div>
+
+ 
+        <!-- CRM Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                 <h5><strong><em>Customers</em></strong></h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Customer Relationship Management</p>
+                    <h2 class="display-4">{{ customer_count }}</h2>
+                    <p class="text-muted">Customers</p>
+                    <a href="{% url 'crm:list_customer' %}" class="btn btn-primary">View Customers</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sitework Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                 <h5><strong><em>Sitework</em></strong></h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Construction Labor Quotes</p>
+                    <h2 class="display-4">{{ quote_count }}</h2>
+                    <p class="text-muted">Quotes</p>
+                    <a href="{% url 'sitework:list_url' %}" class="btn btn-primary">View Sitework</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                 <h5><strong><em>Product</em></strong></h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Product Quotes</p>
+                    <h2 class="display-4">{{ product_quote_count }}</h2>
+                    <p class="text-muted">Product Quotes</p>
+                    <a href="{% url 'product:product_quote_list' %}" class="btn btn-primary">View Quotes</a>
+                </div>
+            </div>
+        </div>
+
+ 
+        <!-- Accounts Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                 <h5><strong><em>Accounts</em></strong></h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Financial Accounts</p>
+                    <h2 class="display-4">{{ account_count }}</h2>
+                    <p class="text-muted">Accounts</p>
+                    <a href="{% url 'accounts:profile' %}" class="btn btn-primary">View Profile</a>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+</div>
+
+{% endblock %}

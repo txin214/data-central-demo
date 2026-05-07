@@ -108,7 +108,7 @@
                         <tr>
                     <td>{{ job.id }}</td>
                             <td>
-                        <strong>{{ job.job_code|default:'-' }}</strong>
+                        <strong>{{ job.job_code|upper|default:'-' }}</strong>
                             </td>
                     <td>{{ job.customer }}</td>
                     <td>
@@ -126,7 +126,7 @@
                             </td>
                     <td>
                         <a href="{% url 'job:job_detail' job.pk %}" class="btn btn-sm btn-outline-primary">View</a>
-                        <a href="{% url 'job:job_update' job.pk %}" class="btn btn-sm btn-outline-info">Edit</a>
+                        <a href="{% url 'job:job_detail' job.pk %}?edit=true" class="btn btn-sm btn-outline-info">Edit</a>
                         <a href="{% url 'job:job_delete' job.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
                             </td>
                         </tr>

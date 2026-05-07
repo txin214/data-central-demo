@@ -74,11 +74,32 @@ def report_show(request,qte:int):
         for g in SiteworkSubCatGroup.objects.all()
     }
 
+    mycatcount = {}
+    for xcat in SiteworkCat.objects.order_by('orderby'):
+        catcount=0
+        xsetupfee_key = SiteworkQuoteLine.objects.filter(cat=xcat, quote=qte, workdesc__icontains='setup fee').first()
+        if xsetupfee_key and xsetupfee_key.calckey != 558: #not the drywall setup fees, please.
+            xsetupfee_key.quantity = 0
+            xsetupfee_key.save()
+    
+        for lin in SiteworkQuoteLine.objects.filter(cat=xcat, quote=qte):
+            if lin.quantity > 0:
+                catcount += 1
+                #print("catcount:",lin.quantity, " on ", lin.workdesc)
+        
+        if xsetupfee_key and catcount > 0:
+            xsetupfee_key.quantity = 1
+            xsetupfee_key.save()
+            print("xsetupfee_key updated:", xsetupfee_key, catcount, xsetupfee_key.quantity)
+
+    # that for loop should have given us a 1 in setupfees for each category.
+
+    
     for xcat in SiteworkCat.objects.order_by('orderby'):
         cat_total=0
         current_group = None
         cat_rows = []
-        for lin in SiteworkQuoteLine.objects.filter(cat=xcat, quote=qte, quantity__gt=0).order_by('group', 'orderby'):
+        for lin in SiteworkQuoteLine.objects.filter(cat=xcat, quote=qte, quantity__gt=0).order_by('orderby'): #was group,orderby 5/6/26
             temp=0
             if lin.quantity > 0:
                 if lin.editallowance == '1':
@@ -365,6 +386,7 @@ def quote_delete(request, quote_id):
 # shows the list of sitework items and allows editing the quantiy and comments for any item.
 # need that all in one list to iterate through in one pass with desciptive date from
 # the (static) siteworkCat and siteworkSubCat models, plus the quantity and comment info for the dynamic stuff.
+# added logic for setupfees item in every subcat.
 @login_required
 def subcat_form(request,cat:int,qte:int):
     print("view:subcat_form", "cat=",cat,"qte=",qte)
@@ -386,8 +408,8 @@ def subcat_form(request,cat:int,qte:int):
         g.group: g.desc
         for g in SiteworkSubCatGroup.objects.all()
     }
+ 
 
-#        SiteworkQuoteLine.objects.filter(cat=cat, quote=qte).order_by('group', 'orderby')
     second = list(
         SiteworkQuoteLine.objects.filter(cat=cat, quote=qte).order_by( 'orderby','group')
     )
@@ -416,16 +438,27 @@ def subcat_form(request,cat:int,qte:int):
 
         
     # build list of quantities for all cats
+    # also update the setupfee counter for each cat.
     ##
     mycatcount = {}
     for xcat in SiteworkCat.objects.order_by('orderby'):
         catcount=0
+        xsetupfee_key = SiteworkQuoteLine.objects.filter(cat=xcat, quote=qte, workdesc__icontains='setup fee').first()
+        if xsetupfee_key and xsetupfee_key.calckey != 558: #not the drywall setup fees, please.
+            xsetupfee_key.quantity = 0
+            xsetupfee_key.save()
+    
         for lin in SiteworkQuoteLine.objects.filter(cat=xcat, quote=qte):
             if lin.quantity > 0:
                 catcount += 1
                 #print("catcount:",lin.quantity, " on ", lin.workdesc)
         
         mycatcount[xcat.id] = catcount
+        if xsetupfee_key and catcount > 0:
+            xsetupfee_key.quantity = 1
+            xsetupfee_key.save()
+            print("xsetupfee_key updated:", xsetupfee_key, catcount, xsetupfee_key.quantity)
+
     # add this dict to the context dictionary, make the deep copy.
     context['catcount'] = mycatcount.copy()
     ##

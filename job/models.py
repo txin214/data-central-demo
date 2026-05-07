@@ -200,9 +200,26 @@ class JobType(models.Model):
 class Job(models.Model):
     """Job model that links customers with sitework quotes and product quotes."""
     
+    # jobcode suffix codes
+    JOB_SUFFIX_CHOICES = [
+        ('B1', 'B1'),
+        ('B2', 'B2'),
+        ('B3', 'B3'),
+        ('B4', 'B4'),
+        ('KI', 'KI'),    
+        ('LN', 'LN'),    
+        ('MR', 'MR'),    
+        ('LL', 'LL'),    
+        ('FL', 'FL'),    
+        ('TP', 'TP'),    
+        ('DR', 'DR'),    
+        ('OT', 'OT'),    
+    ]
+    
     # Basic job information
     job_code = models.CharField(max_length=20, unique=True, blank=True, null=True)
     job_description = models.TextField(blank=True, null=True)
+    job_suffix = models.CharField(max_length=3, choices=JOB_SUFFIX_CHOICES, blank=True, null=True)
     
     # New fields from provided code
     sold = models.BooleanField(default=False)

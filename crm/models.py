@@ -25,7 +25,7 @@ class Customer(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    email = models.EmailField(max_length=100)
+    email = models.EmailField(max_length=100,blank=True)
     first_name2 = models.CharField(max_length=100,blank=True)
     last_name2 = models.CharField(max_length=100,blank=True)
     address = models.CharField(max_length=100)
