@@ -35,10 +35,10 @@
         <div class="col-1 text-end"><small>{{ row.unitamount }}</small></div>
         <div class="col-2 text-end">{{ row.price }}</div>
       </div>
-      {% if row.note %}
+      {% if row.note %} <!-- need indent to the Description for the notes on this report -->
         <div class="row">
-         <div class="col-1"></div> 
-          <div class="col-11 text-start fs-8"><small>{{ row.note }}</small></div>
+         <div class="col-2"></div> 
+          <div class="col-10 text-start fs-8"><small>{{ row.note }}</small></div>
         </div>
       {% endif %}
 

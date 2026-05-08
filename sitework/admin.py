@@ -27,8 +27,11 @@ class SiteworkSubCatImageResource (resources.ModelResource):
         model = SiteworkSubCatImage
 
 class SiteworkSubCatImageAdmin(ImportExportModelAdmin):
-    resource_classes = [SiteworkSubCatImageResource]        
+    resource_classes = [SiteworkSubCatImageResource]       
+    fields = ('calckey','name','desc','image','doc')
     search_fields = ['desc','calckey']
+    list_display = ('calckey','get_calckey','name','image','doc')
+
 
 admin.site.register(SiteworkSubCatImage,SiteworkSubCatImageAdmin)
 
