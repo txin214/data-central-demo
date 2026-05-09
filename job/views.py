@@ -28,6 +28,7 @@ from sitework.models import SiteworkQuote, SiteworkQuoteLine, SiteworkCat, Sitew
 from sitework.forms import SiteworkQuoteForm, QtyForm
 from django.http import HttpResponse
 import json
+import logging
 from django.conf import settings
 import os
 import tempfile
@@ -2174,28 +2175,42 @@ def job_detail(request, pk):
 
 def job_quote_products(request, job_id, quote_id):
     """View to manage products in a quote within a job context."""
-    from product.models import ProductQuote, Product, ProductCategory, ProductSubCategory1, ProductSubCategory2, Manufacturer, Vendor
+    from product.models import ProductQuote, Product, ProductCategory, ProductSubCategory1, ProductSubCategory2, Manufacturer, Vendor, ProductImage
     from django.core.paginator import Paginator
-    from django.db.models import Q
+    from django.db.models import Q, Prefetch
     
     job = get_object_or_404(Job, id=job_id)
     product_quote = get_object_or_404(ProductQuote, id=quote_id, job=job)
 
-    # Prepare line items with primary images and notes
+    # Prepare line items with primary images and notes (optimized to avoid N+1 queries)
+    line_items = list(
+        product_quote.line_items.select_related('product').prefetch_related(
+            Prefetch(
+                'product__images',
+                queryset=ProductImage.objects.filter(is_primary=True),
+                to_attr='primary_images'
+            )
+        )
+    )
+
+    notes_qs = JobQuoteProductNotes.objects.filter(
+        job=job,
+        quote=product_quote,
+        line_item_id__in=[line_item.id for line_item in line_items]
+    ).order_by('id')
+    notes_by_line_item_id = {}
+    for note in notes_qs:
+        notes_by_line_item_id.setdefault(note.line_item_id, note)
+
     line_items_with_images = []
-    for line_item in product_quote.line_items.all():
-        primary_image = line_item.product.images.filter(is_primary=True).first()
-        # Get product note for this line item in this job
-        product_note = JobQuoteProductNotes.objects.filter(
-            job=job, 
-            line_item=line_item
-        ).first()
+    for line_item in line_items:
+        primary_images = getattr(line_item.product, 'primary_images', [])
+        primary_image = primary_images[0] if primary_images else None
+        product_note = notes_by_line_item_id.get(line_item.id)
         line_items_with_images.append((line_item, primary_image, product_note))
     
-    # Prepare adhoc line items
-    adhoc_line_items = []
-    for adhoc_line_item in product_quote.adhoc_line_items.all():
-        adhoc_line_items.append(adhoc_line_item)
+    # Prepare ad-hoc line items
+    adhoc_line_items = list(product_quote.adhoc_line_items.select_related('adhoc'))
 
     # Initialize querysets for the search
     products = Product.objects.all()
@@ -2213,6 +2228,8 @@ def job_quote_products(request, job_id, quote_id):
     manufacturer = request.GET.get('manufacturer')
     active_status = request.GET.get('active_status')
     is_ajax = request.GET.get('ajax') == '1'
+    sort = request.GET.get('sort')
+    order = request.GET.get('order', 'asc')
 
     # Only show products when search filters are applied
     if any([keywords, category, sub_category1, sub_category2, manufacturer, active_status]):
@@ -2234,13 +2251,34 @@ def job_quote_products(request, job_id, quote_id):
         elif active_status == 'False':
             products = products.filter(status=False)
 
+        # Optional sorting
+        if sort == 'name':
+            products = products.order_by('-part_no' if order == 'desc' else 'part_no')
+        elif sort == 'retail_price':
+            products = products.order_by('-retail_sell' if order == 'desc' else 'retail_sell')
+        elif sort == 'builder_price':
+            products = products.order_by('-builder_sell' if order == 'desc' else 'builder_sell')
+
+        # Prefetch primary images for search results to avoid per-row image lookups
+        products = products.prefetch_related(
+            Prefetch(
+                'images',
+                queryset=ProductImage.objects.filter(is_primary=True),
+                to_attr='primary_images'
+            )
+        )
+
         # Apply pagination
         paginator = Paginator(products, 10)  
         page_number = request.GET.get('page') 
         page_obj = paginator.get_page(page_number) 
 
         # Prepare products_with_images for the search results
-        products_with_images = [(product, product.images.filter(is_primary=True).first()) for product in page_obj]
+        products_with_images = []
+        for product in page_obj:
+            primary_images = getattr(product, 'primary_images', [])
+            primary_image = primary_images[0] if primary_images else None
+            products_with_images.append((product, primary_image))
     else:
         # No filters applied - show empty results
         products_with_images = []
@@ -2256,6 +2294,8 @@ def job_quote_products(request, job_id, quote_id):
             'job': job,
             'request': request,
             'is_ajax': True,  # Pass flag to template
+            'sort': sort,
+            'order': order,
         })
         return HttpResponse(html)
 
@@ -2275,6 +2315,8 @@ def job_quote_products(request, job_id, quote_id):
             'products_with_images': products_with_images,
             'is_ajax': is_ajax,
             'vendors': vendors,
+            'sort': sort,
+            'order': order,
         }
     )
 
@@ -4497,17 +4539,230 @@ def sales_list(request):
 
 
 @login_required
+def batch_entry_sales(request):
+    """Create Sale rows from Batch Entry > Sales."""
+    from datetime import date
+    from decimal import Decimal, InvalidOperation
+    from product.models import ProductCode
+
+    allowed_codes = [
+        'CK', 'PSD', 'FL', 'CR', 'LV', 'PFX', 'WP', 'MX', 'AP', 'SL',
+        'SLW', 'CTS', 'SS', 'PFF', 'DEL', 'DS', 'BA', 'HD', 'DIS', 'CTQ'
+    ]
+    product_codes = ProductCode.objects.filter(code__in=allowed_codes).order_by('code')
+
+    if request.method == 'POST':
+        job_id = request.POST.get('job_id')
+        product_code_id = request.POST.get('product_code_id')
+        sale_date_raw = request.POST.get('sale_date')
+        tax = request.POST.get('tax', 'UT')
+        comment = (request.POST.get('comment') or '').strip()
+        sale_amount_raw = request.POST.get('sale_amount')
+
+        if not job_id:
+            messages.error(request, 'Select a job code from the search results.')
+        elif not product_code_id:
+            messages.error(request, 'Select a product code.')
+        elif not sale_amount_raw:
+            messages.error(request, 'Enter a sale amount.')
+        else:
+            job = Job.objects.filter(pk=job_id).first()
+            if not job:
+                messages.error(request, 'Selected job no longer exists.')
+            else:
+                try:
+                    sale_amount = Decimal(str(sale_amount_raw))
+                except (InvalidOperation, TypeError, ValueError):
+                    sale_amount = None
+                if sale_amount is None:
+                    messages.error(request, 'Sale amount is invalid.')
+                else:
+                    try:
+                        from datetime import datetime
+                        parsed_date = (
+                            datetime.strptime(sale_date_raw, '%Y-%m-%d').date()
+                            if sale_date_raw else date.today()
+                        )
+                    except ValueError:
+                        parsed_date = date.today()
+
+                    Sale.objects.create(
+                        job=job,
+                        product_code_id=product_code_id,
+                        sale_amount=sale_amount,
+                        sale_date=parsed_date,
+                        tax=tax if tax in {'EX', 'ST', 'UT', 'LB', 'SU'} else 'UT',
+                        comment=comment,
+                        created_by=request.user if request.user.is_authenticated else None,
+                    )
+                    messages.success(request, f'Sale created for {job.job_code}.')
+                    return redirect('job:batch_entry_sales')
+
+    context = {
+        'batch_type': 'sales',
+        'page_title': 'Batch Entry - Sales',
+        'submit_label': 'Create Sale',
+        'product_codes': product_codes,
+        'initial_date': date.today().strftime('%Y-%m-%d'),
+    }
+    return render(request, 'job/batch_entry_form.html', context)
+
+
+@login_required
+def batch_entry_receipts(request):
+    """Create Payment rows from Batch Entry > Receipts."""
+    from datetime import date
+    from decimal import Decimal, InvalidOperation
+    from .models import Payment, AccountCategory
+
+    account_categories = AccountCategory.objects.filter(status='A').order_by('code')
+
+    if request.method == 'POST':
+        job_id = request.POST.get('job_id')
+        account_category_id = request.POST.get('account_category_id') or None
+        date_raw = request.POST.get('date')
+        discount_raw = request.POST.get('discount')
+        comment = (request.POST.get('comment') or '').strip()
+        amount_raw = request.POST.get('amount')
+
+        if not job_id:
+            messages.error(request, 'Select a job code from the search results.')
+        elif not amount_raw:
+            messages.error(request, 'Enter an amount.')
+        else:
+            job = Job.objects.filter(pk=job_id).first()
+            if not job:
+                messages.error(request, 'Selected job no longer exists.')
+            else:
+                try:
+                    amount = Decimal(str(amount_raw))
+                except (InvalidOperation, TypeError, ValueError):
+                    amount = None
+                try:
+                    discount = Decimal(str(discount_raw)) if discount_raw not in (None, '') else Decimal('0')
+                except (InvalidOperation, TypeError, ValueError):
+                    discount = None
+
+                if amount is None:
+                    messages.error(request, 'Amount is invalid.')
+                elif discount is None:
+                    messages.error(request, 'Discount is invalid.')
+                else:
+                    try:
+                        from datetime import datetime
+                        parsed_date = (
+                            datetime.strptime(date_raw, '%Y-%m-%d').date()
+                            if date_raw else date.today()
+                        )
+                    except ValueError:
+                        parsed_date = date.today()
+
+                    Payment.objects.create(
+                        job=job,
+                        date=parsed_date,
+                        account_category_id=account_category_id,
+                        discount=discount,
+                        comment=comment,
+                        amount=amount,
+                        by=request.user if request.user.is_authenticated else None,
+                    )
+                    messages.success(request, f'Receipt created for {job.job_code}.')
+                    return redirect('job:batch_entry_receipts')
+
+    context = {
+        'batch_type': 'receipts',
+        'page_title': 'Batch Entry - Receipts',
+        'submit_label': 'Create Receipt',
+        'account_categories': account_categories,
+        'initial_date': date.today().strftime('%Y-%m-%d'),
+    }
+    return render(request, 'job/batch_entry_form.html', context)
+
+
+@login_required
+def batch_entry_change_orders(request):
+    """Create ChangeOrder rows from Batch Entry > Change Orders."""
+    from datetime import date
+    from decimal import Decimal, InvalidOperation
+    from django.core.exceptions import ValidationError
+    from product.models import ProductCode
+
+    allowed_codes = [
+        'CK', 'PSD', 'FL', 'CR', 'LV', 'PFX', 'WP', 'MX', 'AP', 'SL',
+        'SLW', 'CTS', 'SS', 'PFF', 'DEL', 'DS', 'BA', 'HD', 'DIS', 'CTQ'
+    ]
+    product_codes = ProductCode.objects.filter(code__in=allowed_codes).order_by('code')
+
+    if request.method == 'POST':
+        job_id = request.POST.get('job_id')
+        product_code_id = request.POST.get('product_code_id') or None
+        order_date_raw = request.POST.get('order_date')
+        tax = request.POST.get('tax') or 'UT'
+        description = (request.POST.get('description') or '').strip()
+        amount_raw = request.POST.get('amount')
+
+        if not job_id:
+            messages.error(request, 'Select a job code from the search results.')
+        elif not description:
+            messages.error(request, 'Description is required.')
+        else:
+            job = Job.objects.filter(pk=job_id).first()
+            if not job:
+                messages.error(request, 'Selected job no longer exists.')
+            else:
+                amount = None
+                if amount_raw not in (None, ''):
+                    try:
+                        amount = Decimal(str(amount_raw))
+                    except (InvalidOperation, TypeError, ValueError):
+                        messages.error(request, 'Amount is invalid.')
+                        amount = 'invalid'
+                if amount != 'invalid':
+                    try:
+                        from datetime import datetime
+                        parsed_date = (
+                            datetime.strptime(order_date_raw, '%Y-%m-%d').date()
+                            if order_date_raw else date.today()
+                        )
+                    except ValueError:
+                        parsed_date = date.today()
+
+                    change_order = ChangeOrder(
+                        job=job,
+                        product_code_id=product_code_id,
+                        description=description,
+                        amount=amount,
+                        order_date=parsed_date,
+                        tax=tax if tax in {'EX', 'ST', 'UT', 'LB', 'SU'} else 'UT',
+                        created_by=request.user if request.user.is_authenticated else None,
+                    )
+                    try:
+                        change_order.save()
+                        messages.success(request, f'Change order created for {job.job_code}.')
+                        return redirect('job:batch_entry_change_orders')
+                    except ValidationError as exc:
+                        messages.error(request, str(exc))
+
+    context = {
+        'batch_type': 'change_orders',
+        'page_title': 'Batch Entry - Change Orders',
+        'submit_label': 'Create Change Order',
+        'product_codes': product_codes,
+        'initial_date': date.today().strftime('%Y-%m-%d'),
+    }
+    return render(request, 'job/batch_entry_form.html', context)
+
+
+@login_required
 def sales_by_person(request):
-    """Display sales and change orders grouped by user (created_by)"""
+    """Sales and change orders by person, aggregated per job (one row per user per job)."""
     from decimal import Decimal
     from datetime import date
     from collections import defaultdict
-    
-    # Get filter parameters from request
-    start_date = request.GET.get('start_date', '')  # Start date filter
-    end_date = request.GET.get('end_date', '')  # End date filter
-    
-    # Parse date filters
+
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
+
     start_date_obj = None
     end_date_obj = None
     if start_date:
@@ -4522,101 +4777,117 @@ def sales_by_person(request):
             end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
         except ValueError:
             pass
-    
-    # Get all sales with related data
-    sales = Sale.objects.select_related('job', 'job__customer', 'job__soldby', 'product_code', 'created_by').order_by('-sale_date', '-created_at')
-    
-    # Get all change orders with related data
-    change_orders = ChangeOrder.objects.select_related('job', 'job__customer', 'job__soldby', 'product_code', 'created_by').order_by('-order_date', '-created_at')
-    
-    # Group by user (created_by)
+
+    sales = Sale.objects.select_related('job', 'job__customer', 'job__soldby', 'created_by').order_by('-sale_date', '-created_at')
+    change_orders = ChangeOrder.objects.select_related('job', 'job__customer', 'job__soldby', 'created_by').order_by('-order_date', '-created_at')
+
+    # user_id -> { user, job_id -> per-job aggregates }
     grouped_by_user = defaultdict(lambda: {
         'user': None,
-        'sales': [],
-        'change_orders': [],
-        'total_sales': Decimal('0'),
-        'total_change_orders': Decimal('0'),
-        'grand_total': Decimal('0')
+        'by_job': {},
     })
-    
-    # Process sales
+
+    def job_slot():
+        return {
+            'job': None,
+            'customer': None,
+            'total_sales': Decimal('0'),
+            'total_change_orders': Decimal('0'),
+            'last_activity': None,
+        }
+
+    # Process sales -> aggregate (user, job)
     for sale in sales:
         sales_person = sale.created_by if sale.created_by else sale.job.soldby
-        sale_date_obj = sale.sale_date or sale.created_at.date() if sale.created_at else date.today()
-        
-        # Filter by date range if specified
+        sale_date_obj = sale.sale_date or (sale.created_at.date() if sale.created_at else date.today())
+
         date_match = True
         if start_date_obj and sale_date_obj < start_date_obj:
             date_match = False
         if end_date_obj and sale_date_obj > end_date_obj:
             date_match = False
-        
-        if date_match and sales_person:
-            user_key = sales_person.id
-            if grouped_by_user[user_key]['user'] is None:
-                grouped_by_user[user_key]['user'] = sales_person
-            
-            grouped_by_user[user_key]['sales'].append({
-                'type': 'Sale',
-                'obj': sale,
-                'date': sale_date_obj,
-                'job': sale.job,
-                'customer': sale.job.customer,
-                'amount': sale.sale_amount,
-                'product_code': sale.product_code,
-                'description': sale.comment or (sale.product_code.description if sale.product_code else ''),
-            })
-            grouped_by_user[user_key]['total_sales'] += sale.sale_amount
-    
-    # Process change orders
+
+        if not date_match or not sales_person:
+            continue
+
+        user_key = sales_person.id
+        if grouped_by_user[user_key]['user'] is None:
+            grouped_by_user[user_key]['user'] = sales_person
+
+        jid = sale.job_id
+        if jid not in grouped_by_user[user_key]['by_job']:
+            grouped_by_user[user_key]['by_job'][jid] = job_slot()
+        slot = grouped_by_user[user_key]['by_job'][jid]
+        if slot['job'] is None:
+            slot['job'] = sale.job
+            slot['customer'] = sale.job.customer
+
+        amt = sale.sale_amount or Decimal('0')
+        slot['total_sales'] += amt
+        if slot['last_activity'] is None or sale_date_obj > slot['last_activity']:
+            slot['last_activity'] = sale_date_obj
+
+    # Process change orders -> same buckets
     for change_order in change_orders:
         sales_person = change_order.created_by if change_order.created_by else change_order.job.soldby
         change_order_date = change_order.order_date
-        
-        # Filter by date range if specified
+
         date_match = True
         if start_date_obj and change_order_date < start_date_obj:
             date_match = False
         if end_date_obj and change_order_date > end_date_obj:
             date_match = False
-        
-        if date_match and sales_person:
-            user_key = sales_person.id
-            if grouped_by_user[user_key]['user'] is None:
-                grouped_by_user[user_key]['user'] = sales_person
-            
-            amount = change_order.amount or Decimal('0')
-            grouped_by_user[user_key]['change_orders'].append({
-                'type': 'Change Order',
-                'obj': change_order,
-                'date': change_order_date,
-                'job': change_order.job,
-                'customer': change_order.job.customer,
-                'amount': amount,
-                'product_code': change_order.product_code,
-                'description': change_order.description,
-            })
-            grouped_by_user[user_key]['total_change_orders'] += amount
-    
-    # Calculate grand totals and convert to list
+
+        if not date_match or not sales_person:
+            continue
+
+        user_key = sales_person.id
+        if grouped_by_user[user_key]['user'] is None:
+            grouped_by_user[user_key]['user'] = sales_person
+
+        jid = change_order.job_id
+        if jid not in grouped_by_user[user_key]['by_job']:
+            grouped_by_user[user_key]['by_job'][jid] = job_slot()
+        slot = grouped_by_user[user_key]['by_job'][jid]
+        if slot['job'] is None:
+            slot['job'] = change_order.job
+            slot['customer'] = change_order.job.customer
+
+        amount = change_order.amount or Decimal('0')
+        slot['total_change_orders'] += amount
+        if slot['last_activity'] is None or change_order_date > slot['last_activity']:
+            slot['last_activity'] = change_order_date
+
     grouped_list = []
     for user_key, group_data in grouped_by_user.items():
-        if group_data['user']:  # Only include groups with a user
-            group_data['grand_total'] = group_data['total_sales'] + group_data['total_change_orders']
-            grouped_list.append(group_data)
-    
-    # Sort by user name
+        if not group_data['user']:
+            continue
+        job_rows = []
+        for _jid, jdata in group_data['by_job'].items():
+            jdata['grand_total'] = jdata['total_sales'] + jdata['total_change_orders']
+            job_rows.append(jdata)
+        job_rows.sort(key=lambda x: ((x['job'].job_code or '').lower(), x['job'].pk))
+
+        total_sales = sum(j['total_sales'] for j in job_rows)
+        total_change_orders = sum(j['total_change_orders'] for j in job_rows)
+        grouped_list.append({
+            'user': group_data['user'],
+            'job_rows': job_rows,
+            'total_sales': total_sales,
+            'total_change_orders': total_change_orders,
+            'grand_total': total_sales + total_change_orders,
+        })
+
     grouped_list.sort(key=lambda x: (
         x['user'].first_name or '',
         x['user'].last_name or '',
         x['user'].username or ''
     ))
-    
-    # Calculate overall totals
-    total_sales_all = sum(group['total_sales'] for group in grouped_list)
-    total_change_orders_all = sum(group['total_change_orders'] for group in grouped_list)
+
+    total_sales_all = sum(g['total_sales'] for g in grouped_list)
+    total_change_orders_all = sum(g['total_change_orders'] for g in grouped_list)
     grand_total_all = total_sales_all + total_change_orders_all
-    
+
     context = {
         'grouped_by_user': grouped_list,
         'total_sales_all': total_sales_all,
@@ -4625,7 +4896,7 @@ def sales_by_person(request):
         'start_date': start_date,
         'end_date': end_date,
     }
-    
+
     return render(request, 'job/sales_by_person.html', context)
 
 
@@ -4836,14 +5107,14 @@ def job_payment_lien_waiver_pdf(request, job_id, payment_id):
 
 def job_accounting(request, job_id):
     """Display combined sales and change orders for accounting view"""
-    from collections import defaultdict
+    from collections import defaultdict, OrderedDict
     from decimal import Decimal
     from datetime import date
     
     job = get_object_or_404(Job, pk=job_id)
     
     # Get sales data (same logic as job_sales view)
-    sales = job.sales.all().select_related('product_code').order_by('-sale_date', '-created_at')
+    sales = job.sales.all().select_related('product_code', 'created_by').order_by('-sale_date', '-created_at')
     
     # Group sales by product_code
     grouped_sales = defaultdict(lambda: {'sales': [], 'total': Decimal('0.00'), 'product_code': None, 'tax': None, 'sale_date': None})
@@ -4897,6 +5168,52 @@ def job_accounting(request, job_id):
     
     # Calculate Due Now (grand total - payment total)
     due_now = grand_total - payment_total
+
+    # Build accounting timeline datasets for charts (ordered by transaction date).
+    timeline = OrderedDict()
+
+    def _ensure_day(day):
+        if day not in timeline:
+            timeline[day] = {
+                'sales': Decimal('0.00'),
+                'change_orders': Decimal('0.00'),
+                'payments': Decimal('0.00'),
+            }
+
+    for sale in sales:
+        day = sale.sale_date or (sale.created_at.date() if sale.created_at else date.today())
+        _ensure_day(day)
+        timeline[day]['sales'] += (sale.sale_amount or Decimal('0.00'))
+
+    for co in change_orders:
+        day = co.order_date or (co.created_at.date() if co.created_at else date.today())
+        _ensure_day(day)
+        timeline[day]['change_orders'] += (co.amount or Decimal('0.00'))
+
+    for payment in payments:
+        day = payment.date or (payment.created_at.date() if payment.created_at else date.today())
+        _ensure_day(day)
+        # Payment total uses amount minus discount; mirror that in chart impact.
+        timeline[day]['payments'] += (payment.amount or Decimal('0.00')) - (payment.discount or Decimal('0.00'))
+
+    chart_labels = []
+    chart_sales = []
+    chart_change_orders = []
+    chart_payments = []
+    chart_running_balance = []
+    running_balance = Decimal('0.00')
+    for day in sorted(timeline.keys()):
+        day_data = timeline[day]
+        day_sales = day_data['sales']
+        day_change = day_data['change_orders']
+        day_payments = day_data['payments']
+        running_balance += day_sales + day_change - day_payments
+
+        chart_labels.append(day.strftime('%Y-%m-%d'))
+        chart_sales.append(float(day_sales))
+        chart_change_orders.append(float(day_change))
+        chart_payments.append(float(day_payments))
+        chart_running_balance.append(float(running_balance))
     
     context = {
         'job': job,
@@ -4910,6 +5227,12 @@ def job_accounting(request, job_id):
         'total_discount': total_discount,
         'payment_total': payment_total,
         'due_now': due_now,
+        'chart_labels': chart_labels,
+        'chart_sales': chart_sales,
+        'chart_change_orders': chart_change_orders,
+        'chart_payments': chart_payments,
+        'chart_running_balance': chart_running_balance,
+        'has_chart_data': bool(chart_labels),
     }
     
     return render(request, 'job/job_accounting.html', context)
@@ -4925,10 +5248,18 @@ def job_sales(request, job_id):
     from datetime import date
     
     job = get_object_or_404(Job, pk=job_id)
-    sales = job.sales.all().select_related('product_code').order_by('-sale_date', '-created_at')
+    sales = job.sales.all().select_related('product_code', 'created_by').order_by('-sale_date', '-created_at')
     
     # Group sales by product_code
-    grouped_sales = defaultdict(lambda: {'sales': [], 'total': Decimal('0.00'), 'product_code': None, 'tax': None, 'sale_date': None})
+    grouped_sales = defaultdict(lambda: {
+        'sales': [],
+        'total': Decimal('0.00'),
+        'total_cost': Decimal('0.00'),
+        'total_tax': Decimal('0.00'),
+        'product_code': None,
+        'tax': None,
+        'sale_date': None,
+    })
     for sale in sales:
         product_code_id = sale.product_code_id if sale.product_code else None
         product_code_key = product_code_id if product_code_id else 'no_code'
@@ -4940,6 +5271,10 @@ def job_sales(request, job_id):
         
         grouped_sales[product_code_key]['sales'].append(sale)
         grouped_sales[product_code_key]['total'] += sale.sale_amount
+        if sale.cost_amount is not None:
+            grouped_sales[product_code_key]['total_cost'] += sale.cost_amount
+        if sale.tax_amount is not None:
+            grouped_sales[product_code_key]['total_tax'] += sale.tax_amount
     
     # Convert to list sorted by product code
     grouped_sales_list = []
@@ -4950,6 +5285,8 @@ def job_sales(request, job_id):
             'tax': group_data['tax'],
             'sale_date': group_data['sale_date'],
             'total': group_data['total'],
+            'total_cost': group_data['total_cost'],
+            'total_tax': group_data['total_tax'],
             'sales': group_data['sales'],
             'count': len(group_data['sales'])
         })
@@ -4959,6 +5296,8 @@ def job_sales(request, job_id):
     
     # Calculate totals
     total_sales_amount = sum(group['total'] for group in grouped_sales_list)
+    total_sales_cost = sum(group['total_cost'] for group in grouped_sales_list)
+    total_sales_tax = sum(group['total_tax'] for group in grouped_sales_list)
     
     # Get main quote (primary product quote) and group products by category
     # Only fetch quote data if job is sold
@@ -4974,11 +5313,25 @@ def job_sales(request, job_id):
         try:
             main_quote = job.product_quotes.filter(is_primary=True).select_related().prefetch_related(
                 'line_items__product__category',
+                'line_items__product__sub_category1',
                 'adhoc_line_items'
             ).first()
             if main_quote:
                 from product.utils import group_quote_line_items
+                from .models import CategoryProductCodeMap, SubCategory1ProductCodeMap
+                from .sales_from_quote import suggested_product_code_id_for_quote_lines
+
                 grouped_products = group_quote_line_items(main_quote)
+                category_to_pc_id = dict(
+                    CategoryProductCodeMap.objects.values_list(
+                        'product_category_id', 'product_code_id'
+                    )
+                )
+                subcat1_to_pc_id = dict(
+                    SubCategory1ProductCodeMap.objects.values_list(
+                        'product_sub_category1_id', 'product_code_id'
+                    )
+                )
                 # Get tax rate from the quote
                 tax_rate = main_quote.get_tax_rate()
                 # Calculate tax for each category
@@ -4989,15 +5342,46 @@ def job_sales(request, job_id):
                         subtotal_decimal = Decimal(str(subtotal))
                         category_tax = subtotal_decimal * tax_rate
                         category_total = subtotal_decimal + category_tax
-                        grouped_products_with_tax.append((category, items, subtotal, category_tax, category_total))
+                        category_cost = Decimal('0')
+                        for line_item in items:
+                            uc = line_item.product.unit_total_cost
+                            unit = Decimal(uc) if uc is not None else Decimal('0')
+                            category_cost += unit * Decimal(line_item.quantity)
+                        category_cost = category_cost.quantize(Decimal('0.01'))
+                        suggested_pc_id = suggested_product_code_id_for_quote_lines(
+                            items,
+                            category_to_pc_id,
+                            subcat1_to_pc_id,
+                            category_label=category,
+                        )
+                        mapped_product_code = None
+                        if suggested_pc_id:
+                            from product.models import ProductCode
+
+                            mapped_product_code = ProductCode.objects.filter(
+                                pk=suggested_pc_id
+                            ).first()
+                        grouped_products_with_tax.append(
+                            (
+                                category,
+                                items,
+                                subtotal,
+                                category_tax,
+                                category_total,
+                                category_cost,
+                                mapped_product_code,
+                            )
+                        )
                     grouped_products = grouped_products_with_tax
                 
                 # Calculate quote totals
                 quote_tax = main_quote.calculate_tax()
                 quote_total = main_quote.get_total_with_tax()
         except Exception:
-            pass
-        
+            logging.getLogger(__name__).exception(
+                "job_sales: failed to attach tax/mapped product codes to grouped quote categories"
+            )
+
         # Calculate sitework total
         try:
             primary_sitework = job.sitework_quotes.filter(is_primary=True).prefetch_related(
@@ -5049,8 +5433,17 @@ def job_sales(request, job_id):
         'sitework_total': sitework_total,
         'product_codes': product_codes,
         'saved_totals': saved_totals,
+        'total_sales_cost': total_sales_cost,
+        'total_sales_tax': total_sales_tax,
     }
-    
+
+    if main_quote:
+        context['quote_has_lines'] = (
+            main_quote.line_items.exists() or main_quote.adhoc_line_items.exists()
+        )
+    else:
+        context['quote_has_lines'] = False
+
     return render(request, 'job/job_sales.html', context)
 
 
@@ -5082,9 +5475,32 @@ def job_sale_create(request, job_id):
         'job': job,
         'form': form,
         'is_edit': False,
+        'read_only': False,
     }
     
     return render(request, 'job/job_sale_form.html', context)
+
+
+@login_required
+@require_GET
+def job_sale_view(request, job_id, sale_id):
+    """Read-only sale detail; reuses job_sale_form.html with read_only set."""
+    from .forms import SaleForm
+
+    job = get_object_or_404(Job, pk=job_id)
+    sale = get_object_or_404(Sale, pk=sale_id, job=job)
+    form = SaleForm(instance=sale)
+    return render(
+        request,
+        'job/job_sale_form.html',
+        {
+            'job': job,
+            'form': form,
+            'sale': sale,
+            'is_edit': False,
+            'read_only': True,
+        },
+    )
 
 
 @login_required
@@ -5110,6 +5526,7 @@ def job_sale_edit(request, job_id, sale_id):
         'form': form,
         'sale': sale,
         'is_edit': True,
+        'read_only': False,
     }
     
     return render(request, 'job/job_sale_form.html', context)
@@ -5129,6 +5546,8 @@ def job_sales_bulk_create(request, job_id):
     job = get_object_or_404(Job, pk=job_id)
     
     try:
+        from decimal import Decimal as D
+
         data = json.loads(request.body)
         sales_data = data.get('sales', [])
         
@@ -5144,10 +5563,24 @@ def job_sales_bulk_create(request, job_id):
             else:
                 sale_date = date.today()
             
+            def _opt_decimal(val):
+                if val is None or val == '':
+                    return None
+                try:
+                    return D(str(val))
+                except Exception:
+                    return None
+
+            sale_amt = _opt_decimal(sale_info.get('sale_amount'))
+            if sale_amt is None:
+                sale_amt = D('0')
+
             sale = Sale.objects.create(
                 job=job,
                 product_code_id=sale_info.get('product_code_id') if sale_info.get('product_code_id') else None,
-                sale_amount=sale_info.get('sale_amount'),
+                cost_amount=_opt_decimal(sale_info.get('cost_amount')),
+                tax_amount=_opt_decimal(sale_info.get('tax_amount')),
+                sale_amount=sale_amt,
                 sale_date=sale_date,
                 tax=sale_info.get('tax', 'UT'),
                 created_by=request.user if request.user.is_authenticated else None

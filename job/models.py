@@ -449,6 +449,56 @@ class JobAttachment(models.Model):
         return f"{self.job} - {name}"
 
 
+class CategoryProductCodeMap(models.Model):
+    """
+    Maps catalog ProductCategory to ProductCode for generating Sale rows from the primary quote.
+    Does not alter product.ProductCategory — this table holds the mapping only.
+    """
+
+    product_category = models.OneToOneField(
+        "product.ProductCategory",
+        on_delete=models.CASCADE,
+        related_name="sales_code_map",
+    )
+    product_code = models.ForeignKey(
+        "product.ProductCode",
+        on_delete=models.PROTECT,
+        related_name="job_category_maps",
+    )
+
+    class Meta:
+        verbose_name = "Category → sale product code"
+        verbose_name_plural = "Category → sale product code maps"
+
+    def __str__(self):
+        return f"{self.product_category.product_category} → {self.product_code.code}"
+
+
+class SubCategory1ProductCodeMap(models.Model):
+    """
+    Optional finer map: ProductSubCategory1 → ProductCode.
+    Used when all quote lines in a category group share the same subcategory1.
+    """
+
+    product_sub_category1 = models.OneToOneField(
+        "product.ProductSubCategory1",
+        on_delete=models.CASCADE,
+        related_name="sales_code_map",
+    )
+    product_code = models.ForeignKey(
+        "product.ProductCode",
+        on_delete=models.PROTECT,
+        related_name="job_subcat1_maps",
+    )
+
+    class Meta:
+        verbose_name = "Subcategory1 → sale product code"
+        verbose_name_plural = "Subcategory1 → sale product code maps"
+
+    def __str__(self):
+        return f"{self.product_sub_category1.product_sub_category} → {self.product_code.code}"
+
+
 class Sale(models.Model):
     """Represents a sold job with payment tracking - a job can have multiple sales"""
     TAX_CHOICES = [
@@ -460,7 +510,29 @@ class Sale(models.Model):
     ]
     
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='sales')
+    source_quote = models.ForeignKey(
+        'product.ProductQuote',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='generated_sales',
+        help_text='If set, this row was generated from this product quote (regenerate replaces rows tied to the same quote).',
+    )
     product_code = models.ForeignKey('product.ProductCode', on_delete=models.SET_NULL, null=True, blank=True, help_text="Product code category")
+    cost_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Total cost basis for this sale line (e.g. sum of unit costs × qty)",
+    )
+    tax_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Sales tax in dollars (when tracked separately from sale amount)",
+    )
     sale_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00, help_text="Total sale amount for this sale")
     sale_date = models.DateField(null=True, blank=True, help_text="Date when the job was sold (defaults to creation date)")
     tax = models.CharField(max_length=2, choices=TAX_CHOICES, default='UT', help_text="Tax status")

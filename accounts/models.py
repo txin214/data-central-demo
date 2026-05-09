@@ -168,11 +168,15 @@ User.add_to_class('has_permission_via_role', user_has_permission_via_role)
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     """Automatically create a profile when a user is created"""
+    if kwargs.get("raw", False):
+        return
     if created:
         UserProfile.objects.create(user=instance)
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
     """Automatically save the profile when the user is saved"""
+    if kwargs.get("raw", False):
+        return
     if hasattr(instance, 'profile'):
         instance.profile.save()

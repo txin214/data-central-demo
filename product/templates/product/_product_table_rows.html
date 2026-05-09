@@ -26,8 +26,8 @@
     <td>{% if product.sub_category2 %}{{ product.sub_category2 }}{% else %}-{% endif %}</td>
     <td>{% if product.status %}Active{% else %}Inactive{% endif %}</td>
     <td>
-        <a href="{% url 'product:product-detail2' product.uuid %}" class="btn btn-sm btn-outline-info">View</a>
-        <a href="{% url 'product:product-update2' product.uuid %}" class="btn btn-sm btn-outline-warning">Edit</a>
+        <a href="{% url 'product:product-detail2' product.uuid %}" class="btn btn-sm btn-outline-primary">View</a>
+        <a href="{% url 'product:product-update2' product.uuid %}" class="btn btn-sm btn-outline-info">Edit</a>
         <a href="{% url 'product:product-delete' product.uuid %}" class="btn btn-sm btn-outline-danger">Delete</a>
     </td>
 </tr>

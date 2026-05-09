@@ -4,6 +4,11 @@ from . import views
 app_name = 'job'
 
 urlpatterns = [
+    # Batch Entry
+    path('batch-entry/receipts/', views.batch_entry_receipts, name='batch_entry_receipts'),
+    path('batch-entry/sales/', views.batch_entry_sales, name='batch_entry_sales'),
+    path('batch-entry/change-orders/', views.batch_entry_change_orders, name='batch_entry_change_orders'),
+
     # Sales
     path('sales/', views.sales_list, name='sales_list'),
     path('sales/by-person/', views.sales_by_person, name='sales_by_person'),
@@ -14,6 +19,7 @@ urlpatterns = [
     path('<int:job_id>/sales/bulk-create/', views.job_sales_bulk_create, name='job_sales_bulk_create'),
     path('<int:job_id>/sales/<int:sale_id>/edit/', views.job_sale_edit, name='job_sale_edit'),
     path('<int:job_id>/sales/<int:sale_id>/delete/', views.job_sale_delete, name='job_sale_delete'),
+    path('<int:job_id>/sales/<int:sale_id>/', views.job_sale_view, name='job_sale_view'),
     path('<int:job_id>/sales/invoice-pdf/', views.job_sales_invoice_pdf, name='job_sales_invoice_pdf'),
     
     # Change Orders

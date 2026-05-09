@@ -103,7 +103,6 @@
             <h2 class="fw-bold mb-0" style="font-size: 2rem;">Customers</h2>
         </div>
         <div class="d-flex gap-2">
-            <a href="{% url 'crm:create_customer' %}" class="btn btn-outline-primary btn-sm">+ Customer</a>
             <!-- <button class="btn btn-outline-secondary btn-sm">Import</button> -->
         </div>
     </div>
@@ -125,6 +124,14 @@
                 </tr>
             </thead>
             <tbody id="customer-table-body">
+                <tr class="border-top-0 border-bottom-0">
+                    <td colspan="8" class="border-top-0 border-bottom-0 py-2">
+                        <a href="{% url 'crm:create_customer' %}" class="btn btn-sm btn-success">
+                            <i class="fas fa-plus me-1"></i>
+                            Add Customer
+                        </a>
+                    </td>
+                </tr>
                 {% for customer in customer_list %}
                 <tr>
                     <td>

@@ -43,10 +43,10 @@
                     <td>
                         <div class="d-flex gap-2">
                             <a href="{% url 'job:job_product_quote_update_specific' job.id product_quote.id %}" class="btn btn-sm btn-outline-primary" title="View or edit this quote">
-                                <i class="fas fa-eye me-1"></i>View / Edit
+                                View / Edit
                             </a>
                             <a href="{% url 'product:product_quote_pdf' product_quote.id %}" class="btn btn-sm btn-outline-success" target="_blank">
-                                <i class="fas fa-file-pdf me-1"></i>Print Preview
+                                Print Preview
                             </a>
                             {% if not product_quote.is_primary %}
                             <form method="post" action="{% url 'job:set_primary_product_quote' job.id product_quote.id %}" style="display: inline;">
@@ -68,8 +68,7 @@
                 {% empty %}
                 <tr>
                     <td colspan="6" class="text-center text-muted py-3">
-                        <i class="fas fa-box-open fa-2x text-muted mb-2"></i>
-                        <p class="text-muted small">No product quotes added to this job yet.</p>
+                        &nbsp;
                     </td>
                 </tr>
                 {% endfor %}

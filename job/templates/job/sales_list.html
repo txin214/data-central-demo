@@ -120,7 +120,14 @@
                         {% endif %}
                     </td>
                     <td>
-                        <a href="{% url 'job:job_detail' item.job.id %}" class="btn btn-sm btn-outline-primary">View Job</a>
+                        <div class="d-flex gap-1 flex-wrap">
+                            <a href="{% url 'job:job_detail' item.job.id %}" class="btn btn-sm btn-outline-primary">View Job</a>
+                            {% if item.type == 'Sale' %}
+                                <a href="{% url 'job:job_sale_view' item.job.id item.obj.id %}" class="btn btn-sm btn-outline-secondary">View Detail</a>
+                            {% elif item.type == 'Change Order' %}
+                                <a href="{% url 'job:job_change_order_edit' item.job.id item.obj.id %}" class="btn btn-sm btn-outline-secondary">View Detail</a>
+                            {% endif %}
+                        </div>
                     </td>
                 </tr>
                 {% empty %}

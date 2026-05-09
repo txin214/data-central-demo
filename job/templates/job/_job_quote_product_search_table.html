@@ -16,11 +16,35 @@
                 <tr style="background-color: #f2f2f2;">
                     <th>Select</th>
                     <th>Image</th>
-                    <th>Name</th>
+                    <th>
+                        {% if sort == 'name' and order == 'asc' %}
+                            <a href="#" class="ajax-sort text-decoration-none" data-sort="name" data-order="desc">Name ▲</a>
+                        {% elif sort == 'name' and order == 'desc' %}
+                            <a href="#" class="ajax-sort text-decoration-none" data-sort="name" data-order="asc">Name ▼</a>
+                        {% else %}
+                            <a href="#" class="ajax-sort text-decoration-none" data-sort="name" data-order="asc">Name</a>
+                        {% endif %}
+                    </th>
                     <th>Description</th>
                     <th>Price Type</th>
-                    <th>Retail Price</th>
-                    <th>Builder Price</th>
+                    <th>
+                        {% if sort == 'retail_price' and order == 'asc' %}
+                            <a href="#" class="ajax-sort text-decoration-none" data-sort="retail_price" data-order="desc">Retail Price ▲</a>
+                        {% elif sort == 'retail_price' and order == 'desc' %}
+                            <a href="#" class="ajax-sort text-decoration-none" data-sort="retail_price" data-order="asc">Retail Price ▼</a>
+                        {% else %}
+                            <a href="#" class="ajax-sort text-decoration-none" data-sort="retail_price" data-order="asc">Retail Price</a>
+                        {% endif %}
+                    </th>
+                    <th>
+                        {% if sort == 'builder_price' and order == 'asc' %}
+                            <a href="#" class="ajax-sort text-decoration-none" data-sort="builder_price" data-order="desc">Builder Price ▲</a>
+                        {% elif sort == 'builder_price' and order == 'desc' %}
+                            <a href="#" class="ajax-sort text-decoration-none" data-sort="builder_price" data-order="asc">Builder Price ▼</a>
+                        {% else %}
+                            <a href="#" class="ajax-sort text-decoration-none" data-sort="builder_price" data-order="asc">Builder Price</a>
+                        {% endif %}
+                    </th>
                     <th>Surplus Price</th>
                     <th>Quantity</th>
                 </tr>
@@ -96,7 +120,7 @@
                 {% if is_ajax %}
                 <a class="page-link ajax-pagination" href="#" data-page="{{ page_obj.previous_page_number }}" aria-label="Previous">
                 {% else %}
-                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}" aria-label="Previous">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{% if order %}&order={{ order }}{% endif %}" aria-label="Previous">
                 {% endif %}
                     <span aria-hidden="true">&laquo;</span>
                 </a>
@@ -109,7 +133,7 @@
                     {% if is_ajax %}
                     <a class="page-link ajax-pagination" href="#" data-page="{{ num }}">{{ num }}</a>
                     {% else %}
-                    <a class="page-link" href="?page={{ num }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}">{{ num }}</a>
+                    <a class="page-link" href="?page={{ num }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{% if order %}&order={{ order }}{% endif %}">{{ num }}</a>
                     {% endif %}
                 </li>
                 {% endfor %}
@@ -119,7 +143,7 @@
                     {% if is_ajax %}
                     <a class="page-link ajax-pagination" href="#" data-page="1">1</a>
                     {% else %}
-                    <a class="page-link" href="?page=1{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}">1</a>
+                    <a class="page-link" href="?page=1{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{% if order %}&order={{ order }}{% endif %}">1</a>
                     {% endif %}
                 </li>
                 
@@ -137,7 +161,7 @@
                             {% if is_ajax %}
                             <a class="page-link ajax-pagination" href="#" data-page="{{ num }}">{{ num }}</a>
                             {% else %}
-                            <a class="page-link" href="?page={{ num }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}">{{ num }}</a>
+                            <a class="page-link" href="?page={{ num }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{% if order %}&order={{ order }}{% endif %}">{{ num }}</a>
                             {% endif %}
                         </li>
                         {% endif %}
@@ -156,7 +180,7 @@
                     {% if is_ajax %}
                     <a class="page-link ajax-pagination" href="#" data-page="{{ page_obj.paginator.num_pages }}">{{ page_obj.paginator.num_pages }}</a>
                     {% else %}
-                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}">{{ page_obj.paginator.num_pages }}</a>
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{% if order %}&order={{ order }}{% endif %}">{{ page_obj.paginator.num_pages }}</a>
                     {% endif %}
                 </li>
                 {% endif %}
@@ -167,7 +191,7 @@
                 {% if is_ajax %}
                 <a class="page-link ajax-pagination" href="#" data-page="{{ page_obj.next_page_number }}" aria-label="Next">
                 {% else %}
-                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}" aria-label="Next">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.keywords %}&keywords={{ request.GET.keywords }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}{% if request.GET.sub_category1 %}&sub_category1={{ request.GET.sub_category1 }}{% endif %}{% if request.GET.sub_category2 %}&sub_category2={{ request.GET.sub_category2 }}{% endif %}{% if request.GET.manufacturer %}&manufacturer={{ request.GET.manufacturer }}{% endif %}{% if request.GET.active_status %}&active_status={{ request.GET.active_status }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}{% if order %}&order={{ order }}{% endif %}" aria-label="Next">
                 {% endif %}
                     <span aria-hidden="true">&raquo;</span>
                 </a>

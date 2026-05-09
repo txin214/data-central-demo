@@ -567,10 +567,29 @@ class SaleForm(forms.ModelForm):
     
     class Meta:
         model = Sale
-        fields = ['product_code', 'sale_amount', 'sale_date', 'tax', 'comment', 'notes']
+        fields = [
+            'product_code',
+            'cost_amount',
+            'tax_amount',
+            'sale_amount',
+            'sale_date',
+            'tax',
+            'comment',
+            'notes',
+        ]
         widgets = {
             'product_code': forms.Select(attrs={
                 'class': 'form-control'
+            }),
+            'cost_amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': 'Cost',
+            }),
+            'tax_amount': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': 'Sales tax ($)',
             }),
             'sale_amount': forms.NumberInput(attrs={
                 'class': 'form-control',
@@ -597,14 +616,17 @@ class SaleForm(forms.ModelForm):
         }
         labels = {
             'product_code': 'Product Code',
+            'cost_amount': 'Cost ($)',
+            'tax_amount': 'Sales tax ($)',
             'sale_amount': 'Sale Amount ($)',
             'sale_date': 'Sale Date',
-            'tax': 'Tax',
+            'tax': 'Tax code',
             'comment': 'Description/Comment',
             'notes': 'Additional Notes',
         }
         help_texts = {
             'sale_amount': 'Total sale amount for this transaction',
+            'tax_amount': 'Dollar amount of sales tax for this line (optional)',
         }
     
     def __init__(self, *args, **kwargs):

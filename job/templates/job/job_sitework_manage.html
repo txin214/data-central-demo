@@ -52,7 +52,7 @@
                                     Sitework
                                 </a>
                                 <a href="{% url 'job:job_sitework_quote_pdf_preview' job.id sitework_quote.id %}" class="btn btn-sm btn-outline-success" target="_blank">
-                                    <i class="fas fa-file-pdf me-1"></i>Print Preview
+                                    Print Preview
                                 </a>
                                 {% if not sitework_quote.is_primary %}
                                 <form method="post" action="{% url 'job:set_primary_sitework_quote' job.id sitework_quote.id %}" style="display: inline;">
@@ -73,7 +73,7 @@
                 {% else %}
                     <tr>
                         <td colspan="6" class="text-center text-muted py-3">
-                            <p class="text-muted small">No sitework quotes added to this job yet.</p>
+                            &nbsp;
                         </td>
                     </tr>
                 {% endif %}

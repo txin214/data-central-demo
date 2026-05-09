@@ -6,64 +6,75 @@
 <style>
     .table-responsive { overflow-x: auto; }
     .sticky-header th { position: sticky; top: 0; background: #f8f9fa; z-index: 2; }
-    .search-bar { width: 100%; max-width: none; }
-    .action-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+    .quotes-content {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+    .search-row,
+    .table-row {
+        width: 100%;
+        margin: 0;
+        padding: 0;
+    }
+    .search-bar {
+        width: 100%;
+        max-width: none;
+        display: block;
+        box-sizing: border-box;
+        margin: 0;
+    }
     .table th, .table td { vertical-align: middle; white-space: nowrap; }
     .btn-theme { background: #2a82db; color: #fff; border: none; }
     .btn-theme:hover, .btn-theme:focus { background: #0056b3; color: #fff; }
 </style>
 <div class="container-fluid mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-        <div>
-            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
-            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Quotes</h2>
+    <div class="quotes-content">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div>
+                <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+                <h2 class="fw-bold mb-0" style="font-size: 2rem;">Quotes</h2>
+            </div>
+            <a href="#addQuoteModal" class="btn btn-outline-primary btn-sm mb-4" data-bs-toggle="modal" data-bs-target="#addQuoteModal">+Quote</a>
         </div>
-        <a href="#addQuoteModal" class="btn btn-outline-primary btn-sm mb-4" data-bs-toggle="modal" data-bs-target="#addQuoteModal">+Quote</a>
-    </div>
-    <div class="action-bar">
-        <input type="text" class="form-control form-control-sm search-bar" placeholder="Search Quotes by Name or Customer..." id="quote-search-bar">
-    </div>
-    <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle mb-0">
-            <thead class="sticky-header">
-                <tr>
-                    <th>Quote Name</th>
-                    <th>Customer</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody id="quote-table-body">
-                {% for quote in quotes %}
-                <tr>
-                    <td>
-                        {% if quote.name %}
-                            {{ quote.name }}
-                        {% else %}
-                            Quote #{{ quote.id }}
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if quote.customer %}
-                            {{ quote.customer.first_name }} {{ quote.customer.last_name }}
-                        {% else %}
-                            No Customer
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="{% url 'product:quote_update' quote.id %}" class="btn btn-theme btn-sm">Update</a>
-                        <a href="{% url 'product:quote_products' quote.id %}" class="btn btn-theme btn-sm">Products</a>
-                        <a href="{% url 'product:delete_quote' quote.id %}" class="btn btn-theme btn-sm">Delete</a>
-                        <a href="{% url 'product:product_quote_report' quote.id %}" class="btn btn-theme btn-sm">Report</a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="3">No quotes found.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <div class="mt-2 text-end text-muted small" id="quote-count">
-        COUNT {{ quotes|length }}
+        <div class="search-row mb-2">
+            <input type="text" class="form-control form-control-sm search-bar" placeholder="Search Quotes by Name or Customer..." id="quote-search-bar">
+        </div>
+        <div class="table-row table-responsive">
+            <table class="table table-bordered table-hover align-middle mb-0">
+                <thead class="sticky-header">
+                    <tr>
+                        <th>Quote Name</th>
+                        <th>Customer</th>
+                    </tr>
+                </thead>
+                <tbody id="quote-table-body">
+                    {% for quote in quotes %}
+                    <tr>
+                        <td>
+                            {% if quote.name %}
+                                <a href="{% url 'product:quote_products' quote.id %}">{{ quote.name }}</a>
+                            {% else %}
+                                <a href="{% url 'product:quote_products' quote.id %}">Quote #{{ quote.id }}</a>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if quote.customer %}
+                                {{ quote.customer.first_name }} {{ quote.customer.last_name }}
+                            {% else %}
+                                No Customer
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="2">No quotes found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="mt-2 text-end text-muted small" id="quote-count">
+            COUNT {{ quotes|length }}
+        </div>
     </div>
 </div>
 <script>
@@ -83,14 +94,8 @@
                         data.results.forEach(quote => {
                             tableBody.innerHTML += `
                                 <tr>
-                                    <td>${quote.name}</td>
+                                    <td><a href="${quote.products_url}">${quote.name}</a></td>
                                     <td>${quote.customer}</td>
-                                    <td>
-                                        <a href="${quote.update_url}" class="btn btn-theme btn-sm">Update</a>
-                                        <a href="${quote.products_url}" class="btn btn-theme btn-sm">Products</a>
-                                        <a href="${quote.delete_url}" class="btn btn-theme btn-sm">Delete</a>
-                                        <a href="${quote.report_url}" class="btn btn-theme btn-sm">Report</a>
-                                    </td>
                                 </tr>
                             `;
                         });

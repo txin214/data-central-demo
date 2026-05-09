@@ -21,7 +21,7 @@ from django.conf import settings
 from django.contrib import messages
 
 # Import utility functions for PDF generation
-from .utils import generate_quote_markdown, markdown_to_pdf, markdown_to_html, group_quote_line_items
+from .utils import generate_quote_markdown, markdown_to_pdf, markdown_to_html
 
 # Import mixins
 from .mixins import ImageHandlingMixin, BreadcrumbMixin
@@ -1531,28 +1531,6 @@ def product_quote_pdf(request, quote_id):
     return product_quote_pdf_generate(request, quote_id)
 
 
-def product_quote_report(request, quote_id):
-    """View to display the report of a specific product quote grouped by category."""
-    quote = get_object_or_404(ProductQuote, id=quote_id)
-    breadcrumbs = [
-        {'name': 'Home', 'url': reverse('home'), 'position': 1, 'resolved': True},
-        {'name': 'Product', 'url': reverse('product:product-list'), 'position': 2, 'resolved': True},
-        {'name': 'Quotes', 'url': reverse('product:product_quote_list'), 'position': 3, 'resolved': True},
-        {'name': f'Quote Report for {quote.customer}', 'url': reverse('product:product_quote_report', args=[quote.id]), 'position': 4, 'resolved': True},
-    ]
-    # Group line items by category and calculate subtotals
-    grouped_data = group_quote_line_items(quote)
-
-    return render(
-        request,
-        'product/quote_report.html',
-        {
-            'quote': quote,
-            'grouped_data': grouped_data, 
-            'breadcrumbs': breadcrumbs,# List of (category, items, subtotal)
-        },
-    )
-
 def add_product(request, quote_id, product_id):
     """View to add a product to a quote."""
     quote = get_object_or_404(ProductQuote, id=quote_id)
@@ -1640,22 +1618,32 @@ def add_product_quote(request, job_id=None):
 
 def quote_products(request, quote_id):
     """View to manage products in a quote and allow searching for new products."""
+    from django.db.models import Prefetch
+    from product.models import ProductImage
     quote = get_object_or_404(ProductQuote, id=quote_id)
 
     # Get associated jobs for this quote (now direct relationship)
     from job.models import Job
     associated_jobs = Job.objects.filter(product_quotes=quote).select_related('customer')
 
-    # Prepare line items with primary images
+    # Prepare line items with primary images (optimized)
+    line_items = list(
+        quote.line_items.select_related('product').prefetch_related(
+            Prefetch(
+                'product__images',
+                queryset=ProductImage.objects.filter(is_primary=True),
+                to_attr='primary_images'
+            )
+        )
+    )
     line_items_with_images = []
-    for line_item in quote.line_items.all():
-        primary_image = line_item.product.images.filter(is_primary=True).first()
+    for line_item in line_items:
+        primary_images = getattr(line_item.product, 'primary_images', [])
+        primary_image = primary_images[0] if primary_images else None
         line_items_with_images.append((line_item, primary_image))
     
-    # Prepare adhoc line items
-    adhoc_line_items = []
-    for adhoc_line_item in quote.adhoc_line_items.all():
-        adhoc_line_items.append(adhoc_line_item)
+    # Prepare ad-hoc line items
+    adhoc_line_items = list(quote.adhoc_line_items.select_related('adhoc'))
 
     # Initialize querysets for the search
     products = Product.objects.all()
@@ -1673,6 +1661,8 @@ def quote_products(request, quote_id):
     manufacturer = request.GET.get('manufacturer')
     active_status = request.GET.get('active_status')
     is_ajax = request.GET.get('ajax') == '1'
+    sort = request.GET.get('sort')
+    order = request.GET.get('order', 'asc')
 
     # Only show products when search filters are applied
     if any([keywords, category, sub_category1, sub_category2, manufacturer, active_status]):
@@ -1694,13 +1684,33 @@ def quote_products(request, quote_id):
         elif active_status == 'False':
             products = products.filter(status=False)
 
+        # Optional sorting
+        if sort == 'name':
+            products = products.order_by('-part_no' if order == 'desc' else 'part_no')
+        elif sort == 'retail_price':
+            products = products.order_by('-retail_sell' if order == 'desc' else 'retail_sell')
+        elif sort == 'builder_price':
+            products = products.order_by('-builder_sell' if order == 'desc' else 'builder_sell')
+
+        products = products.prefetch_related(
+            Prefetch(
+                'images',
+                queryset=ProductImage.objects.filter(is_primary=True),
+                to_attr='primary_images'
+            )
+        )
+
         # Apply pagination
         paginator = Paginator(products, 10)  
         page_number = request.GET.get('page') 
         page_obj = paginator.get_page(page_number) 
 
         # Prepare products_with_images for the search results
-        products_with_images = [(product, product.images.filter(is_primary=True).first()) for product in page_obj]
+        products_with_images = []
+        for product in page_obj:
+            primary_images = getattr(product, 'primary_images', [])
+            primary_image = primary_images[0] if primary_images else None
+            products_with_images.append((product, primary_image))
     else:
         # No filters applied - show empty results
         products_with_images = []
@@ -1712,6 +1722,9 @@ def quote_products(request, quote_id):
             'page_obj': page_obj,
             'quote': quote,
             'request': request,
+            'is_ajax': True,
+            'sort': sort,
+            'order': order,
         })
         return HttpResponse(html)
 
@@ -1731,6 +1744,8 @@ def quote_products(request, quote_id):
             'is_ajax': is_ajax,
             'associated_jobs': associated_jobs,
             'vendors': vendors,
+            'sort': sort,
+            'order': order,
         }
     )
     
@@ -1851,7 +1866,6 @@ def ajax_product_quotes(request):
             'update_url': reverse('product:quote_update', args=[quote.id]),
             'products_url': reverse('product:quote_products', args=[quote.id]),
             'delete_url': reverse('product:delete_quote', args=[quote.id]),
-            'report_url': reverse('product:product_quote_report', args=[quote.id]),
             'pdf_url': reverse('product:product_quote_pdf', args=[quote.id]),
         })
     return JsonResponse({'results': results})

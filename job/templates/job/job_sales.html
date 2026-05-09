@@ -2,31 +2,33 @@
 {% load static %}
 
 {% block job_content %}
-<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.1">
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.3">
 <link rel="stylesheet" type="text/css" href="{% static 'job/css/job_forms.css' %}?v=1.0">
 
-    <div class="table-responsive mt-3">
-        <table class="table table-bordered table-hover align-middle mb-0">
+    <div class="table-responsive mt-3 job-sales-primary-wrap text-start">
+        <table class="table table-bordered table-hover align-middle mb-0 job-sales-primary-table">
             <thead class="sticky-header">
                 <tr>
-                    <th>Sale Date</th>
-                    <th>Product Code</th>
-                    <th>Sale Amount</th>
-                    <th>Tax</th>
-                    <th>Description</th>
-                    <th>Sold By</th>
-                    <th class="text-center">Actions</th>
+                    <th class="text-start">Sale Date</th>
+                    <th class="text-start">Product Code</th>
+                    <th class="text-start">Cost</th>
+                    <th class="text-start">Sale Amount</th>
+                    <th class="text-start">Tax</th>
+                    <th class="text-start">Tax code</th>
+                    <th class="text-start">Description</th>
+                    <th class="text-start">Sold By</th>
+                    <th class="text-center">More</th>
                 </tr>
             </thead>
             <tbody>
                 <tr class="border-top-0 border-bottom-0">
-                    <td colspan="5" class="border-top-0 border-bottom-0 border-end-0 py-2">
+                    <td colspan="7" class="border-top-0 border-bottom-0 border-end-0 py-2 text-start">
                         <a href="{% url 'job:job_sale_create' job.id %}" class="btn btn-sm btn-success">
                             <i class="fas fa-plus me-1"></i>
                             Add Sale
                         </a>
                     </td>
-                    <td colspan="2" class="border-top-0 border-bottom-0 border-start-0 py-2 text-end">
+                    <td colspan="2" class="border-top-0 border-bottom-0 border-start-0 py-2 text-end" aria-label="Print">
                         <a href="{% url 'job:job_sales_invoice_pdf' job.id %}" target="_blank" class="btn btn-sm btn-primary">
                             <i class="fas fa-print me-1"></i>Print Invoice
                         </a>
@@ -36,27 +38,35 @@
                 {% if group.count > 1 %}
                 <!-- Grouped row with expand/collapse -->
                 <tr class="group-header" data-group-id="group-{{ forloop.counter }}">
-                    <td>
+                    <td class="text-start">
                         <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none expand-btn" data-target="group-{{ forloop.counter }}">
                             <i class="fas fa-chevron-right me-1"></i>
                         </button>
                         {{ group.sale_date|date:"M d, Y"|default:"-" }}
                     </td>
-                    <td>
+                    <td class="text-start">
                         {% if group.product_code %}
                         {{ group.product_code.code }}
                         {% else %}
                         <span class="text-muted">-</span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td class="text-start">
+                        {% if group.total_cost %}
+                        {{ group.total_cost|floatformat:2 }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-start">
                         <strong>{{ group.total|floatformat:2 }}</strong>
                         <small class="text-muted d-block">({{ group.count }} items)</small>
                     </td>
-                    <td>
+                    <td class="text-start">{{ group.total_tax|floatformat:2 }}</td>
+                    <td class="text-start">
                         {{ group.tax|default:"-" }}
                     </td>
-                    <td>
+                    <td class="text-start">
                         {% if group.sales %}
                             {% with first_sale=group.sales|first %}
                                 {% if first_sale.comment %}
@@ -73,11 +83,11 @@
                             <span class="text-muted">-</span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td class="text-start">
                         {% if group.sales %}
                             {% with first_sale=group.sales|first %}
                                 {% if first_sale.created_by %}
-                                    {{ first_sale.created_by.first_name }} {{ first_sale.created_by.last_name }}
+                                    {{ first_sale.created_by.get_full_name|default:first_sale.created_by.username }}
                                 {% else %}
                                     <span class="text-muted">-</span>
                                 {% endif %}
@@ -86,7 +96,7 @@
                             <span class="text-muted">-</span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td class="text-center">
                         <div class="d-flex gap-2 justify-content-center">
                             <span class="text-muted small">Click to expand</span>
                         </div>
@@ -101,8 +111,14 @@
                     <td class="ps-4">
                         <small class="text-muted">-</small>
                     </td>
-                    <td class="ps-4">
+                    <td class="ps-4 text-start">
+                        <small>{% if sale.cost_amount %}{{ sale.cost_amount|floatformat:2 }}{% else %}<span class="text-muted">-</span>{% endif %}</small>
+                    </td>
+                    <td class="ps-4 text-start">
                         <small>{{ sale.sale_amount|floatformat:2 }}</small>
+                    </td>
+                    <td class="ps-4 text-start">
+                        <small>{% if sale.tax_amount %}{{ sale.tax_amount|floatformat:2 }}{% else %}<span class="text-muted">-</span>{% endif %}</small>
                     </td>
                     <td class="ps-4">
                         <small>{{ sale.get_tax_display|default:"-" }}</small>
@@ -119,7 +135,7 @@
                     <td class="ps-4">
                         <small>
                             {% if sale.created_by %}
-                                {{ sale.created_by.first_name }} {{ sale.created_by.last_name }}
+                                {{ sale.created_by.get_full_name|default:sale.created_by.username }}
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
@@ -127,14 +143,11 @@
                     </td>
                     <td>
                         <div class="d-flex gap-2 justify-content-center">
-                            <a href="{% url 'job:job_sale_edit' job.id sale.id %}" class="btn btn-sm btn-outline-primary" title="Edit Sale #{{ sale.id }}">
-                                <i class="fas fa-edit"></i>
-                            </a>
+                            <a href="{% url 'job:job_sale_view' job.id sale.id %}" class="btn btn-sm btn-outline-primary" title="View Sale #{{ sale.id }}">View</a>
+                            <a href="{% url 'job:job_sale_edit' job.id sale.id %}" class="btn btn-sm btn-outline-info" title="Edit Sale #{{ sale.id }}">Edit</a>
                             <form method="post" action="{% url 'job:job_sale_delete' job.id sale.id %}" style="display: inline;">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this sale?')" title="Delete Sale #{{ sale.id }}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this sale?')" title="Delete Sale #{{ sale.id }}">Delete</button>
                             </form>
                         </div>
                     </td>
@@ -143,21 +156,29 @@
                 {% else %}
                 <!-- Single sale row (no grouping needed) -->
                 <tr>
-                    <td>{{ group.sale_date|date:"M d, Y"|default:"-" }}</td>
-                    <td>
+                    <td class="text-start">{{ group.sale_date|date:"M d, Y"|default:"-" }}</td>
+                    <td class="text-start">
                         {% if group.product_code %}
                         {{ group.product_code.code }}
                         {% else %}
                         <span class="text-muted">-</span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td class="text-start">
+                        {% if group.total_cost %}
+                        {{ group.total_cost|floatformat:2 }}
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-start">
                         <strong>{{ group.total|floatformat:2 }}</strong>
                     </td>
-                    <td>
+                    <td class="text-start">{{ group.total_tax|floatformat:2 }}</td>
+                    <td class="text-start">
                         {{ group.tax|default:"-" }}
                     </td>
-                    <td>
+                    <td class="text-start">
                         {% if group.sales %}
                             {% with first_sale=group.sales|first %}
                                 {% if first_sale.comment %}
@@ -174,11 +195,11 @@
                             <span class="text-muted">-</span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td class="text-start">
                         {% if group.sales %}
                             {% with first_sale=group.sales|first %}
                                 {% if first_sale.created_by %}
-                                    {{ first_sale.created_by.first_name }} {{ first_sale.created_by.last_name }}
+                                    {{ first_sale.created_by.get_full_name|default:first_sale.created_by.username }}
                                 {% else %}
                                     <span class="text-muted">-</span>
                                 {% endif %}
@@ -187,17 +208,14 @@
                             <span class="text-muted">-</span>
                         {% endif %}
                     </td>
-                    <td>
-                        <div class="d-flex gap-2 justify-content-center">
+                    <td class="text-center">
+                        <div class="d-flex gap-2 justify-content-center flex-wrap">
                             {% for sale in group.sales %}
-                            <a href="{% url 'job:job_sale_edit' job.id sale.id %}" class="btn btn-sm btn-outline-primary" title="Edit Sale #{{ sale.id }}">
-                                <i class="fas fa-edit"></i>
-                            </a>
+                            <a href="{% url 'job:job_sale_view' job.id sale.id %}" class="btn btn-sm btn-outline-primary" title="View Sale #{{ sale.id }}">View</a>
+                            <a href="{% url 'job:job_sale_edit' job.id sale.id %}" class="btn btn-sm btn-outline-info" title="Edit Sale #{{ sale.id }}">Edit</a>
                             <form method="post" action="{% url 'job:job_sale_delete' job.id sale.id %}" style="display: inline;">
                                 {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this sale?')" title="Delete Sale #{{ sale.id }}">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this sale?')" title="Delete Sale #{{ sale.id }}">Delete</button>
                             </form>
                             {% endfor %}
                         </div>
@@ -206,8 +224,8 @@
                 {% endif %}
                 {% empty %}
                 <tr>
-                    <td colspan="7" class="text-center text-muted py-3">
-                        <p class="text-muted small">No sales added to this job yet.</p>
+                    <td colspan="9" class="text-center text-muted py-3">
+                        &nbsp;
                     </td>
                 </tr>
                 {% endfor %}
@@ -216,45 +234,59 @@
     </div>
     
     {% if grouped_sales %}
-    <div class="mt-3 d-flex justify-content-between align-items-center">
+    <div class="mt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
         <div class="text-muted small">
             Total: {{ grouped_sales|length }} product code{{ grouped_sales|length|pluralize }}
         </div>
-        <div class="text-end">
-            <strong>Total Sales Amount: 
-                {{ total_sales_amount|floatformat:2 }}
-            </strong>
+        <div class="text-end small">
+            <span class="me-3">Total cost: <strong>{{ total_sales_cost|floatformat:2 }}</strong></span>
+            <span class="me-3">Total tax: <strong>{{ total_sales_tax|floatformat:2 }}</strong></span>
+            <span>Total sales: <strong>{{ total_sales_amount|floatformat:2 }}</strong></span>
         </div>
     </div>
     {% endif %}
 
     {% if job.sold and main_quote and grouped_products %}
     <div class="mt-4">
-        <h5 class="mb-3">
-            Main Quote Products
-        </h5>
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <h5 class="mb-0">
+                Quote
+            </h5>
+            {% if quote_has_lines %}
+            <button type="button" id="add-all-from-quote-btn" class="btn btn-sm btn-outline-primary" title="Add every visible quote category row to pending sales (same as Add on each row). Choose product codes for dropdown rows first, then click Save Sales.">
+                Add All
+            </button>
+            {% endif %}
+        </div>
         <div class="table-responsive">
-            <table class="table table-bordered table-hover align-middle mb-0">
+            <table id="main-quote-products-table" class="table table-bordered table-hover align-middle mb-0">
                 <thead>
                     <tr>
                         <th>Category</th>
                         <th>Product Code</th>
-                        <th>Tax</th>
-                        <th class="text-end">Total</th>
+                        <th>Tax code</th>
+                        <th class="text-start">Cost</th>
+                        <th class="text-start">Tax</th>
                         <th class="text-center">Action</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for category, items, subtotal, category_tax, category_total in grouped_products %}
-                    <tr data-category="{{ category }}" data-total="{{ category_total|floatformat:2 }}">
+                    {% for category, items, subtotal, category_tax, category_total, category_cost, mapped_product_code in grouped_products %}
+                    <tr data-category="{{ category }}" data-total="{{ category_total }}" data-cost="{{ category_cost }}" data-tax="{{ category_tax }}">
                         <td><strong>{{ category }}</strong></td>
                         <td>
-                            <select class="form-control form-control-sm product-code-select">
-                                <option value="">Select Product Code</option>
-                                {% for product_code in product_codes %}
-                                <option value="{{ product_code.id }}" data-code="{{ product_code.code }}">{{ product_code.code }} - {{ product_code.description }}</option>
-                                {% endfor %}
-                            </select>
+                            {% if mapped_product_code %}
+                                <span class="small fw-semibold">{{ mapped_product_code.code }}</span>
+                                <span class="small text-muted"> – {{ mapped_product_code.description }}</span>
+                                <input type="hidden" class="product-code-value" value="{{ mapped_product_code.id }}" data-code="{{ mapped_product_code.code }}">
+                            {% else %}
+                                <select class="form-control form-control-sm product-code-select">
+                                    <option value="">Select Product Code</option>
+                                    {% for product_code in product_codes %}
+                                    <option value="{{ product_code.id }}" data-code="{{ product_code.code }}">{{ product_code.code }} - {{ product_code.description }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% endif %}
                         </td>
                         <td>
                             <select class="form-control form-control-sm tax-select">
@@ -265,7 +297,8 @@
                                 <option value="SU">SU</option>
                             </select>
                         </td>
-                        <td class="text-end"><strong>${{ category_total|floatformat:2 }}</strong></td>
+                        <td class="text-start"><strong>${{ category_cost|floatformat:2 }}</strong></td>
+                        <td class="text-start"><strong>${{ category_tax|floatformat:2 }}</strong></td>
                         <td class="text-center">
                             <button type="button" class="btn btn-sm btn-primary add-sale-btn" data-category="{{ category }}" data-total="{{ category_total }}">
                                 <i class="fas fa-plus me-1"></i>Add
@@ -274,7 +307,7 @@
                     </tr>
                     {% endfor %}
                     {% if sitework_total > 0 %}
-                    <tr data-category="Sitework" data-total="{{ sitework_total|floatformat:2 }}">
+                    <tr data-category="Sitework" data-total="{{ sitework_total }}" data-cost="" data-tax="">
                         <td><strong>Sitework</strong></td>
                         <td>
                             <select class="form-control form-control-sm product-code-select">
@@ -293,7 +326,8 @@
                                 <option value="SU">SU</option>
                             </select>
                         </td>
-                        <td class="text-end"><strong>${{ sitework_total|floatformat:2 }}</strong></td>
+                        <td class="text-start"><span class="text-muted">-</span></td>
+                        <td class="text-start"><span class="text-muted">-</span></td>
                         <td class="text-center">
                             <button type="button" class="btn btn-sm btn-primary add-sale-btn" data-category="Sitework" data-total="{{ sitework_total }}">
                                 <i class="fas fa-plus me-1"></i>Add
@@ -308,8 +342,6 @@
             <button type="button" id="save-sales-btn" class="btn btn-success" disabled>
                 <i class="fas fa-save me-1"></i>Save Sales
             </button>
-        </div>
-            </table>
         </div>
     </div>
     {% elif job.sold and main_quote %}
@@ -333,6 +365,34 @@
 <script>
 let pendingSales = [];
 
+function parseRowMoney(row, key) {
+    const raw = row.dataset[key];
+    if (raw === undefined || raw === null || raw === '') {
+        return NaN;
+    }
+    const n = parseFloat(String(raw).replace(/,/g, ''));
+    return Number.isFinite(n) ? n : NaN;
+}
+
+function parseCellMoneyTotal(cell) {
+    if (!cell) return 0;
+    const strong = cell.querySelector('strong');
+    const raw = (strong ? strong.textContent : cell.textContent).replace(/,/g, '').trim();
+    if (!raw || raw === '-') return 0;
+    const n = parseFloat(raw);
+    return Number.isFinite(n) ? n : 0;
+}
+
+function moneyCellStrong(n) {
+    if (!Number.isFinite(n)) return '<span class="text-muted">-</span>';
+    return '<strong>' + n.toFixed(2) + '</strong>';
+}
+
+function moneyCellSmall(n) {
+    if (!Number.isFinite(n)) return '<small class="text-muted">-</small>';
+    return '<small>' + n.toFixed(2) + '</small>';
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     const salesTableBody = document.querySelector('table tbody');
     const saveBtn = document.getElementById('save-sales-btn');
@@ -354,11 +414,24 @@ document.addEventListener('DOMContentLoaded', function() {
             const row = this.closest('tr');
             const category = row.dataset.category;
             const total = parseFloat(row.dataset.total);
+            const costAmount = parseRowMoney(row, 'cost');
+            const taxAmount = parseRowMoney(row, 'tax');
+            const mappedPc = row.querySelector('.product-code-value');
             const productCodeSelect = row.querySelector('.product-code-select');
             const taxSelect = row.querySelector('.tax-select');
             
-            const productCodeId = productCodeSelect.value;
-            const productCodeText = productCodeSelect.options[productCodeSelect.selectedIndex]?.dataset.code || '';
+            let productCodeId;
+            let productCodeText;
+            if (mappedPc) {
+                productCodeId = mappedPc.value;
+                productCodeText = mappedPc.dataset.code || '';
+            } else if (productCodeSelect) {
+                productCodeId = productCodeSelect.value;
+                productCodeText = productCodeSelect.options[productCodeSelect.selectedIndex]?.dataset.code || '';
+            } else {
+                productCodeId = '';
+                productCodeText = '';
+            }
             const tax = taxSelect.value;
             
             // Validation
@@ -382,13 +455,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 product_code_id: productCodeId,
                 product_code: productCodeText,
                 sale_amount: total,
+                cost_amount: Number.isFinite(costAmount) ? costAmount : null,
+                tax_amount: Number.isFinite(taxAmount) ? taxAmount : null,
                 tax: tax,
                 sale_date: saleDate,
                 categoryRow: row  // Store reference to the category row
             };
             pendingSales.push(saleData);
             
-            // Hide the category row from Main Quote Products table
+            // Hide the category row from the Quote table
             row.style.display = 'none';
             row.dataset.pendingSaleIndex = pendingSales.length - 1;
             
@@ -407,29 +482,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 itemRow.dataset.productCodeId = productCodeId;
                 itemRow.dataset.category = category;
                 itemRow.innerHTML = `
-                    <td class="ps-4">
+                    <td class="ps-4 text-start">
                         <small class="text-muted">${formattedDate}</small>
                     </td>
-                    <td class="ps-4">
+                    <td class="ps-4 text-start">
                         <small class="text-muted">-</small>
                     </td>
-                    <td class="ps-4">
+                    <td class="ps-4 text-start">
+                        ${moneyCellSmall(costAmount)}
+                    </td>
+                    <td class="ps-4 text-start">
                         <small>${total.toFixed(2)}</small>
                     </td>
-                    <td class="ps-4">
+                    <td class="ps-4 text-start">
+                        ${moneyCellSmall(taxAmount)}
+                    </td>
+                    <td class="ps-4 text-start">
                         <small>${tax}</small>
                     </td>
-                    <td class="ps-4">
+                    <td class="ps-4 text-start">
                         <small class="text-muted">${category}</small>
                     </td>
-                    <td class="ps-4">
+                    <td class="ps-4 text-start">
                         <small class="text-muted">-</small>
                     </td>
-                    <td>
+                    <td class="text-center">
                         <div class="d-flex gap-2 justify-content-center">
-                            <a href="{% url 'job:job_sale_edit' job.id 0 %}" class="btn btn-sm btn-outline-primary" title="Edit Sale" style="display: none;">
-                                <i class="fas fa-edit"></i>
-                            </a>
+                            <a href="{% url 'job:job_sale_edit' job.id 0 %}" class="btn btn-sm btn-outline-info" title="Edit Sale" style="display: none;">Edit</a>
                             <button type="button" class="btn btn-sm btn-outline-danger remove-pending-item" data-index="${pendingSales.length - 1}" data-product-code-id="${productCodeId}" data-category="${category}">
                                 <i class="fas fa-times"></i>
                             </button>
@@ -441,11 +520,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 existingPendingGroup.after(itemRow);
                 
                 // Update group header - sum the amounts and update count
-                const amountCell = existingPendingGroup.querySelector('td:nth-child(3)');
-                const currentAmount = parseFloat(amountCell.querySelector('strong').textContent.replace(',', ''));
+                const amountCell = existingPendingGroup.querySelector('td:nth-child(4)');
+                const costCell = existingPendingGroup.querySelector('td:nth-child(3)');
+                const taxCell = existingPendingGroup.querySelector('td:nth-child(5)');
+                const currentAmount = parseCellMoneyTotal(amountCell);
                 const newAmount = currentAmount + total;
+                const curCost = parseCellMoneyTotal(costCell);
+                const curTax = parseCellMoneyTotal(taxCell);
+                const addC = Number.isFinite(costAmount) ? costAmount : 0;
+                const addT = Number.isFinite(taxAmount) ? taxAmount : 0;
+                if (costCell) {
+                    costCell.className = 'text-start';
+                    costCell.innerHTML = moneyCellStrong(curCost + addC);
+                }
+                if (taxCell) {
+                    taxCell.className = 'text-start';
+                    taxCell.innerHTML = moneyCellStrong(curTax + addT);
+                }
                 const itemCount = parseInt(existingPendingGroup.dataset.itemCount || '1') + 1;
                 existingPendingGroup.dataset.itemCount = itemCount;
+                amountCell.className = 'text-start';
                 
                 // Update header row
                 if (itemCount > 1) {
@@ -474,23 +568,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 newRow.dataset.productCodeId = productCodeId;
                 newRow.dataset.itemCount = '1';
                 newRow.innerHTML = `
-                    <td>${formattedDate}</td>
-                    <td>
+                    <td class="text-start">${formattedDate}</td>
+                    <td class="text-start">
                         ${productCodeText}
                     </td>
-                    <td>
+                    <td class="text-start">${moneyCellStrong(Number.isFinite(costAmount) ? costAmount : NaN)}</td>
+                    <td class="text-start">
                         <strong>${total.toFixed(2)}</strong>
                     </td>
-                    <td>
+                    <td class="text-start">${moneyCellStrong(Number.isFinite(taxAmount) ? taxAmount : NaN)}</td>
+                    <td class="text-start">
                         ${tax}
                     </td>
-                    <td>
+                    <td class="text-start">
                         <small class="text-muted">${category}</small>
                     </td>
-                    <td>
+                    <td class="text-start">
                         <span class="text-muted">-</span>
                     </td>
-                    <td>
+                    <td class="text-center">
                         <div class="d-flex gap-2 justify-content-center">
                             <button type="button" class="btn btn-sm btn-outline-danger remove-pending-sale" data-product-code-id="${productCodeId}">
                                 <i class="fas fa-times me-1"></i>Remove
@@ -511,29 +607,33 @@ document.addEventListener('DOMContentLoaded', function() {
                 itemRow.dataset.productCodeId = productCodeId;
                 itemRow.dataset.category = category;
                 itemRow.innerHTML = `
-                    <td class="ps-4">
+                    <td class="ps-4 text-start">
                         <small class="text-muted">${formattedDate}</small>
                     </td>
-                    <td class="ps-4">
+                    <td class="ps-4 text-start">
                         <small class="text-muted">-</small>
                     </td>
-                    <td class="ps-4">
+                    <td class="ps-4 text-start">
+                        ${moneyCellSmall(costAmount)}
+                    </td>
+                    <td class="ps-4 text-start">
                         <small>${total.toFixed(2)}</small>
                     </td>
-                    <td class="ps-4">
+                    <td class="ps-4 text-start">
+                        ${moneyCellSmall(taxAmount)}
+                    </td>
+                    <td class="ps-4 text-start">
                         <small>${tax}</small>
                     </td>
-                    <td class="ps-4">
+                    <td class="ps-4 text-start">
                         <small class="text-muted">${category}</small>
                     </td>
-                    <td class="ps-4">
+                    <td class="ps-4 text-start">
                         <small class="text-muted">-</small>
                     </td>
-                    <td>
+                    <td class="text-center">
                         <div class="d-flex gap-2 justify-content-center">
-                            <a href="{% url 'job:job_sale_edit' job.id 0 %}" class="btn btn-sm btn-outline-primary" title="Edit Sale" style="display: none;">
-                                <i class="fas fa-edit"></i>
-                            </a>
+                            <a href="{% url 'job:job_sale_edit' job.id 0 %}" class="btn btn-sm btn-outline-info" title="Edit Sale" style="display: none;">Edit</a>
                             <button type="button" class="btn btn-sm btn-outline-danger remove-pending-item" data-index="${pendingSales.length - 1}" data-product-code-id="${productCodeId}" data-category="${category}">
                                 <i class="fas fa-times"></i>
                             </button>
@@ -549,6 +649,45 @@ document.addEventListener('DOMContentLoaded', function() {
             saveBtn.disabled = false;
         });
     });
+
+    const addAllFromQuoteBtn = document.getElementById('add-all-from-quote-btn');
+    if (addAllFromQuoteBtn) {
+        addAllFromQuoteBtn.addEventListener('click', function() {
+            const table = document.getElementById('main-quote-products-table');
+            if (!table) {
+                return;
+            }
+            const buttons = Array.from(table.querySelectorAll('.add-sale-btn'));
+            let added = 0;
+            let skipped = 0;
+            for (const btn of buttons) {
+                const row = btn.closest('tr');
+                if (!row || row.style.display === 'none') {
+                    continue;
+                }
+                const mappedPc = row.querySelector('.product-code-value');
+                const productCodeSelect = row.querySelector('.product-code-select');
+                const hasCode = Boolean(
+                    mappedPc || (productCodeSelect && productCodeSelect.value)
+                );
+                if (!hasCode) {
+                    skipped++;
+                    continue;
+                }
+                btn.click();
+                added++;
+            }
+            if (added === 0 && skipped > 0) {
+                alert('No rows added. Select a product code for each row that still shows a dropdown (for example Sitework), then try add all again.');
+            } else if (added === 0) {
+                alert('Nothing to add. Categories may already be hidden because they match saved sales, or they were already added to pending.');
+            } else if (skipped > 0) {
+                alert('Added ' + added + ' categor' + (added === 1 ? 'y' : 'ies') + ' to pending sales. ' + skipped + ' row(s) skipped (no product code selected). Click Save Sales when ready.');
+            } else {
+                alert('Added ' + added + ' categor' + (added === 1 ? 'y' : 'ies') + ' to pending sales. Click Save Sales to record them.');
+            }
+        });
+    }
     
     // Handle remove pending sale (entire group)
     salesTableBody.addEventListener('click', function(e) {
@@ -612,9 +751,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 groupRow.remove();
             } else {
                 // Update group totals
-                const total = remainingSales.reduce((sum, s) => sum + s.sale_amount, 0);
-                const amountCell = groupRow.querySelector('td:nth-child(3)');
+                const total = remainingSales.reduce((sum, s) => sum + (Number(s.sale_amount) || 0), 0);
+                const totalCost = remainingSales.reduce((sum, s) => sum + (typeof s.cost_amount === 'number' && Number.isFinite(s.cost_amount) ? s.cost_amount : 0), 0);
+                const totalTax = remainingSales.reduce((sum, s) => sum + (typeof s.tax_amount === 'number' && Number.isFinite(s.tax_amount) ? s.tax_amount : 0), 0);
+                const amountCell = groupRow.querySelector('td:nth-child(4)');
+                const costCell = groupRow.querySelector('td:nth-child(3)');
+                const taxCell = groupRow.querySelector('td:nth-child(5)');
                 groupRow.dataset.itemCount = remainingSales.length;
+                if (costCell) {
+                    costCell.className = 'text-start';
+                    costCell.innerHTML = moneyCellStrong(totalCost);
+                }
+                if (taxCell) {
+                    taxCell.className = 'text-start';
+                    taxCell.innerHTML = moneyCellStrong(totalTax);
+                }
+                amountCell.className = 'text-start';
                 
                 if (remainingSales.length > 1) {
                     amountCell.innerHTML = `<strong>${total.toFixed(2)}</strong><small class="text-muted d-block">(${remainingSales.length} items)</small>`;
@@ -683,7 +835,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 'X-CSRFToken': csrftoken
             },
             body: JSON.stringify({
-                sales: pendingSales
+                sales: pendingSales.map(s => ({
+                    category: s.category,
+                    product_code_id: s.product_code_id,
+                    product_code: s.product_code,
+                    sale_amount: s.sale_amount,
+                    cost_amount: s.cost_amount,
+                    tax_amount: s.tax_amount,
+                    tax: s.tax,
+                    sale_date: s.sale_date,
+                }))
             })
         })
         .then(response => response.json())

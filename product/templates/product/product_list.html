@@ -93,8 +93,8 @@
                     <th>Image</th>
                     <th>Name</th>
                     <th>Description</th>
-                    <th>Unit Cost</th>
-                    <th>Unit Price</th>
+                    <th>Total Cost</th>
+                    <th>Retail Price</th>
                     <th>Category</th>
                     <th>Manufacturer</th>
                     <th>Subcategory 1</th>
@@ -131,8 +131,8 @@
                     <td>{% if product.sub_category2 %}{{ product.sub_category2 }}{% else %}-{% endif %}</td>
                     <td>{% if product.status %}A{% else %}I{% endif %}</td>
                     <td>
-                        <a href="{% url 'product:product-detail2' product.uuid %}" class="btn btn-sm btn-outline-info">View</a>
-                        <a href="{% url 'product:product-update2' product.uuid %}" class="btn btn-sm btn-outline-warning">Edit</a>
+                        <a href="{% url 'product:product-detail2' product.uuid %}" class="btn btn-sm btn-outline-primary">View</a>
+                        <a href="{% url 'product:product-update2' product.uuid %}" class="btn btn-sm btn-outline-info">Edit</a>
                         <a href="{% url 'product:product-delete' product.uuid %}" class="btn btn-sm btn-outline-danger">Delete</a>
                     </td>
                 </tr>

@@ -103,6 +103,20 @@
         .sidebar .submenu.expanded {
             max-height: 300px;
         }
+        #reports-submenu.expanded {
+            max-height: 360px;
+        }
+        .sidebar .submenu-nested-parent.nav-link {
+            font-size: 0.75rem;
+            padding: 8px 12px 8px 26px;
+        }
+        .sidebar .submenu .submenu.submenu-nested {
+            background: #eceff1;
+        }
+        .sidebar .submenu .submenu.submenu-nested .nav-link {
+            padding-left: 38px;
+            font-size: 0.68rem;
+        }
         .sidebar .submenu .nav-link {
             font-size: 0.7rem;
             padding: 6px 12px 6px 30px;
@@ -260,7 +274,7 @@
     </div>
     <div class="sidebar d-flex flex-column align-items-start">
         <nav class="nav flex-column w-100 flex-grow-1">
-            <a class="nav-link" href="#" onclick="collapseProductSubmenu(); collapseCustomerSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu();"><i class="fa fa-home me-2"></i> Home</a>
+            <a class="nav-link" href="#" onclick="collapseProductSubmenu(); collapseCustomerSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); collapseBatchEntrySubmenu(); collapseReportsSubmenu();"><i class="fa fa-home me-2"></i> Home</a>
             <a class="nav-link submenu-parent" href="#" onclick="toggleCustomerSubmenu(this)"><i class="fa fa-users me-2"></i> Customers</a>
             <div class="submenu" id="customer-submenu">
                 <a class="nav-link" href="{% url 'crm:list_customer' %}" onclick="expandCustomerSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); return true;">List Customers</a>
@@ -301,13 +315,22 @@
                 <a class="nav-link" href="{% url 'accounts:company_forms' %}" onclick="expandCompanySubmenu(); return true;">Forms</a>
                 <a class="nav-link" href="{% url 'accounts:product_info_forms' %}" onclick="expandCompanySubmenu(); return true;">Product Info Forms</a>
             </div>
+            <a class="nav-link submenu-parent" href="#" onclick="toggleBatchEntrySubmenu(this)"><i class="fa fa-layer-group me-2"></i> Batch Entry</a>
+            <div class="submenu" id="batch-entry-submenu">
+                <a class="nav-link" href="{% url 'job:batch_entry_receipts' %}" onclick="expandBatchEntrySubmenu(); return true;">Receipts</a>
+                <a class="nav-link" href="{% url 'job:batch_entry_sales' %}" onclick="expandBatchEntrySubmenu(); return true;">Sales</a>
+                <a class="nav-link" href="{% url 'job:batch_entry_change_orders' %}" onclick="expandBatchEntrySubmenu(); return true;">Change Orders</a>
+            </div>
             <!-- <a class="nav-link" href="#" onclick="collapseProductSubmenu(); collapseCustomerSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu();"><i class="fa fa-folder me-2"></i> Files</a> -->
-                <a class="nav-link submenu-parent" href="#" onclick="toggleSalesSubmenu(this)"><i class="fa fa-dollar-sign me-2"></i> Sales</a>
-                <div class="submenu" id="sales-submenu">
-                    <a class="nav-link" href="{% url 'job:sales_list' %}" onclick="expandSalesSubmenu(); return true;">Sales List</a>
-                    <a class="nav-link" href="{% url 'job:sales_by_person' %}" onclick="expandSalesSubmenu(); return true;">Sales by Person</a>
+            <a class="nav-link submenu-parent" href="#" onclick="toggleReportsSubmenu(this)"><i class="fa fa-chart-bar me-2"></i> Reports</a>
+            <div class="submenu" id="reports-submenu">
+                <a class="nav-link submenu-parent submenu-nested-parent" href="#" onclick="toggleSalesSubmenu(this)"><i class="fa fa-dollar-sign me-2"></i> Sales</a>
+                <div class="submenu submenu-nested" id="sales-submenu">
+                    <a class="nav-link" href="{% url 'job:sales_list' %}" onclick="expandReportsSubmenu(); expandSalesSubmenu(); return true;">Sales List</a>
+                    <a class="nav-link" href="{% url 'job:sales_by_person' %}" onclick="expandReportsSubmenu(); expandSalesSubmenu(); return true;">Sales by Person</a>
                 </div>
-            <a class="nav-link" href="/admin/" onclick="collapseProductSubmenu(); collapseCustomerSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); collapseSalesSubmenu();"><i class="fa fa-user-shield me-2"></i> Admin</a>
+            </div>
+            <a class="nav-link" href="/admin/" onclick="collapseProductSubmenu(); collapseCustomerSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); collapseReportsSubmenu(); collapseBatchEntrySubmenu();"><i class="fa fa-user-shield me-2"></i> Admin</a>
             <!-- <a class="nav-link" href="#" onclick="collapseProductSubmenu(); collapseCustomerSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu();"><i class="fa fa-cog me-2"></i> Settings</a> -->
         </nav>
         <nav class="nav flex-column w-100 mt-auto">
@@ -562,8 +585,81 @@
         function toggleSalesSubmenu(element) {
             const submenu = document.getElementById('sales-submenu');
             const isExpanded = submenu.classList.contains('expanded');
-            
-            // Toggle current submenu
+
+            if (isExpanded) {
+                submenu.classList.remove('expanded');
+                element.classList.remove('active');
+            } else {
+                expandReportsSubmenu();
+                submenu.classList.add('expanded');
+                element.classList.add('active');
+            }
+        }
+
+        function expandSalesSubmenu() {
+            const submenu = document.getElementById('sales-submenu');
+            const salesButton = document.querySelector('.nav-link.submenu-parent[onclick*="toggleSalesSubmenu"]');
+
+            expandReportsSubmenu();
+            submenu.classList.add('expanded');
+            if (salesButton) {
+                salesButton.classList.add('active');
+            }
+        }
+
+        function collapseSalesSubmenu() {
+            const submenu = document.getElementById('sales-submenu');
+            const salesButton = document.querySelector('.nav-link.submenu-parent[onclick*="toggleSalesSubmenu"]');
+
+            if (submenu && submenu.classList.contains('expanded')) {
+                submenu.classList.remove('expanded');
+                if (salesButton) {
+                    salesButton.classList.remove('active');
+                }
+            }
+        }
+
+        function toggleReportsSubmenu(element) {
+            const submenu = document.getElementById('reports-submenu');
+            const isExpanded = submenu.classList.contains('expanded');
+
+            if (isExpanded) {
+                submenu.classList.remove('expanded');
+                element.classList.remove('active');
+                collapseSalesSubmenu();
+            } else {
+                submenu.classList.add('expanded');
+                element.classList.add('active');
+            }
+        }
+
+        function expandReportsSubmenu() {
+            const submenu = document.getElementById('reports-submenu');
+            const reportsButton = document.querySelector('.nav-link.submenu-parent[onclick*="toggleReportsSubmenu"]');
+
+            submenu.classList.add('expanded');
+            if (reportsButton) {
+                reportsButton.classList.add('active');
+            }
+        }
+
+        function collapseReportsSubmenu() {
+            collapseSalesSubmenu();
+            const submenu = document.getElementById('reports-submenu');
+            const reportsButton = document.querySelector('.nav-link.submenu-parent[onclick*="toggleReportsSubmenu"]');
+
+            if (submenu && submenu.classList.contains('expanded')) {
+                submenu.classList.remove('expanded');
+                if (reportsButton) {
+                    reportsButton.classList.remove('active');
+                }
+            }
+        }
+
+        function toggleBatchEntrySubmenu(element) {
+            const submenu = document.getElementById('batch-entry-submenu');
+            const isExpanded = submenu.classList.contains('expanded');
+
             if (isExpanded) {
                 submenu.classList.remove('expanded');
                 element.classList.remove('active');
@@ -572,27 +668,25 @@
                 element.classList.add('active');
             }
         }
-        
-        function expandSalesSubmenu() {
-            const submenu = document.getElementById('sales-submenu');
-            const salesButton = document.querySelector('.nav-link.submenu-parent[onclick*="toggleSalesSubmenu"]');
-            
-            // Ensure submenu is expanded
+
+        function expandBatchEntrySubmenu() {
+            const submenu = document.getElementById('batch-entry-submenu');
+            const batchButton = document.querySelector('.nav-link.submenu-parent[onclick*="toggleBatchEntrySubmenu"]');
+
             submenu.classList.add('expanded');
-            if (salesButton) {
-                salesButton.classList.add('active');
+            if (batchButton) {
+                batchButton.classList.add('active');
             }
         }
-        
-        function collapseSalesSubmenu() {
-            const submenu = document.getElementById('sales-submenu');
-            const salesButton = document.querySelector('.nav-link.submenu-parent[onclick*="toggleSalesSubmenu"]');
-            
-            // Collapse Sales submenu
+
+        function collapseBatchEntrySubmenu() {
+            const submenu = document.getElementById('batch-entry-submenu');
+            const batchButton = document.querySelector('.nav-link.submenu-parent[onclick*="toggleBatchEntrySubmenu"]');
+
             if (submenu && submenu.classList.contains('expanded')) {
                 submenu.classList.remove('expanded');
-                if (salesButton) {
-                    salesButton.classList.remove('active');
+                if (batchButton) {
+                    batchButton.classList.remove('active');
                 }
             }
         }

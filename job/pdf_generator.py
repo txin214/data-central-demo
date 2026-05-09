@@ -1394,7 +1394,15 @@ def sales_invoice_pdf_generate(request, job_id):
         sales = job.sales.all().select_related('product_code').order_by('-sale_date', '-created_at')
         
         # Group sales by product_code (same logic as in job_sales view)
-        grouped_sales = defaultdict(lambda: {'sales': [], 'total': Decimal('0.00'), 'product_code': None, 'tax': None, 'sale_date': None})
+        grouped_sales = defaultdict(lambda: {
+            'sales': [],
+            'total': Decimal('0.00'),
+            'total_cost': Decimal('0.00'),
+            'total_tax': Decimal('0.00'),
+            'product_code': None,
+            'tax': None,
+            'sale_date': None,
+        })
         for sale in sales:
             product_code_id = sale.product_code_id if sale.product_code else None
             product_code_key = product_code_id if product_code_id else 'no_code'
@@ -1406,6 +1414,10 @@ def sales_invoice_pdf_generate(request, job_id):
             
             grouped_sales[product_code_key]['sales'].append(sale)
             grouped_sales[product_code_key]['total'] += sale.sale_amount
+            if sale.cost_amount is not None:
+                grouped_sales[product_code_key]['total_cost'] += sale.cost_amount
+            if sale.tax_amount is not None:
+                grouped_sales[product_code_key]['total_tax'] += sale.tax_amount
         
         # Convert to list
         grouped_sales_list = []
@@ -1415,6 +1427,8 @@ def sales_invoice_pdf_generate(request, job_id):
                 'tax': group_data['tax'],
                 'sale_date': group_data['sale_date'],
                 'total': group_data['total'],
+                'total_cost': group_data['total_cost'],
+                'total_tax': group_data['total_tax'],
                 'sales': group_data['sales'],
                 'count': len(group_data['sales'])
             })
@@ -1423,8 +1437,10 @@ def sales_invoice_pdf_generate(request, job_id):
         from datetime import date
         grouped_sales_list.sort(key=lambda x: (x['product_code'].code if x['product_code'] else 'zzz', x['sale_date'] or date.min), reverse=True)
         
-        # Calculate total
+        # Calculate totals
         total_sales_amount = sum(group['total'] for group in grouped_sales_list)
+        total_sales_cost = sum(group['total_cost'] for group in grouped_sales_list)
+        total_sales_tax = sum(group['total_tax'] for group in grouped_sales_list)
         
         # Create PDF buffer
         pdf_buffer = BytesIO()
@@ -1605,17 +1621,19 @@ def sales_invoice_pdf_generate(request, job_id):
             alignment=TA_RIGHT
         )
         
-        # Header row with Paragraph objects - Tax and Amount headers right-aligned
+        # Header row: cost and dollar tax columns right-aligned
         table_data = [[
             Paragraph('Product Code', header_left_style),
             Paragraph('Description', header_left_style),
+            Paragraph('Cost', header_right_style),
+            Paragraph('Amount', header_right_style),
             Paragraph('Tax', header_right_style),
-            Paragraph('Amount', header_right_style)
+            Paragraph('Code', header_right_style),
         ]]
         
         for group in grouped_sales_list:
             product_code = group['product_code'].code if group['product_code'] else '-'
-            tax = group['tax'] or '-'
+            tax_code = group['tax'] or '-'
             total = float(group['total'])
             
             # Get description from first sale's comment or product code description
@@ -1627,32 +1645,35 @@ def sales_invoice_pdf_generate(request, job_id):
                 elif group['product_code'] and group['product_code'].description:
                     description = group['product_code'].description
             
-            # Use Paragraph objects for all cells to ensure proper alignment
-            # Format amount with consistent spacing
             amount_str = f"${total:,.2f}"
+            cost_str = format_currency(group['total_cost'])
+            tax_amt_str = format_currency(group['total_tax'])
             table_data.append([
                 Paragraph(str(product_code), cell_style),
                 Paragraph(str(description), cell_style),
-                Paragraph(str(tax), tax_style),
-                Paragraph(amount_str, amount_style)
+                Paragraph(cost_str, tax_style),
+                Paragraph(amount_str, amount_style),
+                Paragraph(tax_amt_str, tax_style),
+                Paragraph(str(tax_code), tax_style),
             ])
         
-        # Add total row with Paragraph objects
+        # Total row
         total_amount_str = f"${float(total_sales_amount):,.2f}"
+        total_cost_str = format_currency(total_sales_cost)
+        total_tax_str = format_currency(total_sales_tax)
         table_data.append([
             Paragraph('TOTAL', total_style),
             Paragraph('', cell_style),
+            Paragraph(total_cost_str, total_amount_style),
+            Paragraph(total_amount_str, total_amount_style),
+            Paragraph(total_tax_str, total_amount_style),
             Paragraph('', cell_style),
-            Paragraph(total_amount_str, total_amount_style)
         ])
         
-        # Create table with adjusted column widths for better alignment
-        # Increased Amount column width to accommodate formatted numbers
-        sales_table = Table(table_data, colWidths=[35*mm, 85*mm, 20*mm, 30*mm])
+        sales_table = Table(table_data, colWidths=[28*mm, 52*mm, 24*mm, 26*mm, 22*mm, 18*mm])
         sales_table.setStyle(TableStyle([
-            # Alignment - left for Product Code and Description, right for Tax and Amount
-            ('ALIGN', (0, 0), (1, -1), 'LEFT'),  # Product Code and Description left-aligned
-            ('ALIGN', (2, 0), (3, -1), 'RIGHT'),  # Tax and Amount right-aligned
+            ('ALIGN', (0, 0), (1, -1), 'LEFT'),
+            ('ALIGN', (2, 0), (5, -1), 'RIGHT'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),  # Vertical alignment middle for better appearance
             ('FONTSIZE', (0, 0), (-1, -1), 10),
             ('LEFTPADDING', (0, 0), (-1, -1), 4),

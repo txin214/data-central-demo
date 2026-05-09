@@ -12,7 +12,6 @@
             <h2 class="fw-bold mb-0" style="font-size: 2rem;">Manufacturers</h2>
         </div>
         <div class="d-flex gap-2">
-            <a href="{% url 'product:create_manufacturer' %}" class="btn btn-outline-primary btn-sm">+ Manufacturer</a>
             <button class="btn btn-outline-secondary btn-sm">Import</button>
         </div>
     </div>
@@ -24,24 +23,31 @@
                 </div>
             </div>
             <div class="row mt-2">
-                <div class="col-md-12">
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="statusFilterType" id="statusActive" value="active" checked>
-                        <label class="form-check-label small text-muted" for="statusActive">
-                            Active Only
-                        </label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="statusFilterType" id="statusInactive" value="inactive">
-                        <label class="form-check-label small text-muted" for="statusInactive">
-                            Inactive Only
-                        </label>
-                    </div>
-                    <div class="form-check form-check-inline">
-                        <input class="form-check-input" type="radio" name="statusFilterType" id="statusAll" value="all">
-                        <label class="form-check-label small text-muted" for="statusAll">
-                            All Manufacturers
-                        </label>
+                <div class="col-md-6">
+                    <button id="clear-filters" class="btn btn-outline-secondary btn-sm">
+                        <i class="fa fa-refresh me-1"></i>Clear Filters
+                    </button>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex justify-content-end">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="statusFilterType" id="statusActive" value="active" checked>
+                            <label class="form-check-label small text-muted" for="statusActive">
+                                Active Only
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="statusFilterType" id="statusInactive" value="inactive">
+                            <label class="form-check-label small text-muted" for="statusInactive">
+                                Inactive Only
+                            </label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="statusFilterType" id="statusAll" value="all">
+                            <label class="form-check-label small text-muted" for="statusAll">
+                                All Manufacturers
+                            </label>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -60,6 +66,14 @@
                 </tr>
             </thead>
             <tbody id="manufacturer-table-body">
+                <tr class="border-top-0 border-bottom-0">
+                    <td colspan="8" class="border-top-0 border-bottom-0 py-2">
+                        <a href="{% url 'product:create_manufacturer' %}" class="btn btn-sm btn-success">
+                            <i class="fas fa-plus me-1"></i>
+                            Add Manufacturer
+                        </a>
+                    </td>
+                </tr>
                 {% for manufacturer in manufacturers %}
                 <tr>
                     <td>{{ manufacturer.manufacturer_name }}</td>
@@ -627,6 +641,15 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         // Default to active
         document.getElementById('statusActive').checked = true;
+    }
+
+    const clearFiltersButton = document.getElementById('clear-filters');
+    if (clearFiltersButton) {
+        clearFiltersButton.addEventListener('click', function() {
+            document.getElementById('manufacturer-search-bar').value = '';
+            document.getElementById('statusActive').checked = true;
+            window.location.href = window.location.pathname + '?status=active';
+        });
     }
 });
 </script>

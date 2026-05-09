@@ -6,25 +6,33 @@
 <link rel="stylesheet" type="text/css" href="{% static 'job/css/job_forms.css' %}?v=1.0">
 
 <div class="card mb-3 mt-3">
-    <div class="card-header">
+    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
         <h6 class="card-title mb-0">
-            {% if is_edit %}Edit{% else %}Create{% endif %} Sale
+            {% if read_only %}View sale{% elif is_edit %}Edit sale{% else %}Create sale{% endif %}
         </h6>
+        {% if read_only and sale %}
+        <a href="{% url 'job:job_sale_edit' job.id sale.id %}" class="btn btn-sm btn-primary">
+            <i class="fas fa-edit me-1"></i>Edit
+        </a>
+        {% endif %}
     </div>
     <div class="card-body">
-        <form method="POST">
+        <form method="post" {% if read_only %}action="" onsubmit="return false;"{% endif %}>
+            {% if not read_only %}
             {% csrf_token %}
-            
-            {% if form.non_field_errors %}
+            {% endif %}
+
+            {% if not read_only and form.non_field_errors %}
                 <div class="alert alert-danger py-1 mb-2 small">{{ form.non_field_errors }}</div>
             {% endif %}
-            
+
+            <fieldset class="border-0 p-0 m-0" {% if read_only %}disabled{% endif %}>
             <div class="row">
                 <!-- Product Code -->
                 <div class="col-md-6 mb-2">
                     <label class="form-label small" for="{{ form.product_code.id_for_label }}">{{ form.product_code.label }}</label>
                     {{ form.product_code }}
-                    {% if form.product_code.errors %}
+                    {% if not read_only and form.product_code.errors %}
                         <div class="text-danger small">{{ form.product_code.errors }}</div>
                     {% endif %}
                 </div>
@@ -33,8 +41,25 @@
                 <div class="col-md-6 mb-2">
                     <label class="form-label small" for="{{ form.sale_amount.id_for_label }}">{{ form.sale_amount.label }}</label>
                     {{ form.sale_amount }}
-                    {% if form.sale_amount.errors %}
+                    {% if not read_only and form.sale_amount.errors %}
                         <div class="text-danger small">{{ form.sale_amount.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-2">
+                    <label class="form-label small" for="{{ form.cost_amount.id_for_label }}">{{ form.cost_amount.label }}</label>
+                    {{ form.cost_amount }}
+                    {% if not read_only and form.cost_amount.errors %}
+                        <div class="text-danger small">{{ form.cost_amount.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="col-md-6 mb-2">
+                    <label class="form-label small" for="{{ form.tax_amount.id_for_label }}">{{ form.tax_amount.label }}</label>
+                    {{ form.tax_amount }}
+                    {% if not read_only and form.tax_amount.errors %}
+                        <div class="text-danger small">{{ form.tax_amount.errors }}</div>
                     {% endif %}
                 </div>
             </div>
@@ -44,16 +69,16 @@
                 <div class="col-md-6 mb-2">
                     <label class="form-label small" for="{{ form.sale_date.id_for_label }}">{{ form.sale_date.label }}</label>
                     {{ form.sale_date }}
-                    {% if form.sale_date.errors %}
+                    {% if not read_only and form.sale_date.errors %}
                         <div class="text-danger small">{{ form.sale_date.errors }}</div>
                     {% endif %}
                 </div>
 
-                <!-- Tax -->
+                <!-- Tax code -->
                 <div class="col-md-6 mb-2">
                     <label class="form-label small" for="{{ form.tax.id_for_label }}">{{ form.tax.label }}</label>
                     {{ form.tax }}
-                    {% if form.tax.errors %}
+                    {% if not read_only and form.tax.errors %}
                         <div class="text-danger small">{{ form.tax.errors }}</div>
                     {% endif %}
                 </div>
@@ -64,7 +89,7 @@
                 <div class="col-md-12 mb-2">
                     <label class="form-label small" for="{{ form.comment.id_for_label }}">{{ form.comment.label }}</label>
                     {{ form.comment }}
-                    {% if form.comment.errors %}
+                    {% if not read_only and form.comment.errors %}
                         <div class="text-danger small">{{ form.comment.errors }}</div>
                     {% endif %}
                 </div>
@@ -75,23 +100,30 @@
                 <div class="col-md-12 mb-2">
                     <label class="form-label small" for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
                     {{ form.notes }}
-                    {% if form.notes.errors %}
+                    {% if not read_only and form.notes.errors %}
                         <div class="text-danger small">{{ form.notes.errors }}</div>
                     {% endif %}
                 </div>
             </div>
-            
+            </fieldset>
+
             <!-- Action Buttons -->
             <div class="row mt-3">
                 <div class="col-12">
+                    {% if read_only %}
+                    <a href="{% url 'job:job_sales' job.id %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i>Back to sales
+                    </a>
+                    {% else %}
                     <button type="submit" class="btn btn-primary btn-sm">
                         <i class="fas fa-{% if is_edit %}save{% else %}plus{% endif %} me-1"></i>
-                        {% if is_edit %}Update{% else %}Create{% endif %} Sale
+                        {% if is_edit %}Update{% else %}Create{% endif %} sale
                     </button>
                     <a href="{% url 'job:job_sales' job.id %}" class="btn btn-secondary btn-sm">
                         <i class="fas fa-times me-1"></i>
                         Cancel
                     </a>
+                    {% endif %}
                 </div>
             </div>
         </form>

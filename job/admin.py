@@ -1,5 +1,22 @@
 from django.contrib import admin
-from .models import Job, JobType, JobNotes, JobQuoteProductNotes, PurchaseOrder, PurchaseOrderItem, Team, Holiday, Store, Sale, ChangeOrder, PaymentType, AccountCategory, Payment
+from .models import (
+    Job,
+    JobType,
+    JobNotes,
+    JobQuoteProductNotes,
+    PurchaseOrder,
+    PurchaseOrderItem,
+    Team,
+    Holiday,
+    Store,
+    CategoryProductCodeMap,
+    SubCategory1ProductCodeMap,
+    Sale,
+    ChangeOrder,
+    PaymentType,
+    AccountCategory,
+    Payment,
+)
 
 
 @admin.register(JobType)
@@ -242,10 +259,39 @@ class StoreAdmin(admin.ModelAdmin):
     )
 
 
+@admin.register(CategoryProductCodeMap)
+class CategoryProductCodeMapAdmin(admin.ModelAdmin):
+    list_display = ("product_category", "product_code")
+    list_select_related = ("product_category", "product_code")
+    search_fields = ("product_category__product_category", "product_code__code", "product_code__description")
+
+
+@admin.register(SubCategory1ProductCodeMap)
+class SubCategory1ProductCodeMapAdmin(admin.ModelAdmin):
+    list_display = ("product_sub_category1", "product_code")
+    list_select_related = ("product_sub_category1", "product_sub_category1__category", "product_code")
+    search_fields = (
+        "product_sub_category1__product_sub_category",
+        "product_sub_category1__category__product_category",
+        "product_code__code",
+        "product_code__description",
+    )
+
+
 @admin.register(Sale)
 class SaleAdmin(admin.ModelAdmin):
     """Admin for Sale model."""
-    list_display = ('job_code', 'sales_person_name', 'sale_date', 'product_code', 'sale_amount', 'tax')
+    list_display = (
+        'job_code',
+        'sales_person_name',
+        'sale_date',
+        'product_code',
+        'cost_amount',
+        'tax_amount',
+        'sale_amount',
+        'tax',
+        'source_quote',
+    )
     list_filter = ('sale_date', 'tax')
     search_fields = ('job__job_code', 'job__customer__first_name', 'job__customer__last_name', 'job__soldby__first_name', 'job__soldby__last_name')
     readonly_fields = ('job_code', 'sales_person_name', 'total_contract_amount', 'created_at', 'updated_at')
@@ -253,10 +299,10 @@ class SaleAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ('Job Information', {
-            'fields': ('job', 'job_code', 'sales_person_name')
+            'fields': ('job', 'job_code', 'sales_person_name', 'source_quote')
         }),
         ('Sale Details', {
-            'fields': ('sale_date', 'sale_amount', 'product_code', 'tax')
+            'fields': ('sale_date', 'cost_amount', 'tax_amount', 'sale_amount', 'product_code', 'tax')
         }),
         ('Description & Notes', {
             'fields': ('comment', 'notes',)

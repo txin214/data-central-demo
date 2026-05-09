@@ -129,8 +129,7 @@ urlpatterns = [
     path('quotes/edit-quantity/<int:line_item_id>/', views.edit_quantity, name='edit_quantity'),  # Edit product quantity in quote
     path('quotes/update-price-type/<int:line_item_id>/', views.update_line_item_price_type, name='update_line_item_price_type'),  # Update line item price type
     
-    # Quote reporting and PDF generation
-    path('quotes/report/<int:quote_id>/', views.product_quote_report, name='product_quote_report'),  # Generate quote report
+    # Quote PDF generation
     path('quotes/pdf/<int:quote_id>/', views.product_quote_pdf, name='product_quote_pdf'),  # Generate quote PDF
     path('quotes/save/<int:quote_id>/', save_quote_content, name='save_quote_content'),  # Save quote content
     

@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<style>
+.batch-entry-wrap .table-responsive {
+    overflow: visible;
+}
+
+.batch-entry-wrap td {
+    overflow: visible;
+}
+
+#jobCodeSearchResults {
+    z-index: 3000;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+}
+</style>
+
+<div class="container-fluid mt-4 batch-entry-wrap">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <h2 class="fw-bold mb-0" style="font-size: 2rem;">{{ page_title }}</h2>
+        </div>
+    </div>
+
+    <form method="post" class="mt-3">
+        {% csrf_token %}
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover align-middle mb-0">
+                <thead class="sticky-header">
+                    <tr>
+                        <th style="width: 120px;">Date</th>
+                        <th style="width: 260px;">Job Code</th>
+                        {% if batch_type == 'receipts' %}
+                            <th style="width: 220px;">Account</th>
+                            <th style="width: 120px;">Discount</th>
+                        {% else %}
+                            <th style="width: 120px;">Product</th>
+                            <th style="width: 90px;">Tax Rate</th>
+                        {% endif %}
+                        <th>{% if batch_type == 'change_orders' %}Description{% else %}Comment{% endif %}</th>
+                        <th style="width: 140px;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            {% if batch_type == 'sales' %}
+                                <input type="date" name="sale_date" class="form-control form-control-sm" value="{{ initial_date }}" required>
+                            {% elif batch_type == 'change_orders' %}
+                                <input type="date" name="order_date" class="form-control form-control-sm" value="{{ initial_date }}" required>
+                            {% else %}
+                                <input type="date" name="date" class="form-control form-control-sm" value="{{ initial_date }}" required>
+                            {% endif %}
+                        </td>
+                        <td style="position: relative;">
+                            <input type="hidden" name="job_id" id="selectedJobId">
+                            <input
+                                type="text"
+                                id="jobCodeSearchInput"
+                                class="form-control form-control-sm"
+                                placeholder="Search job code..."
+                                autocomplete="off"
+                                required
+                            >
+                            <div id="jobCodeSearchResults" class="list-group position-absolute w-100 shadow-sm" style="max-height: 240px; overflow-y: auto; display: none;"></div>
+                        </td>
+                        {% if batch_type == 'receipts' %}
+                            <td>
+                                <select name="account_category_id" class="form-select form-select-sm">
+                                    <option value="">Select</option>
+                                    {% for acct in account_categories %}
+                                        <option value="{{ acct.id }}">{{ acct.code }} - {{ acct.description }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td>
+                                <input type="number" name="discount" class="form-control form-control-sm" step="0.01" min="0" placeholder="0.00">
+                            </td>
+                        {% else %}
+                            <td>
+                                <select name="product_code_id" class="form-select form-select-sm" {% if batch_type == 'sales' %}required{% endif %}>
+                                    <option value="">Select</option>
+                                    {% for code in product_codes %}
+                                        <option value="{{ code.id }}">{{ code.code }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td>
+                                <select name="tax" class="form-select form-select-sm">
+                                    {% if batch_type == 'change_orders' %}
+                                        <option value="">-</option>
+                                    {% endif %}
+                                    <option value="UT" selected>UT</option>
+                                    <option value="EX">EX</option>
+                                    <option value="ST">ST</option>
+                                    <option value="LB">LB</option>
+                                    <option value="SU">SU</option>
+                                </select>
+                            </td>
+                        {% endif %}
+                        <td>
+                            {% if batch_type == 'change_orders' %}
+                                <input type="text" name="description" class="form-control form-control-sm" placeholder="Description" required>
+                            {% else %}
+                                <input type="text" name="comment" class="form-control form-control-sm" placeholder="Comment">
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if batch_type == 'sales' %}
+                                <input type="number" name="sale_amount" class="form-control form-control-sm" step="0.01" min="0" placeholder="0.00" required>
+                            {% elif batch_type == 'change_orders' %}
+                                <input type="number" name="amount" class="form-control form-control-sm" step="0.01" placeholder="0.00">
+                            {% else %}
+                                <input type="number" name="amount" class="form-control form-control-sm" step="0.01" min="0" placeholder="0.00" required>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-3 d-flex justify-content-end">
+            <button type="submit" class="btn btn-sm btn-primary">
+                <i class="fa fa-save me-1"></i>{{ submit_label }}
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const input = document.getElementById('jobCodeSearchInput');
+    const hiddenJobId = document.getElementById('selectedJobId');
+    const results = document.getElementById('jobCodeSearchResults');
+    let timer = null;
+
+    function clearResults() {
+        results.innerHTML = '';
+        results.style.display = 'none';
+    }
+
+    function setSelected(job) {
+        hiddenJobId.value = job.id;
+        input.value = job.job_code;
+        clearResults();
+    }
+
+    async function searchJobs(query) {
+        const url = `{% url 'job:ajax_search_jobs' %}?q=${encodeURIComponent(query)}&type=job_code&status=all`;
+        const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!resp.ok) {
+            clearResults();
+            return;
+        }
+        const data = await resp.json();
+        const jobs = data.jobs || [];
+        if (!jobs.length) {
+            clearResults();
+            return;
+        }
+
+        results.innerHTML = '';
+        jobs.slice(0, 8).forEach((job) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'list-group-item list-group-item-action text-start';
+            btn.textContent = `${job.job_code} - ${job.customer}`;
+            btn.addEventListener('click', function() {
+                setSelected(job);
+            });
+            results.appendChild(btn);
+        });
+        results.style.display = 'block';
+    }
+
+    input.addEventListener('input', function() {
+        hiddenJobId.value = '';
+        const q = input.value.trim();
+        if (timer) clearTimeout(timer);
+        if (!q) {
+            clearResults();
+            return;
+        }
+        timer = setTimeout(function() {
+            searchJobs(q);
+        }, 250);
+    });
+
+    document.addEventListener('click', function(e) {
+        if (!results.contains(e.target) && e.target !== input) {
+            clearResults();
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -33,6 +33,7 @@
         <div>
             <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
             <h2 class="fw-bold mb-0" style="font-size: 2rem;">Sales by Person</h2>
+            <p class="text-muted small mb-0">Totals per job (all sale lines and change orders summed by job).</p>
         </div>
     </div>
     <div class="action-bar">
@@ -45,22 +46,20 @@
         <table class="table table-bordered table-hover align-middle mb-0">
             <thead class="sticky-header">
                 <tr>
-                    <th>User</th>
-                    <th>Type</th>
-                    <th>Job Code</th>
+                    <th>Person</th>
+                    <th>Job code</th>
                     <th>Customer</th>
-                    <th>Date</th>
-                    <th>Amount</th>
-                    <th>Product Code</th>
-                    <th>Description</th>
+                    <th>Last activity</th>
+                    <th class="text-end">Sales</th>
+                    <th class="text-end">Change orders</th>
+                    <th class="text-end">Job total</th>
                     <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for group in grouped_by_user %}
-                <!-- User Group Header -->
                 <tr class="user-group-header" data-user-id="user-{{ group.user.id }}">
-                    <td colspan="9" class="py-2">
+                    <td colspan="8" class="py-2">
                         <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none text-dark fw-bold expand-btn" data-target="user-{{ group.user.id }}" style="text-align: left;">
                             <i class="fas fa-chevron-right me-2"></i>
                             {% if group.user.first_name or group.user.last_name %}
@@ -69,8 +68,7 @@
                                 {{ group.user.username }}
                             {% endif %}
                             <span class="ms-3 text-muted">
-                                ({{ group.sales|length }} sale{{ group.sales|length|pluralize }}, 
-                                {{ group.change_orders|length }} change order{{ group.change_orders|length|pluralize }})
+                                ({{ group.job_rows|length }} job{{ group.job_rows|length|pluralize }})
                             </span>
                             <span class="ms-3 fw-bold">
                                 Total: ${{ group.grand_total|floatformat:2 }}
@@ -78,135 +76,74 @@
                         </button>
                     </td>
                 </tr>
-                <!-- Sales for this user (collapsed by default) -->
-                {% for item in group.sales %}
+                {% for row in group.job_rows %}
                 <tr class="group-item user-{{ group.user.id }}" style="display: none;">
                     <td class="ps-4">
-                        <small class="text-muted">-</small>
+                        <small class="text-muted">—</small>
                     </td>
-                    <td class="ps-4">
-                        <small>Sale</small>
+                    <td>
+                        <small>{{ row.job.job_code|default:'-' }}</small>
                     </td>
-                    <td class="ps-4">
-                        <small>{{ item.job.job_code|default:'-' }}</small>
-                    </td>
-                    <td class="ps-4">
-                        <small>{{ item.customer.first_name }} {{ item.customer.last_name }}</small>
-                    </td>
-                    <td class="ps-4">
-                        <small>{{ item.date|date:"m/d/Y"|default:'-' }}</small>
-                    </td>
-                    <td class="ps-4">
-                        <small>${{ item.amount|floatformat:2|default:"0.00" }}</small>
-                    </td>
-                    <td class="ps-4">
+                    <td>
                         <small>
-                            {% if item.product_code %}
-                                {{ item.product_code.code }}
+                            {% if row.customer %}
+                                {{ row.customer.first_name }} {{ row.customer.last_name }}
                             {% else %}
                                 <span class="text-muted">-</span>
                             {% endif %}
                         </small>
                     </td>
-                    <td class="ps-4">
-                        <small>
-                            {% if item.description %}
-                                {{ item.description|truncatewords:10 }}
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </small>
+                    <td>
+                        <small>{{ row.last_activity|date:"m/d/Y"|default:'-' }}</small>
                     </td>
-                    <td class="ps-4">
-                        <a href="{% url 'job:job_detail' item.job.id %}" class="btn btn-sm btn-outline-primary">View Job</a>
+                    <td class="text-end">
+                        <small>${{ row.total_sales|floatformat:2 }}</small>
                     </td>
-                </tr>
-                {% endfor %}
-                <!-- Change Orders for this user (collapsed by default) -->
-                {% for item in group.change_orders %}
-                <tr class="group-item user-{{ group.user.id }}" style="display: none;">
-                    <td class="ps-4">
-                        <small class="text-muted">-</small>
+                    <td class="text-end">
+                        <small>${{ row.total_change_orders|floatformat:2 }}</small>
                     </td>
-                    <td class="ps-4">
-                        <small>Change Order</small>
+                    <td class="text-end">
+                        <small class="fw-semibold">${{ row.grand_total|floatformat:2 }}</small>
                     </td>
-                    <td class="ps-4">
-                        <small>{{ item.job.job_code|default:'-' }}</small>
-                    </td>
-                    <td class="ps-4">
-                        <small>{{ item.customer.first_name }} {{ item.customer.last_name }}</small>
-                    </td>
-                    <td class="ps-4">
-                        <small>{{ item.date|date:"m/d/Y"|default:'-' }}</small>
-                    </td>
-                    <td class="ps-4">
-                        <small>
-                            {% if item.amount >= 0 %}
-                                +${{ item.amount|floatformat:2|default:"0.00" }}
-                            {% else %}
-                                ${{ item.amount|floatformat:2|default:"0.00" }}
-                            {% endif %}
-                        </small>
-                    </td>
-                    <td class="ps-4">
-                        <small>
-                            {% if item.product_code %}
-                                {{ item.product_code.code }}
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </small>
-                    </td>
-                    <td class="ps-4">
-                        <small>
-                            {% if item.description %}
-                                {{ item.description|truncatewords:10 }}
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </small>
-                    </td>
-                    <td class="ps-4">
-                        <a href="{% url 'job:job_detail' item.job.id %}" class="btn btn-sm btn-outline-primary">View Job</a>
+                    <td>
+                        <a href="{% url 'job:job_detail' row.job.id %}" class="btn btn-sm btn-outline-primary">View job</a>
                     </td>
                 </tr>
                 {% endfor %}
                 {% empty %}
                 <tr>
-                    <td colspan="9" class="text-center text-muted py-4">No sales or change orders found</td>
+                    <td colspan="8" class="text-center text-muted py-4">No sales or change orders found</td>
                 </tr>
                 {% endfor %}
             </tbody>
             {% if grouped_by_user %}
             <tfoot>
                 <tr>
-                    <td colspan="5" class="text-end"><strong>Total Sales:</strong></td>
-                    <td><strong>${{ total_sales_all|floatformat:2 }}</strong></td>
-                    <td colspan="3"></td>
+                    <td colspan="6" class="text-end"><strong>Total sales:</strong></td>
+                    <td class="text-end"><strong>${{ total_sales_all|floatformat:2 }}</strong></td>
+                    <td></td>
                 </tr>
                 <tr>
-                    <td colspan="5" class="text-end"><strong>Total Change Orders:</strong></td>
-                    <td><strong>${{ total_change_orders_all|floatformat:2 }}</strong></td>
-                    <td colspan="3"></td>
+                    <td colspan="6" class="text-end"><strong>Total change orders:</strong></td>
+                    <td class="text-end"><strong>${{ total_change_orders_all|floatformat:2 }}</strong></td>
+                    <td></td>
                 </tr>
                 <tr>
-                    <td colspan="5" class="text-end"><strong>Grand Total:</strong></td>
-                    <td><strong>${{ grand_total_all|floatformat:2 }}</strong></td>
-                    <td colspan="3"></td>
+                    <td colspan="6" class="text-end"><strong>Grand total:</strong></td>
+                    <td class="text-end"><strong>${{ grand_total_all|floatformat:2 }}</strong></td>
+                    <td></td>
                 </tr>
             </tfoot>
             {% endif %}
         </table>
     </div>
     <div class="mt-2 text-end text-muted small" style="margin-right: 0; padding-right: 0;">
-        Total Users: {{ grouped_by_user|length }}
+        Total people: {{ grouped_by_user|length }}
     </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Handle expand/collapse for user groups
     const tableBody = document.querySelector('table tbody');
     if (tableBody) {
         tableBody.addEventListener('click', function(e) {
@@ -217,27 +154,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 const targetId = expandBtn.dataset.target;
                 const icon = expandBtn.querySelector('i');
                 const groupItems = document.querySelectorAll(`.group-item.${targetId}`);
-                
-                // Check current state - check if first item is visible
                 const firstItem = groupItems[0];
                 let isCurrentlyExpanded = false;
                 if (firstItem) {
                     const computedStyle = window.getComputedStyle(firstItem);
                     isCurrentlyExpanded = computedStyle.display !== 'none';
                 }
-                
-                // Toggle based on current state
                 groupItems.forEach(item => {
-                    if (isCurrentlyExpanded) {
-                        // Collapse: hide items
-                        item.style.display = 'none';
-                    } else {
-                        // Expand: show items
-                        item.style.display = '';
-                    }
+                    item.style.display = isCurrentlyExpanded ? 'none' : '';
                 });
-                
-                // Update icon
                 if (isCurrentlyExpanded) {
                     icon.classList.remove('fa-chevron-down');
                     icon.classList.add('fa-chevron-right');
@@ -251,4 +176,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 {% endblock %}
-

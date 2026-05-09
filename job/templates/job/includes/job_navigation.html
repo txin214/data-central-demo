@@ -161,18 +161,6 @@
                 <li class="nav-item">
                     <a class="nav-link {% if 'job_attachments' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'job:job_attachments' job.id %}">Attachments</a>
                 </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if 'job_sales' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'job:job_sales' job.id %}">Sale</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if 'job_change_orders' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'job:job_change_orders' job.id %}">Change Orders</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if 'job_payments' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'job:job_payments' job.id %}">Payment</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link {% if 'job_print_preview' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'job:job_print_preview' job.id %}">Print</a>
-                </li>
             </ul>
         </div>
     </nav>

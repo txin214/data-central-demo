@@ -36,3 +36,34 @@
     background-color: rgba(0, 0, 0, 0.075);
 }
 
+/* Job sales — primary sales table: left-align block, numeric columns line up */
+.job-sales-primary-wrap {
+    text-align: left;
+    width: 100%;
+}
+
+.job-sales-primary-wrap > .job-sales-primary-table {
+    width: 100%;
+    margin-left: 0;
+}
+
+.job-sales-primary-wrap .table thead th,
+.job-sales-primary-wrap .table tbody td {
+    vertical-align: middle;
+}
+
+.job-sales-primary-wrap .table thead th.text-end,
+.job-sales-primary-wrap .table tbody td.text-end {
+    text-align: right !important;
+}
+
+.job-sales-primary-wrap .table thead th.text-start,
+.job-sales-primary-wrap .table tbody td.text-start {
+    text-align: left !important;
+}
+
+.job-sales-primary-wrap .table thead th.text-center,
+.job-sales-primary-wrap .table tbody td.text-center {
+    text-align: center !important;
+}
+
