@@ -30,7 +30,10 @@ class SiteworkSubCatImageAdmin(ImportExportModelAdmin):
     resource_classes = [SiteworkSubCatImageResource]       
     fields = ('calckey','name','desc','image','doc')
     search_fields = ['desc','calckey']
-    list_display = ('calckey','get_calckey','name','image','doc')
+    list_display = ('calckey','get_calckey2','name','image','doc')
+    def get_calckey2(self,obj):
+        s = SiteworkSubCat.objects.filter(calckey=obj.calckey).first()
+        return f'{obj.calckey}: {s.workdesc}'
 
 
 admin.site.register(SiteworkSubCatImage,SiteworkSubCatImageAdmin)

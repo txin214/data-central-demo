@@ -44,10 +44,37 @@ AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', '')
 AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', '')
 AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', '')
 
+#AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', 'tid_dpI_qrxVeYunyDjiMCqZ_dvIVdcMxLUZsmVePHiZsXTWukAJGB')
+#AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', 'tsec_KrY6_uFgMJiZtQL6rKgFW+cP7cBp2Fd57DL8-2ouLPi1g4KfjnznPrI8xJgm_90-ZP6Nv3')
+#AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'sw-chicken-3761')
+#AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', 'https://t3.storage.dev')
+#AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', 'https://t3.tigrisfiles.io')
+#AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'global')
+
 # Check if Spaces should be used (auto-enable if all credentials are provided)
 USE_SPACES = os.environ.get('USE_SPACES', '').lower() == 'true' or (
     AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and AWS_STORAGE_BUCKET_NAME and AWS_S3_ENDPOINT_URL
 )
+#STORAGES = {
+#    "default": {
+#        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+#        "OPTIONS": {
+#            'access_key' :'tid_PjJqgzb_SFIsfFNkvyewEnqbBE_bVtqkbkHJCEUjfDIoSrKIUZ',
+#            'secret_key' :'tsec_5puV81K6Jx00LTL9fzZK1OL1roVRhARk7hx1AXi3Vk3JwnpG_BYIk-d1ikVmAXm-W5qMN3',    
+#           # 'bucket_name' :'sw-chicken-3761',
+#          # ...your_options_here
+#        },
+#    },
+#    "staticfiles": {
+#        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+#        "OPTIONS": {
+#            'access_key' :'tid_PjJqgzb_SFIsfFNkvyewEnqbBE_bVtqkbkHJCEUjfDIoSrKIUZ',
+#            'secret_key' :'tsec_5puV81K6Jx00LTL9fzZK1OL1roVRhARk7hx1AXi3Vk3JwnpG_BYIk-d1ikVmAXm-W5qMN3',    
+#           # 'bucket_name' :'sw-chicken-3761',
+#          # ...your_options_here
+#        },
+#    },
+#}
 
 if USE_SPACES:
     # Use DigitalOcean Spaces for file storage
@@ -72,6 +99,12 @@ if USE_SPACES:
     # Set MEDIA_URL to point to Spaces
     MEDIA_URL = f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/'
     
+    #MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_ENDPOINT_URL.replace("https://", "")}/'
+    #STATIC_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_ENDPOINT_URL.replace("https://", "")}/static/'
+
+   #1 MEDIA_URL = f'https://{AWS_S3_ENDPOINT_URL}/'
+  #1 STATIC_URL = f'https://{AWS_S3_ENDPOINT_URL}/static/'
+
     # Additional settings
     AWS_QUERYSTRING_AUTH = False  # Don't add query string authentication
     AWS_S3_FILE_OVERWRITE = False  # Don't overwrite files with same name
@@ -122,6 +155,7 @@ INSTALLED_APPS = [
     'smart_selects',
     'dynamic_breadcrumbs',
     'django_htmx',
+    'storages',
 ]
 
 
@@ -239,14 +273,14 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = '/static/'
-
-from import_export.formats.base_formats import CSV
-IMPORT_FORMATS = [CSV]
-
 STATIC_ROOT = BASE_DIR / 'static'
 STATICFILES_DIRS = [
     BASE_DIR / 'staticfiles',
 ]
+
+from import_export.formats.base_formats import CSV
+IMPORT_FORMATS = [CSV]
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
