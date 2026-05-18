@@ -1,17 +1,123 @@
-document.getElementById('product-id').style.display = 'none';
+(function () {
+    const el = document.getElementById('product-id');
+    if (el) el.setAttribute('hidden', '');
+})();
 
+function getProductPk() {
+    const el = document.getElementById('product-id');
+    if (!el) return NaN;
+    const pk = el.getAttribute('data-product-pk');
+    if (pk != null && pk !== '') {
+        const n = parseInt(pk, 10);
+        return Number.isFinite(n) ? n : NaN;
+    }
+    const text = el.textContent || '';
+    const colon = text.indexOf(':');
+    if (colon >= 0) {
+        return parseInt(text.slice(colon + 1).trim(), 10);
+    }
+    return NaN;
+}
 
+function setComponentsHidden(value) {
+    const field = document.getElementById('components_field');
+    if (field) field.value = value;
+}
 
+function renderSelectedComponents(rows) {
+    const tbody = document.getElementById('selected-components-tbody');
+    if (!tbody) return;
 
-function removeComponent(componentId, componentName) {
-    if (!confirm(`Are you sure you want to remove "${componentName}" from this product?`)) {
+    tbody.textContent = '';
+
+    if (!rows || rows.length === 0) {
+        const tr = document.createElement('tr');
+        tr.style.border = 'none';
+        const td = document.createElement('td');
+        td.colSpan = 6;
+        td.className = 'table-title';
+        td.style.border = 'none';
+        td.textContent = 'No components were found.';
+        tr.appendChild(td);
+        tbody.appendChild(tr);
         return;
     }
 
-    const productIdText = document.getElementById('product-id').textContent;
-    const productId = parseInt(productIdText.split(':')[1].trim(), 10);
+    const headerTr = document.createElement('tr');
+    headerTr.style.border = 'none';
+    ['Component', 'Description', 'Type', 'Unit Cost', 'Quantity', 'Action'].forEach(function (label) {
+        const td = document.createElement('td');
+        td.style.border = 'none';
+        const b = document.createElement('b');
+        b.textContent = label;
+        td.appendChild(b);
+        headerTr.appendChild(td);
+    });
+    tbody.appendChild(headerTr);
 
-    if (!productId) {
+    rows.forEach(function (row) {
+        const tr = document.createElement('tr');
+        tr.style.border = 'none';
+
+        ['part_no', 'description', 'product_type'].forEach(function (key) {
+            const td = document.createElement('td');
+            td.style.border = 'none';
+            td.textContent = row[key] != null ? String(row[key]) : '';
+            tr.appendChild(td);
+        });
+
+        const tdCost = document.createElement('td');
+        tdCost.style.border = 'none';
+        if (row.unit_total_cost != null && row.unit_total_cost !== '') {
+            tdCost.textContent = '$' + Number(row.unit_total_cost).toFixed(2);
+        } else {
+            tdCost.textContent = 'Not Available';
+        }
+        tr.appendChild(tdCost);
+
+        const tdQty = document.createElement('td');
+        tdQty.style.border = 'none';
+        const q = parseFloat(row.qty);
+        tdQty.textContent = Number.isFinite(q) ? q.toFixed(3) : String(row.qty);
+        tr.appendChild(tdQty);
+
+        const tdBtn = document.createElement('td');
+        tdBtn.style.border = 'none';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-sm btn-outline-danger';
+        btn.style.padding = '2px 6px';
+        btn.style.fontSize = '11px';
+        btn.style.height = '30px';
+        btn.innerHTML = '<i class="fa-solid fa-trash"></i> Remove';
+        const cid = row.component_id;
+        const pname = row.part_no || '';
+        btn.addEventListener('click', function () {
+            removeComponent(cid, pname);
+        });
+        tdBtn.appendChild(btn);
+        tr.appendChild(tdBtn);
+
+        tbody.appendChild(tr);
+    });
+}
+
+function clearComponentSearchSelection() {
+    document.querySelectorAll('input[name="selected_components"]').forEach(function (cb) {
+        cb.checked = false;
+    });
+    const selAll = document.querySelector('input[name="select_all_components"]');
+    if (selAll) selAll.checked = false;
+}
+
+function removeComponent(componentId, componentName) {
+    if (!confirm('Are you sure you want to remove "' + (componentName || 'this component') + '" from this product?')) {
+        return;
+    }
+
+    const productId = getProductPk();
+
+    if (!Number.isFinite(productId) || productId < 1) {
         alert('Product ID not found.');
         return;
     }
@@ -23,21 +129,26 @@ function removeComponent(componentId, componentName) {
             'X-CSRFToken': getCookie('csrftoken')
         },
         body: JSON.stringify({
-            'product_id': productId,
-            'component_id': componentId
+            product_id: productId,
+            component_id: componentId
         })
     })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Component removed successfully!');
-                // Refresh the page to show updated components
+        .then(function (response) {
+            return response.json().then(function (data) {
+                return { ok: response.ok, data: data };
+            });
+        })
+        .then(function (result) {
+            if (result.ok && result.data.success) {
                 location.reload();
             } else {
-                alert('Failed to remove component.');
+                alert('Failed to remove component.' + (result.data.error ? ' ' + result.data.error : ''));
             }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(function (error) {
+            console.error('Error:', error);
+            alert('Failed to remove component.');
+        });
 }
 
 function performComponentSearch() {
@@ -49,13 +160,15 @@ function performComponentSearch() {
         return;
     }
 
-    fetch(`/product/search_components/?q=${query}&filterby=${filterby}`, {
-        method: 'GET',
+    fetch('/product/search_components/?q=' + encodeURIComponent(query) + '&filterby=' + encodeURIComponent(filterby), {
+        method: 'GET'
     })
-        .then(response => response.json())
-        .then(data => {
+        .then(function (response) {
+            return response.json();
+        })
+        .then(function (data) {
             const resultsContainer = document.getElementById('component-search-results');
-            resultsContainer.innerHTML = '';  // Clear previous results
+            resultsContainer.innerHTML = '';
 
             if (data.results.length > 0) {
                 let tableContent = '<table class="ViewTable" style="width:80%; border: none">';
@@ -68,70 +181,77 @@ function performComponentSearch() {
                 tableContent += '<th style="border: none; background-color: #2780e3; color: white; font-family: Arial, sans-serif; font-size: 14px; font-weight: normal;">Quantity</th>';
                 tableContent += '</tr>';
 
-                data.results.forEach(component => {
-                    tableContent += `
-            <tr>
-                <td style="font-family: Arial, sans-serif; font-size: 14px;"><input type="checkbox" name="selected_components" value="${component.id}" /></td>
-                <td style="font-family: Arial, sans-serif; font-size: 14px;">${component.part_no}</td>
-                <td style="font-family: Arial, sans-serif; font-size: 14px;">${component.description}</td>
-                <td style="font-family: Arial, sans-serif; font-size: 14px;">${component.product_type}</td>
-                <td style="font-family: Arial, sans-serif; font-size: 14px;">${component.unit_total_cost !== null ? '$' + parseFloat(component.unit_total_cost).toFixed(2) : 'Not Available'}</td>
-                <td style="font-family: Arial, sans-serif; font-size: 14px;"><input type="number" name="component_qty_${component.id}" value="1" min="0" step="0.001" style="width: 80px; height: 25px;" /></td>
-            </tr>
-        `;
+                data.results.forEach(function (component) {
+                    tableContent +=
+                        '<tr>' +
+                        '<td style="font-family: Arial, sans-serif; font-size: 14px;"><input type="checkbox" name="selected_components" value="' +
+                        component.id +
+                        '" /></td>' +
+                        '<td style="font-family: Arial, sans-serif; font-size: 14px;">' +
+                        escapeHtml(component.part_no) +
+                        '</td>' +
+                        '<td style="font-family: Arial, sans-serif; font-size: 14px;">' +
+                        escapeHtml(component.description) +
+                        '</td>' +
+                        '<td style="font-family: Arial, sans-serif; font-size: 14px;">' +
+                        escapeHtml(component.product_type) +
+                        '</td>' +
+                        '<td style="font-family: Arial, sans-serif; font-size: 14px;">' +
+                        (component.unit_total_cost !== null ? '$' + parseFloat(component.unit_total_cost).toFixed(2) : 'Not Available') +
+                        '</td>' +
+                        '<td style="font-family: Arial, sans-serif; font-size: 14px;"><input type="number" name="component_qty_' +
+                        component.id +
+                        '" value="1" min="0" step="0.001" style="width: 80px; height: 25px;" /></td>' +
+                        '</tr>';
                 });
 
                 tableContent += '</table>';
-                tableContent += '<div style="margin-top: 10px;"><button type="button" class="btn btn-primary" onclick="submitComponents()">Add Selected Components</button></div>';
+                tableContent +=
+                    '<div style="margin-top: 10px;"><button type="button" class="btn btn-primary" onclick="submitComponents()">Add Selected Components</button></div>';
                 resultsContainer.innerHTML = tableContent;
-
             } else {
-                resultsContainer.innerHTML = '<table class="ViewTable" style="border: none"><tr style="border: none"><td colspan="6" class="table-title" style="border: none">No products were found.</td></tr></table>';
+                resultsContainer.innerHTML =
+                    '<table class="ViewTable" style="border: none"><tr style="border: none"><td colspan="6" class="table-title" style="border: none">No products were found.</td></tr></table>';
             }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(function (error) {
+            console.error('Error:', error);
+        });
+}
+
+function escapeHtml(text) {
+    if (text == null || text === '') return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function toggleAllComponents(checkbox) {
     const componentCheckboxes = document.querySelectorAll('input[name="selected_components"]');
-    componentCheckboxes.forEach(cb => {
+    componentCheckboxes.forEach(function (cb) {
         cb.checked = checkbox.checked;
     });
 }
 
 function submitComponents() {
-    const selectedComponents = Array.from(document.querySelectorAll('input[name="selected_components"]:checked'))
-        .map(input => {
-            const componentId = input.value;
-            const qtyInput = document.querySelector(`input[name="component_qty_${componentId}"]`);
-            const qty = qtyInput ? parseFloat(qtyInput.value) || 1 : 1;
-            return { id: componentId, qty: qty };
-        });
-        
-    const productIdElement = document.getElementById('product-id');
-    if (!productIdElement) {
-        alert('Product ID element not found. Please refresh the page and try again.');
-        return;
-    }
-    
-    const productIdText = productIdElement.textContent;
-        const productId = parseInt(productIdText.split(':')[1].trim(), 10);
+    const selectedComponents = Array.from(document.querySelectorAll('input[name="selected_components"]:checked')).map(function (input) {
+        const componentId = input.value;
+        const qtyInput = document.querySelector('input[name="component_qty_' + componentId + '"]');
+        const qty = qtyInput ? parseFloat(qtyInput.value) || 1 : 1;
+        return { id: componentId, qty: qty };
+    });
 
-    console.log('Product ID:', productId);
-    console.log('Selected Components:', selectedComponents);
+    const productId = getProductPk();
 
-    if (!productId || selectedComponents.length === 0) {
+    if (!Number.isFinite(productId) || productId < 1 || selectedComponents.length === 0) {
         alert('Please select a valid product and at least one component.');
         return;
     }
 
     const requestData = {
-        'product_id': productId,
-        'components': selectedComponents
+        product_id: productId,
+        components: selectedComponents
     };
-    
-    console.log('Request data:', requestData);
-    console.log('CSRF Token:', getCookie('csrftoken'));
 
     fetch('/product/add_components/', {
         method: 'POST',
@@ -141,36 +261,30 @@ function submitComponents() {
         },
         body: JSON.stringify(requestData)
     })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Update the hidden components field to preserve selections during form submission
-                const componentsField = document.getElementById('components_field');
-                if (componentsField) {
-                    // Get current components and add new ones
-                    const currentComponents = componentsField.value ? componentsField.value.split(',').filter(id => id.trim()) : [];
-                    const newComponentEntries = selectedComponents.map(comp => `${comp.id}:${comp.qty}`);
-                    const newComponents = [...new Set([...currentComponents, ...newComponentEntries])];
-                    componentsField.value = newComponents.join(',');
-                }
-                
-                // Show detailed success message
-                let message = 'Components processed successfully!';
-                if (data.added && data.added.length > 0) {
-                    message += '\n\nAdded: ' + data.added.join(', ');
-                }
-                if (data.skipped && data.skipped.length > 0) {
-                    message += '\n\nQuantity Added: ' + data.skipped.join(', ');
-                }
-                alert(message);
-                
-                // Refresh the page to show updated components
-                location.reload();
-            } else {
-                alert('Failed to add components: ' + (data.error || 'Unknown error'));
+        .then(function (response) {
+            return response.json().then(function (data) {
+                return { ok: response.ok, status: response.status, data: data };
+            });
+        })
+        .then(function (result) {
+            const data = result.data;
+            if (!result.ok || !data.success) {
+                alert('Failed to add components: ' + (data && data.error ? data.error : 'HTTP ' + result.status));
+                return;
+            }
+
+            renderSelectedComponents(data.selected_components);
+            if (data.components_hidden != null) {
+                setComponentsHidden(data.components_hidden);
+            }
+            clearComponentSearchSelection();
+
+            const tb = document.getElementById('selected-components-tbody');
+            if (tb && tb.scrollIntoView) {
+                tb.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
         })
-        .catch(error => {
+        .catch(function (error) {
             console.error('Error:', error);
             alert('Failed to add components: ' + error.message);
         });
@@ -182,7 +296,7 @@ function getCookie(name) {
         const cookies = document.cookie.split(';');
         for (let i = 0; i < cookies.length; i++) {
             const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            if (cookie.substring(0, name.length + 1) === name + '=') {
                 cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                 break;
             }
@@ -190,4 +304,3 @@ function getCookie(name) {
     }
     return cookieValue;
 }
-

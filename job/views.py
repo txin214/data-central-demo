@@ -4,7 +4,8 @@ from .utils import update_page_numbers, format_currency, group_line_items_by_cat
 from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
 from django.contrib import messages
-from django.db.models import Q
+from django.db.models import Q, Sum, F, Value, DecimalField
+from django.db.models.functions import Coalesce
 from django.http import JsonResponse, HttpResponseRedirect
 from django.views.decorators.http import require_POST, require_GET
 from django.utils.decorators import method_decorator
@@ -2098,20 +2099,36 @@ class JobDetailUpdateView(DetailView):
         context['google_maps_api_key'] = getattr(settings, 'GOOGLE_MAPS_API_KEY', '')
         context['google_places_api_key'] = getattr(settings, 'GOOGLE_PLACES_API_KEY', '')
         
+        # Add JOB_SUFFIX_CHOICES for the job code suffix dropdown
+        context['job_suffix_choices'] = Job.JOB_SUFFIX_CHOICES
+        
         return context
     
     def post(self, request, *args, **kwargs):
         """Handle form submission for updates."""
         self.object = self.get_object()
         form = JobForm(request.POST, instance=self.object)
-        
+
         if form.is_valid():
             job_instance = form.save(commit=False)
-            
-            # Handle job_code update if provided (from the editable letter field)
-            if 'job_code' in request.POST and request.POST['job_code']:
-                job_instance.job_code = request.POST['job_code']
-            
+
+            # Handle job_code update from prefix + suffix
+            job_code_suffix = request.POST.get('job_code_suffix', '')
+            if job_code_suffix:
+                # Ensure customer has cust_code
+                if not job_instance.customer.cust_code:
+                    job_instance.customer.save()
+                    job_instance.customer.refresh_from_db()
+
+                cust_code = job_instance.customer.cust_code if job_instance.customer.cust_code else "XXXXX"
+                job_instance.job_code = f"{cust_code}-{job_code_suffix}"
+            else:
+                # If no suffix, just use the customer code
+                if not job_instance.customer.cust_code:
+                    job_instance.customer.save()
+                    job_instance.customer.refresh_from_db()
+                job_instance.job_code = job_instance.customer.cust_code
+
             job_instance.save()
             messages.success(request, 'Job updated successfully!')
             return redirect('job:job_detail', pk=self.object.pk)
@@ -2382,8 +2399,12 @@ def job_sitework_view(request, job_id):
     """Main sitework view for a job - shows existing sitework quotes."""
     job = get_object_or_404(Job, id=job_id)
     
-    # Fetch all sitework quotes for listing
-    sitework_quotes = SiteworkQuote.objects.filter(job=job).order_by('-quotedate')
+    # Fetch all sitework quotes for listing (line price sums = subtotal for list display)
+    sitework_quotes = (
+        SiteworkQuote.objects.filter(job=job)
+        .annotate(subtotal_sum=Sum('sql_quotes__price'))
+        .order_by('-quotedate')
+    )
     
     return render(request, 'job/job_sitework_manage.html', {
         'job': job,
@@ -3451,12 +3472,8 @@ def ajax_search_jobs(request):
                 Q(customer__first_name__icontains=query) |
                 Q(customer__last_name__icontains=query)
             )
-        elif search_type == 'invoice_number':
-            # Placeholder for future invoice number search
-            jobs = jobs.none()
-        elif search_type == 'po_number':
-            # Placeholder for future PO number search
-            jobs = jobs.none()
+        else:
+            jobs = jobs.filter(Q(job_code__icontains=query))
     
     # Pagination for search results
     paginator = Paginator(jobs, 20)  # 20 items per page
@@ -3521,6 +3538,7 @@ def job_customer_detail(request, job_id):
     expected_cust_code = f"{last_name_part}{first_name_part}"
     
     # Update cust_code if it doesn't match or doesn't exist
+    print(f"Customer: Expected cust_code: {expected_cust_code} vs customer.cust_code {customer.cust_code}")
     if not customer.cust_code or customer.cust_code != expected_cust_code:
         customer.cust_code = expected_cust_code
         customer.save(update_fields=['cust_code'])
@@ -4011,7 +4029,21 @@ def delete_product_from_quote(request, job_id, quote_id, line_item_id):
 def job_purchase_orders(request, job_id):
     """View to list all purchase orders for a job."""
     job = get_object_or_404(Job, id=job_id)
-    purchase_orders = job.purchase_orders.all().select_related('vendor', 'location').order_by('vendor__vendor_name', '-created_at')
+    purchase_orders = (
+        job.purchase_orders.all()
+        .select_related('vendor', 'location')
+        .annotate(
+            subtotal_sum=Sum(
+                F('items__quantity')
+                * Coalesce(
+                    F('items__cost'),
+                    Value(0, output_field=DecimalField(max_digits=10, decimal_places=2)),
+                ),
+                output_field=DecimalField(max_digits=14, decimal_places=2),
+            )
+        )
+        .order_by('vendor__vendor_name', '-created_at')
+    )
     
     context = {
         'job': job,

@@ -7,6 +7,11 @@ from smart_selects.db_fields import ChainedForeignKey
 from django.utils.timezone import now
 
 
+PRODUCT_COSTPOOL_DEFAULT_RETAIL_MULTIPLIER = Decimal('0.6')
+PRODUCT_COSTPOOL_DEFAULT_BUILDER_MULTIPLIER = Decimal('0.7')
+PRODUCT_COSTPOOL_DEFAULT_SURPLUS_MULTIPLIER = Decimal('1')
+
+
 def product_image_upload_to(instance, filename):
     """
     Custom upload_to function for ProductImage.
@@ -330,6 +335,7 @@ class CostPool(models.Model):
     
 class Product(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+    legacy_product_id = models.IntegerField(null=True, blank=True, db_index=True)
     category = models.ForeignKey(ProductCategory, on_delete=models.CASCADE, null=True, blank=True)
     sub_category1 = ChainedForeignKey(
         ProductSubCategory1,
@@ -506,17 +512,34 @@ class Product(models.Model):
         else:
             return False, None, 'no_match'
 
+    def apply_cost_pool_multipliers(self):
+        """
+        Align sell multipliers with CostPool taxonomy (linked pool or matched pool).
+        When no CostPool matches, use 0.6 / 0.7 / 1.
+
+        Does not change retail_sell, builder_sell, or surplus_sell — entered prices
+        stay as authoritative; the multiplier fields drive the algo when prices are blank
+        (see ProductForm.clean).
+        """
+        if getattr(self, 'cost_pool_id', None):
+            self.sync_multipliers_from_cost_pool()
+            return
+
+        ok, _, _ = self.link_to_matching_cost_pool()
+        if ok:
+            self.sync_multipliers_from_cost_pool()
+            return
+
+        self.retail_sell_multiplier = PRODUCT_COSTPOOL_DEFAULT_RETAIL_MULTIPLIER
+        self.builder_sell_multiplier = PRODUCT_COSTPOOL_DEFAULT_BUILDER_MULTIPLIER
+        self.surplus_sell_multiplier = PRODUCT_COSTPOOL_DEFAULT_SURPLUS_MULTIPLIER
+
     def save(self, *args, **kwargs):
         if not self.pk and not self.date_entered:  
             self.date_entered = now()
         
-        # Auto-link to CostPool if not already linked
-        if not self.cost_pool:
-            success, cost_pool, match_type = self.link_to_matching_cost_pool()
-            if success:
-                # Sync multipliers from the linked CostPool
-                self.sync_multipliers_from_cost_pool()
-        
+        self.apply_cost_pool_multipliers()
+
         # Always update the date_updated field when saving
         self.date_updated = now()
         

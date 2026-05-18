@@ -2,24 +2,25 @@
 {% load static %}
 
 {% block job_content %}
-<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.1">
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.2">
 <link rel="stylesheet" type="text/css" href="{% static 'job/css/job_forms.css' %}?v=1.0">
 
     <div class="table-responsive mt-3">
-        <table class="table table-bordered table-hover align-middle mb-0">
+        <table class="table table-bordered table-hover align-middle mb-0 job-sitework-table">
             <thead class="sticky-header">
                 <tr>
                     <th>Customer</th>
                     <th>Quote Date</th>
                     <th>Description</th>
+                    <th>Subtotal</th>
                     <th>Status</th>
                     <th>Market</th>
-                    <th colspan="5" class="text-center bg-light">More</th>
+                    <th class="text-center bg-light">More</th>
                 </tr>
             </thead>
             <tbody>
                 <tr class="border-top-0 border-bottom-0">
-                    <td colspan="6" class="border-top-0 border-bottom-0 py-2">
+                    <td colspan="7" class="border-top-0 border-bottom-0 py-2">
                         <a href="{% url 'job:job_sitework_create' job.id %}" class="btn btn-sm btn-success">
                             <i class="fas fa-plus me-1"></i>
                             Add Sitework Quote
@@ -38,6 +39,7 @@
                                 <span class="badge bg-warning text-dark ms-1">Primary</span>
                             {% endif %}
                         </td>
+                        <td class="text-end">{{ sitework_quote.subtotal_sum|default_if_none:0|floatformat:2 }}</td>
                         <td>{{ sitework_quote.status }}</td>
                         <td>{{ sitework_quote.market }}</td>
                         <td>
@@ -72,7 +74,7 @@
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="6" class="text-center text-muted py-3">
+                        <td colspan="7" class="text-center text-muted py-3">
                             &nbsp;
                         </td>
                     </tr>

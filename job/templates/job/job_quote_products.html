@@ -2,9 +2,6 @@
 
 {% block job_content %}
 {% load static %}
-<div class="mt-3 mb-2">
-    <a href="{% url 'job:job_product_quote_update_specific' job.id product_quote.id %}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Quote Details</a>
-</div>
 <style>
 .product-img-thumb {
     width: 36px;
@@ -40,6 +37,15 @@
 }
 .table {
     font-size: 13px;
+}
+.quote-products-card {
+    border-bottom: 0 !important;
+}
+.quote-products-card .quote-products-table tfoot tr:last-child > * {
+    border-bottom: 1px solid #dee2e6 !important;
+}
+.quote-products-card .quote-products-table {
+    margin-bottom: 0 !important;
 }
 .adhoc-bar .form-control,
 .adhoc-bar .form-select {
@@ -136,17 +142,16 @@
         </div>
     </div>
 </div>
+</div>
 
 <!-- Products in Quote Section -->
-<div class="container-fluid px-0">
-        <div class="card mb-3">
+<div class="card mb-3 quote-products-card">
             <div class="card-header">
                 <h6 class="mb-0">{% if product_quote.name %}Products in {{ product_quote.name }}{% else %}Products in Quote{% endif %}</h6>
             </div>
             {% if line_items_with_images or adhoc_line_items %}
-            <div class="card-body">
-                <div id="adhocProductsContainer" class="table-responsive">
-                    <table class="table table-bordered table-hover align-middle mb-0" style="max-width: 100%;">
+            <div id="adhocProductsContainer" class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 quote-products-table" style="max-width: 100%;">
                         <thead class="sticky-header">
                             <tr style="background-color: #f2f2f2;">
                                 <th>Type</th>
@@ -256,13 +261,19 @@
                             </tr>
                             {% endfor %}
                         </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="12" class="text-end bg-light">
+                                    <strong>Quote Total:</strong>
+                                    <span class="fs-6 fw-bold text-success ms-2" id="quoteTotalDisplay">${{ product_quote.subtotal|floatformat:2 }}</span>
+                                </td>
+                            </tr>
+                        </tfoot>
                     </table>
-                </div>
             </div>
             {% else %}
-            <!-- Quick Navigation Card -->
-            <div class="card-body border-bottom">
-                <div class="d-flex gap-2 flex-wrap">
+            <div class="card-body">
+                <div class="d-flex gap-2 flex-wrap mb-3">
                     <a href="{% url 'product:product_quote_list' %}" class="btn btn-sm btn-outline-primary">
                         <i class="fas fa-list"></i> All Quotes
                     </a>
@@ -273,25 +284,18 @@
                         <i class="fas fa-external-link-alt"></i> Full Quote View
                     </a>
                 </div>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info">
+                <div class="alert alert-info mb-0">
                     <h5>No products in this quote yet.</h5>
                     <p class="mb-0">Use the search section above to find and add products to your quote.</p>
                 </div>
             </div>
             {% endif %}
-        </div>
-        
-        <!-- Quote Total Display -->
-        <div class="alert mb-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <strong>Quote Total:</strong>
-                    <span class="fs-5 fw-bold text-success ms-2" id="quoteTotalDisplay">${{ product_quote.subtotal|floatformat:2 }}</span>
-                </div>
-            </div>
-        </div>
+</div>
+
+<div class="mt-2 mb-3 text-start">
+    <a href="{% url 'job:job_product_quote_update_specific' job.id product_quote.id %}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Back to Quote Details
+    </a>
 </div>
 
 <!-- Confirmation Modal -->
@@ -626,7 +630,7 @@ function addAdhocItemToTable(data) {
     // If no table exists, create a unified quote table skeleton
     if (!tableBody) {
         const tableHTML = `
-            <table class="table table-bordered table-hover align-middle mb-0" style="max-width: 100%;">
+            <table class="table table-hover align-middle mb-0 quote-products-table" style="max-width: 100%;">
                 <thead class="sticky-header">
                     <tr style="background-color: #f2f2f2;">
                         <th>Type</th>
@@ -645,6 +649,14 @@ function addAdhocItemToTable(data) {
                 </thead>
                 <tbody id="quoteProductsTableBody"></tbody>
                 <tbody id="adhocProductsTableBody"></tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="12" class="text-end bg-light">
+                            <strong>Quote Total:</strong>
+                            <span class="fs-6 fw-bold text-success ms-2" id="quoteTotalDisplay">${{ product_quote.subtotal|floatformat:2 }}</span>
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
         `;
         container.innerHTML = tableHTML;

@@ -1,4 +1,4 @@
 #!/bin/sh
-cd /Users/bill/Projects/DC1/AllenKit-dc
+cd /Users/bill/Projects/DC2/AllenKit-dc
 source venv/bin/activate && redis-server
 

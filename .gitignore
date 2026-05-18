@@ -25,6 +25,7 @@ wheels/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+allenkit_db.dump
 
 # Media and static files
 # /media/  # Commented out to allow pushing product images to GitHub

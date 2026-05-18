@@ -25,6 +25,20 @@ class CustomerCreateView(LoginRequiredMixin, CreateView):
     model = Customer
     form_class = CustomerForm
     success_url = reverse_lazy('crm:list_customer')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from job.models import Job
+        job_id = self.request.GET.get('job_id')
+        if job_id:
+            try:
+                context['job'] = Job.objects.get(id=job_id)
+            except Job.DoesNotExist:
+                context['job'] = None
+        else:
+            context['job'] = None
+        context['action'] = 'Create'
+        return context
     
     def form_valid(self,form):
         form.save(commit=True)
@@ -66,13 +80,27 @@ class CustomerDetailView(LoginRequiredMixin, DetailView):
 
 class CustomerUpdateView(LoginRequiredMixin, UpdateView):
     model = Customer
-    fields = "__all__"
+    form_class = CustomerForm
     success_url = reverse_lazy('crm:list_customer')
     
     def get_object(self, queryset=None):
         """Override to use uuid instead of pk"""
         uuid = self.kwargs.get('pk')
         return Customer.objects.get(uuid=uuid)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from job.models import Job
+        job_id = self.request.GET.get('job_id')
+        if job_id:
+            try:
+                context['job'] = Job.objects.get(id=job_id)
+            except Job.DoesNotExist:
+                context['job'] = None
+        else:
+            context['job'] = None
+        context['action'] = 'Update'
+        return context
 
 class CustomerDeleteView(LoginRequiredMixin, UpdateView):
     model = Customer

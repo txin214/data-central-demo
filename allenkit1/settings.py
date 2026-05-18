@@ -111,6 +111,7 @@ INSTALLED_APPS = [
     'product.apps.ProductConfig',
     'job.apps.JobConfig',
     'accounts.apps.AccountsConfig',
+    'dashboard.apps.DashboardConfig',
     'import_export',
     'django.contrib.admin',
     'django.contrib.auth',

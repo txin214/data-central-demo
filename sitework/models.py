@@ -1,5 +1,6 @@
 # sitework/models.py
 from django.db import models
+from django.contrib import admin
 from django.db.models import Prefetch
 from django.db.models import Q
 from datetime import datetime
@@ -100,7 +101,15 @@ class SiteworkSubCatImage(models.Model):
         elif self.doc:
             return self.doc.url  # "/media/sitework_images/name.pdf"
         return ""
-
+    
+    @admin.display(description='Sitework SubCategory')
+    def get_calckey(self):
+        print(f"get_calckey: {self.calckey}")
+        s=SiteworkSubCat.objects.filter(calckey=self.calckey).first()
+        print(s)
+        # Find the SiteworkSubCat that matches this image's calckey
+        return f'{self.calckey}: {s}'
+    
     def __str__(self):
         if self.image:
             return f'{self.desc} : {self.calckey} Image'

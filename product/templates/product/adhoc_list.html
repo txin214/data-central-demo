@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/pagination.css' %}">
 <link rel="stylesheet" href="{% static 'css/table_styles.css' %}">
 {% endblock %}
 
@@ -91,7 +92,7 @@
                     <th>Cost</th>
                     <th>Retail Price</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th>More</th>
                 </tr>
             </thead>
             <tbody>
@@ -109,13 +110,7 @@
                                     <strong>{{ adhoc.part_no }}</strong>
                                 </td>
                                 <td>{{ adhoc.description }}</td>
-                                <td>
-                                    {% if adhoc.category %}
-                                        <span class="badge bg-info">{{ adhoc.category.product_category }}</span>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
+                                <td>{% if adhoc.category %}{{ adhoc.category.product_category }}{% else %}Other{% endif %}</td>
                                 <td>
                                     {% if adhoc.manufacturer %}
                                         {{ adhoc.manufacturer.manufacturer_name }}
@@ -132,9 +127,9 @@
                                 </td>
                                 <td>{% if adhoc.cost and adhoc.cost != 0 %}${{ adhoc.cost|floatformat:2 }}{% else %}-{% endif %}</td>
                                 <td>{% if adhoc.retail_price and adhoc.retail_price != 0 %}${{ adhoc.retail_price|floatformat:2 }}{% else %}-{% endif %}</td>
-                                <td>{% if adhoc.status %}Active{% else %}Inactive{% endif %}</td>
+                                <td>{% if adhoc.status %}A{% else %}I{% endif %}</td>
                                 <td>
-                                    <a href="{% url 'admin:product_adhoc_change' adhoc.id %}" class="btn btn-sm btn-outline-warning" target="_blank">Edit</a>
+                                    <a href="{% url 'admin:product_adhoc_change' adhoc.id %}" class="btn btn-sm btn-outline-info" target="_blank">Edit</a>
                                     <a href="#" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteAdhoc({{ adhoc.id }}, '{{ adhoc.part_no }}'); return false;">Delete</a>
                                 </td>
                             </tr>

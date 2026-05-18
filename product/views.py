@@ -387,6 +387,7 @@ class ProductDuplicateUpdateView(LoginRequiredMixin, ImageHandlingMixin, Breadcr
         
         primary_image = original_product.images.filter(is_primary=True).first()
         context['primary_image'] = primary_image
+        context['product'] = self.object
         return context
 
     def get_breadcrumbs(self):
@@ -510,9 +511,10 @@ class ProductUpdateView2(LoginRequiredMixin, ImageHandlingMixin, BreadcrumbMixin
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['product_id'] = self.object.id
-        context['action'] = 'Update'  
-        
-        product = self.object  
+        context['action'] = 'Update'
+        context['product'] = self.object
+
+        product = self.object
         # Get finishes related to this product's category/subcategories
         finishes = Finish.objects.filter(
             category=product.category,
@@ -1396,6 +1398,30 @@ def remove_component(request):
 
     return JsonResponse({'success': False}, status=400)
 
+def _serialize_assembly_components(product):
+    """Build JSON rows + hidden field value for the Edit Product components tab."""
+    from .models import ProductComponent
+    rows = []
+    hidden_parts = []
+    for pc in (
+        ProductComponent.objects.filter(product=product)
+        .select_related('component')
+        .order_by('component__part_no')
+    ):
+        c = pc.component
+        rows.append({
+            'component_id': c.id,
+            'part_no': c.part_no or '',
+            'description': c.description or '',
+            'product_type': c.product_type or '',
+            'unit_total_cost': float(c.unit_total_cost) if c.unit_total_cost is not None else None,
+            'qty': str(pc.component_qty),
+        })
+        hidden_parts.append(f'{c.id}:{pc.component_qty}')
+    hidden = ','.join(hidden_parts) if hidden_parts else 'none'
+    return rows, hidden
+
+
 @csrf_exempt
 def add_components(request):
     if request.method == 'POST':
@@ -1407,59 +1433,97 @@ def add_components(request):
             return JsonResponse({'success': False, 'error': 'Invalid product or component data'}, status=400)
 
         try:
-            product = get_object_or_404(Product, id=product_id)
+            try:
+                product_id = int(product_id)
+            except (TypeError, ValueError):
+                return JsonResponse({'success': False, 'error': 'Invalid product id'}, status=400)
+
+            try:
+                product = Product.objects.get(id=product_id)
+            except Product.DoesNotExist:
+                return JsonResponse(
+                    {'success': False, 'error': 'No Product matches the given query.'},
+                    status=404,
+                )
+
             from .models import ProductComponent
-            from django.db import IntegrityError
-            
+
             added_components = []
             skipped_components = []
-            
+
             for component_data in components_data:
                 if isinstance(component_data, dict):
-                    component_id = component_data.get('id')
-                    qty = component_data.get('qty', 1)
+                    raw_id = component_data.get('id')
+                    qty_raw = component_data.get('qty', 1)
                 else:
-                    # Handle legacy format where components_data might be a list of IDs
-                    component_id = component_data
-                    qty = 1
-                
-                if component_id:
-                    component = get_object_or_404(Product, id=component_id)
-                    
-                    # Check if this component is already added to this product
-                    existing_component = ProductComponent.objects.filter(
-                        product=product, 
-                        component=component
-                    ).first()
-                    
-                    if existing_component:
-                        # Add to existing quantity if component already exists
-                        old_qty = existing_component.component_qty
-                        existing_component.component_qty += qty
-                        existing_component.save()
-                        skipped_components.append(f"{component.part_no} (added {qty} to existing {old_qty}, new total: {existing_component.component_qty})")
-                    else:
-                        # Create new component relationship
-                        ProductComponent.objects.create(
-                            product=product, 
-                            component=component, 
-                            component_qty=qty
-                        )
-                        added_components.append(component.part_no)
-            
-            response_data = {'success': True}
+                    raw_id = component_data
+                    qty_raw = 1
+
+                try:
+                    component_id = int(raw_id)
+                except (TypeError, ValueError):
+                    continue
+
+                try:
+                    qty = Decimal(str(qty_raw))
+                except Exception:
+                    qty = Decimal('1')
+                if qty <= 0:
+                    continue
+
+                try:
+                    component = Product.objects.get(id=component_id)
+                except Product.DoesNotExist:
+                    return JsonResponse(
+                        {'success': False, 'error': f'No product found for component id {component_id}.'},
+                        status=400,
+                    )
+
+                if component_id == product_id:
+                    return JsonResponse(
+                        {'success': False, 'error': 'A product cannot be a component of itself.'},
+                        status=400,
+                    )
+
+                existing_component = ProductComponent.objects.filter(
+                    product=product,
+                    component=component,
+                ).first()
+
+                if existing_component:
+                    old_qty = existing_component.component_qty
+                    existing_component.component_qty += qty
+                    existing_component.save()
+                    skipped_components.append(
+                        f'{component.part_no} (+{qty} to existing {old_qty}, total {existing_component.component_qty})'
+                    )
+                else:
+                    ProductComponent.objects.create(
+                        product=product,
+                        component=component,
+                        component_qty=qty,
+                    )
+                    added_components.append(component.part_no)
+
+            rows, hidden = _serialize_assembly_components(product)
+            response_data = {
+                'success': True,
+                'selected_components': rows,
+                'components_hidden': hidden,
+            }
             if added_components:
                 response_data['added'] = added_components
             if skipped_components:
                 response_data['skipped'] = skipped_components
-                
+
             return JsonResponse(response_data)
-            
+
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
     return JsonResponse({'success': False}, status=400)
 
+@login_required
 def product_quote_list(request):
     """View to list product quotes with the option to use original or current prices."""
     from crm.models import Customer
@@ -2601,10 +2665,13 @@ def ajax_filter_costpools(request):
     paginator = Paginator(queryset, 16)
     costpools_page = paginator.get_page(page)
     
-    # Generate HTML for filtered results
-    html = render_to_string('product/_costpool_table_rows.html', {
-        'costpools': costpools_page
-    })
+    # Generate HTML for filtered results (first row matches product list style)
+    add_row_html = render_to_string('product/_costpool_add_costpool_row.html')
+    rows_html = render_to_string(
+        'product/_costpool_table_rows.html',
+        {'costpools': costpools_page},
+    )
+    html = add_row_html + rows_html
     
     # Generate pagination HTML
     pagination_html = render_to_string('product/_costpool_pagination.html', {

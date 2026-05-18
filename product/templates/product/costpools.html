@@ -1,5 +1,9 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/pagination.css' %}">
+<link rel="stylesheet" href="{% static 'css/table_styles.css' %}">
 <style>
     .sticky-header th {
         position: sticky;
@@ -79,9 +83,15 @@
     .notification .close-btn:hover {
         opacity: 1;
     }
+    .table-responsive {
+        overflow-x: auto;
+        padding-right: 0;
+    }
+    .table th, .table td {
+        white-space: nowrap;
+    }
 </style>
 {% endblock %}
-{% load static %}
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -90,7 +100,6 @@
             <h2 class="fw-bold mb-0" style="font-size: 2rem;">Cost Pools</h2>
         </div>
         <div class="d-flex gap-2">
-            <a href="{% url 'product:create_costpool' %}" class="btn btn-outline-primary btn-sm">+ Cost Pool</a>
             <button class="btn btn-outline-secondary btn-sm">Import</button>
         </div>
     </div>
@@ -125,7 +134,7 @@
         </div>
         <div class="row mt-2">
             <div class="col-md-6">
-                <button id="clear-filters" class="btn btn-outline-secondary btn-sm">Clear All Filters</button>
+                <button id="clear-filters" class="btn btn-outline-secondary btn-sm"><i class="fa fa-refresh me-1"></i>Clear Filters</button>
                 <span id="filter-results-count" class="ms-3 text-muted small"></span>
             </div>
             <div class="col-md-6">
@@ -167,11 +176,12 @@
                 </tr>
             </thead>
             <tbody id="costpool-table-body">
+                {% include 'product/_costpool_add_costpool_row.html' %}
                 {% for costpool in costpools %}
                 <tr>
                     <td>{{ costpool.id }}</td>
                     <td>{{ costpool.manufacturer.manufacturer_name }}</td>
-                    <td>{{ costpool.category.product_category }}</td>
+                    <td>{% if costpool.category %}{{ costpool.category.product_category }}{% else %}Other{% endif %}</td>
                     <td>{{ costpool.sub_category1.product_sub_category }}</td>
                     <td>{{ costpool.sub_category2.product_sub_category2|default:'-' }}</td>
                     <td>{{ costpool.retail }}</td>
@@ -207,7 +217,8 @@ let currentSortDirection = 'asc';
 
 function sortCostPools(field) {
     const tbody = document.getElementById('costpool-table-body');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const addRowEl = tbody.querySelector('.costpool-add-row');
+    const rows = Array.from(tbody.querySelectorAll('tr:not(.costpool-add-row)'));
     
     // Remove existing sort classes
     document.querySelectorAll('.sortable-header').forEach(header => {
@@ -252,7 +263,11 @@ function sortCostPools(field) {
         }
     });
     
-    // Re-append sorted rows
+    // Re-append: Add Cost Pool row first, then sorted data rows
+    tbody.innerHTML = '';
+    if (addRowEl) {
+        tbody.appendChild(addRowEl);
+    }
     rows.forEach(row => tbody.appendChild(row));
 }
 

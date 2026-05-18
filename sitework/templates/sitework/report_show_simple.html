@@ -25,9 +25,9 @@
       <div class="row py-1">
         <div class="col-12">{{ row.desc }}</div>
       </div>
-      {% if row.note %}
+      {% if row.note %} <!-- no indent for the notes on this report -->
         <div class="row">
-          <div class="col-12 text-start fs-8"><small>{{ row.note }}</small></div>
+          <div class="col-11 text-start fs-8"><small>{{ row.note }}</small></div>
         </div>
       {% endif %}
 

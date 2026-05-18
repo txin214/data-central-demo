@@ -202,6 +202,7 @@ class JobForm(forms.ModelForm):
             status='A',
             name__in=required_job_types
         ).order_by('name')
+        self.fields['customer'].queryset = Customer.objects.all().order_by('last_name', 'first_name')
         self.fields['storelocation'].queryset = StoreLocation.objects.all().order_by('name')
         self.fields['county'].queryset = County.objects.all().order_by('name')
         

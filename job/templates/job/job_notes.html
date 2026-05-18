@@ -2,18 +2,18 @@
 {% load static %}
 
 {% block job_content %}
-<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.1">
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.3">
 <link rel="stylesheet" type="text/css" href="{% static 'job/css/job_forms.css' %}?v=1.0">
 
     <!-- Notes List -->
     <div class="table-responsive mt-3">
-        <table class="table table-bordered table-hover align-middle mb-0">
+        <table class="table table-bordered table-hover align-middle mb-0 job-notes-table">
             <thead class="sticky-header">
                 <tr>
                     <th style="width: 15%;">Entered</th>
                     <th style="width: 50%;">Note</th>
                     <th style="width: 20%;">Follow Up</th>
-                    <th colspan="6" class="text-center bg-light" style="width: 15%;">More</th>
+                    <th class="text-center bg-light" style="width: 15%;">More</th>
                 </tr>
             </thead>
             <tbody>

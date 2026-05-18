@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django import forms
 from django.forms import inlineformset_factory
 from .models import Color, Finish, Manufacturer, Product, ProductCategory, ProductQuote, ProductSubCategory1, ProductSubCategory2, ProductAccessory, ProductImage, Vendor, AdHoc, CostPool
@@ -28,6 +28,11 @@ class ProductForm(forms.ModelForm):
                              widget=forms.ClearableFileInput(attrs={'allow_multiple_selected': True}))
     primary_image = forms.ChoiceField(required=False, label="Set Primary Image",
                                       widget=forms.RadioSelect, choices=[])
+    # Assembly links are stored as ProductComponent rows; POST uses id:qty,id:qty (not a plain M2M list).
+    components = forms.CharField(
+        required=False,
+        widget=forms.HiddenInput(attrs={'id': 'components_field'}),
+    )
 
     class Meta:
         model = Product
@@ -37,7 +42,7 @@ class ProductForm(forms.ModelForm):
                   'unit_total_cost', 'bulk_material_cost', 'bulk_qty', 'bulk_lead_time', 'bulk_labor_cost', 
                   'bulk_total_cost', 'retail_sell', 'builder_sell', 'surplus_sell', 'upc', 'product_lbl',
                   'status', 'component_level', 'product_type', 'unit_base_cost', 'date_entered','date_updated',
-                  'unit_top_install_minutes', 'accessories', 'components','retail_sell_multiplier', 
+                  'unit_top_install_minutes', 'accessories', 'retail_sell_multiplier', 
                   'builder_sell_multiplier', 'surplus_sell_multiplier','website']
         widgets = {
             'date_entered': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
@@ -68,13 +73,7 @@ class ProductForm(forms.ModelForm):
             widget=forms.HiddenInput(),
             initial=[]
         )
-        self.fields['components'] = CustomManyToManyField(
-            queryset=Product.objects.all(),
-            required=False,
-            widget=forms.HiddenInput(),
-            initial=[]
-        )
-        
+
         if not self.instance.pk:
             self.fields['status'].initial = True
             # Set default values for new products
@@ -82,6 +81,14 @@ class ProductForm(forms.ModelForm):
             self.fields['component_level'].initial = 1
             self.fields['product_type'].initial = 'product'
         if self.instance.pk:
+            pcs = list(self.instance.product_components.all())
+            if pcs:
+                self.fields['components'].initial = ','.join(
+                    f'{pc.component_id}:{pc.component_qty}' for pc in pcs
+                )
+            else:
+                self.fields['components'].initial = 'none'
+
             self.fields['primary_image'].choices = [(img.id, img.image.name) for img in self.instance.images.all()]
             # Ensure date fields are properly populated for existing products
             if self.instance.date_entered:
@@ -142,7 +149,7 @@ class ProductForm(forms.ModelForm):
             self.fields[field].widget.attrs.update(attrs)
 
         # Add responsive CSS for all responsive fields
-        responsive_fields = ['manufacturer', 'category', 'sub_category1', 'sub_category2', 'pref_vendor', 'alt_vendor', 'part_no', 'website', 'upc', 'product_lbl', 'description', 'width', 'height', 'depth', 'min_order', 'min_stock', 'unit_total_cost', 'unit_base_cost', 'unit_material_cost', 'bulk_material_cost', 'bulk_qty', 'unit_labor_minutes', 'bulk_labor_cost', 'unit_labor_cost', 'bulk_total_cost', 'unit_top_install_minutes', 'retail_sell', 'builder_sell', 'surplus_sell', 'unit_lead_time', 'bulk_lead_time']
+        responsive_fields = ['manufacturer', 'category', 'sub_category1', 'sub_category2', 'pref_vendor', 'alt_vendor', 'part_no', 'website', 'upc', 'product_lbl', 'description', 'width', 'height', 'depth', 'min_order', 'min_stock', 'unit_total_cost', 'unit_base_cost', 'unit_material_cost', 'bulk_material_cost', 'bulk_qty', 'unit_labor_minutes', 'bulk_labor_cost', 'unit_labor_cost', 'bulk_total_cost', 'unit_top_install_minutes', 'retail_sell', 'builder_sell', 'surplus_sell', 'unit_lead_time', 'bulk_lead_time', 'date_entered', 'date_updated']
         for field in responsive_fields:
             self.fields[field].widget.attrs['style'] += '; box-sizing: border-box;'
             
@@ -183,44 +190,50 @@ class ProductForm(forms.ModelForm):
                 else:
                     instance.accessories.clear()
 
-            # Handle components - this ensures they are preserved during updates
+            # Handle assembly components (ProductComponent); POST field is id:qty,id:qty or none
             if 'components' in self.cleaned_data:
-                # Parse components data that includes quantity information
                 components_data = self.cleaned_data['components']
-                if isinstance(components_data, str) and components_data:
-                    # Parse the format "id:qty,id:qty,..."
-                    component_relationships = []
-                    for component_entry in components_data.split(','):
-                        if ':' in component_entry:
-                            component_id, qty = component_entry.split(':', 1)
-                            try:
-                                component_id = int(component_id.strip())
-                                qty = float(qty.strip())
-                                component_relationships.append((component_id, qty))
-                            except (ValueError, TypeError):
+                if isinstance(components_data, str):
+                    raw = (components_data or '').strip()
+                    if not raw or raw == 'none':
+                        instance.components.clear()
+                    else:
+                        component_relationships = []
+                        for component_entry in raw.split(','):
+                            component_entry = component_entry.strip()
+                            if not component_entry:
                                 continue
-                        else:
-                            # Handle legacy format without quantity
-                            try:
-                                component_id = int(component_entry.strip())
-                                component_relationships.append((component_id, 1))
-                            except (ValueError, TypeError):
+                            if ':' in component_entry:
+                                sid, qty_s = component_entry.split(':', 1)
+                                try:
+                                    cid = int(sid.strip())
+                                    qty_dec = Decimal(qty_s.strip())
+                                    component_relationships.append((cid, qty_dec))
+                                except (ValueError, TypeError, InvalidOperation):
+                                    continue
+                            else:
+                                try:
+                                    component_relationships.append((int(component_entry.strip()), Decimal('1')))
+                                except (ValueError, TypeError):
+                                    continue
+
+                        from .models import ProductComponent
+                        instance.components.clear()
+                        for component_id, qty in component_relationships:
+                            if component_id == instance.pk:
                                 continue
-                    
-                    # Clear existing components and add new ones with quantities
-                    instance.components.clear()
-                    from .models import ProductComponent
-                    for component_id, qty in component_relationships:
-                        try:
-                            component = Product.objects.get(id=component_id)
-                            ProductComponent.objects.create(product=instance, component=component, component_qty=qty)
-                        except Product.DoesNotExist:
-                            continue
+                            try:
+                                component = Product.objects.get(id=component_id)
+                                ProductComponent.objects.create(
+                                    product=instance,
+                                    component=component,
+                                    component_qty=qty,
+                                )
+                            except Product.DoesNotExist:
+                                continue
                 elif isinstance(components_data, list) and components_data:
-                    # Handle case where components is a list of IDs (legacy format)
                     instance.components.set(components_data)
                 else:
-                    # Clear components if no valid data
                     instance.components.clear()
 
             self.save_m2m()
@@ -230,13 +243,11 @@ class ProductForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         
-        # Handle components field - keep as string for the save method to handle
         if 'components' in cleaned_data:
-            components_value = cleaned_data.get('components')
-            if isinstance(components_value, str) and components_value.strip() and components_value != 'none':
-                # Keep as string for the save method to handle
-                cleaned_data['components'] = components_value
-        
+            cv = cleaned_data.get('components')
+            if isinstance(cv, str):
+                cleaned_data['components'] = cv.strip()
+
         unit_material_cost = cleaned_data.get('unit_material_cost') or Decimal('0')
         unit_labor_cost = cleaned_data.get('unit_labor_cost') or Decimal('0')
         unit_base_cost = cleaned_data.get('unit_base_cost') or Decimal('0')

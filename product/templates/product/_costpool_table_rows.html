@@ -2,7 +2,7 @@
 <tr>
     <td>{{ costpool.id }}</td>
     <td>{{ costpool.manufacturer.manufacturer_name }}</td>
-    <td>{{ costpool.category.product_category }}</td>
+    <td>{% if costpool.category %}{{ costpool.category.product_category }}{% else %}Other{% endif %}</td>
     <td>{{ costpool.sub_category1.product_sub_category }}</td>
     <td>{{ costpool.sub_category2.product_sub_category2|default:'-' }}</td>
     <td>{{ costpool.retail }}</td>

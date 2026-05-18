@@ -39,6 +39,7 @@ urlpatterns = [
     path('sitework/', include("sitework.urls"),name='sitework'),
     path('product/', include("product.urls"),name='product'),
     path('job/', include("job.urls"),name='job'),
+    path('dashboard/', include("dashboard.urls"),name='dashboard'),
     path('smart_selects/', include('smart_selects.urls')),
     # Suppress Chrome DevTools well-known path 404
     path('.well-known/appspecific/com.chrome.devtools.json', chrome_devtools_handler),
