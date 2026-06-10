@@ -210,7 +210,7 @@ class ProductImage(models.Model):
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
             region_name=settings.AWS_S3_REGION_NAME,
-            config=Config(signature_version='s3v4')
+            config=Config(signature_version='s3v4',s3={"addressing_style": "virtual"})
         )
         
         return s3_client.generate_presigned_url(

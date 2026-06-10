@@ -3,7 +3,20 @@
 {% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Data Central Admin') }}{% endblock %}
 
 {% block branding %}
+  {# Show the app identity #}
 <h1 id="site-name"  ><a href="{% url 'admin:index' %}">Data Central Administration</a></h1>
-{% endblock %}
 
+{% if app_list %}
+{% if app_list|length > 1 %}
+<h3>Menu</h3>
+  <ul style="display:flex;list-style-type:none;padding:4px;margin:4px;">
+  {# Display app names as links #}
+  {% for app in app_list %}
+  <li style="display:inline;margin-right:10px;"><a href="{{ app.app_url }}">{{ app.name|truncatewords:1 }}</a></li>
+  {% endfor %}
+  
+</ul>
+{% endif %}
+{% endif %}
+{% endblock %}
 {% block nav-global %}{% endblock %}

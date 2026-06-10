@@ -65,7 +65,9 @@ class SiteworkSubCat(models.Model):
     lastmodifieddate = models.DateTimeField(null=False, blank=False,default=timezone.now)
         
     def __str__(self):
-        return f"{self.workdesc}"    
+        #return f"{self.workdesc}"
+        # this is more useful in the admin screens
+        return f"{self.calckey}: {self.workdesc}"    
 
 # These are the titles/subheadings shown in the sitework editor screens
 class SiteworkSubCatGroup(models.Model):

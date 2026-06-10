@@ -22,8 +22,8 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+#MEDIA_URL = '/media/'
+#MEDIA_ROOT = BASE_DIR / 'media'
 
 # DigitalOcean Spaces (S3-compatible) Configuration
 # To enable, set the following environment variables in your .env file:
@@ -38,52 +38,57 @@ MEDIA_ROOT = BASE_DIR / 'media'
 # The .env file is automatically loaded by python-dotenv.
 
 # Get Spaces credentials from environment
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
-AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', '')
-AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', '')
-AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', '')
+#AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
+#AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
+#AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', '')
+#AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', '')
+#AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', '')
 
-#AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', 'tid_dpI_qrxVeYunyDjiMCqZ_dvIVdcMxLUZsmVePHiZsXTWukAJGB')
-#AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', 'tsec_KrY6_uFgMJiZtQL6rKgFW+cP7cBp2Fd57DL8-2ouLPi1g4KfjnznPrI8xJgm_90-ZP6Nv3')
-#AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'sw-chicken-3761')
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', 'tid_dpI_qrxVeYunyDjiMCqZ_dvIVdcMxLUZsmVePHiZsXTWukAJGB')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', 'tsec_KrY6_uFgMJiZtQL6rKgFW+cP7cBp2Fd57DL8-2ouLPi1g4KfjnznPrI8xJgm_90-ZP6Nv3')
+TIGRIS_STORAGE_BUCKET_NAME = os.environ.get('TIGRIS_STORAGE_BUCKET_NAME', 'sw-chicken-3761')
+AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'sw-chicken-3761')
 #AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', 'https://t3.storage.dev')
 #AWS_S3_ENDPOINT_URL = os.environ.get('AWS_S3_ENDPOINT_URL', 'https://t3.tigrisfiles.io')
-#AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'global')
+AWS_S3_ENDPOINT_URL = f"https://{TIGRIS_STORAGE_BUCKET_NAME}.t3.tigrisfiles.io/"
+
+AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'global')
+MEDIA_URL = f"https://{AWS_S3_ENDPOINT_URL}"
+STATIC_URL = f"https://{AWS_S3_ENDPOINT_URL}/static/"
 
 # Check if Spaces should be used (auto-enable if all credentials are provided)
 USE_SPACES = os.environ.get('USE_SPACES', '').lower() == 'true' or (
     AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and AWS_STORAGE_BUCKET_NAME and AWS_S3_ENDPOINT_URL
 )
-#STORAGES = {
-#    "default": {
-#        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-#        "OPTIONS": {
-#            'access_key' :'tid_PjJqgzb_SFIsfFNkvyewEnqbBE_bVtqkbkHJCEUjfDIoSrKIUZ',
-#            'secret_key' :'tsec_5puV81K6Jx00LTL9fzZK1OL1roVRhARk7hx1AXi3Vk3JwnpG_BYIk-d1ikVmAXm-W5qMN3',    
-#           # 'bucket_name' :'sw-chicken-3761',
-#          # ...your_options_here
-#        },
-#    },
-#    "staticfiles": {
-#        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
-#        "OPTIONS": {
-#            'access_key' :'tid_PjJqgzb_SFIsfFNkvyewEnqbBE_bVtqkbkHJCEUjfDIoSrKIUZ',
-#            'secret_key' :'tsec_5puV81K6Jx00LTL9fzZK1OL1roVRhARk7hx1AXi3Vk3JwnpG_BYIk-d1ikVmAXm-W5qMN3',    
-#           # 'bucket_name' :'sw-chicken-3761',
-#          # ...your_options_here
-#        },
-#    },
-#}
+STORAGES = {
+    "default": {
+       "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+       "OPTIONS": {
+            'access_key' :'tid_PjJqgzb_SFIsfFNkvyewEnqbBE_bVtqkbkHJCEUjfDIoSrKIUZ',
+            'secret_key' :'tsec_5puV81K6Jx00LTL9fzZK1OL1roVRhARk7hx1AXi3Vk3JwnpG_BYIk-d1ikVmAXm-W5qMN3',    
+           # 'bucket_name' :'sw-chicken-3761',
+          # ...your_options_here
+        },
+    },
+    "staticfiles": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        "OPTIONS": {
+            'access_key' :'tid_PjJqgzb_SFIsfFNkvyewEnqbBE_bVtqkbkHJCEUjfDIoSrKIUZ',
+            'secret_key' :'tsec_5puV81K6Jx00LTL9fzZK1OL1roVRhARk7hx1AXi3Vk3JwnpG_BYIk-d1ikVmAXm-W5qMN3',    
+           # 'bucket_name' :'sw-chicken-3761',
+          # ...your_options_here
+        },
+    },
+}
 
 if USE_SPACES:
     # Use DigitalOcean Spaces for file storage
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    # DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     
     # AWS/S3 settings for DigitalOcean Spaces
-    AWS_S3_OBJECT_PARAMETERS = {
-        'CacheControl': 'max-age=86400',  # Cache for 1 day
-    }
+    # AWS_S3_OBJECT_PARAMETERS = {
+    #     'CacheControl': 'max-age=86400',  # Cache for 1 day
+    # }
     
     # File upload settings
     AWS_DEFAULT_ACL = 'private'  # Make files private (use signed URLs to access)
@@ -97,7 +102,7 @@ if USE_SPACES:
     #     MEDIA_URL = f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/'
     
     # Set MEDIA_URL to point to Spaces
-    MEDIA_URL = f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/'
+    #MEDIA_URL = f'{AWS_S3_ENDPOINT_URL}/{AWS_STORAGE_BUCKET_NAME}/'
     
     #MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_ENDPOINT_URL.replace("https://", "")}/'
     #STATIC_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.{AWS_S3_ENDPOINT_URL.replace("https://", "")}/static/'
@@ -205,7 +210,6 @@ CELERY_TASK_TIME_LIMIT = 30 * 60
 # current LOCAL versionm run "redis-server" in a terminal
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 # current with upstash
-#CELERY_BROKER_URL = 'redis://default:12f880528ed2419f9951f9ee4c922fc8@fly-falling-wind-1391.upstash.io:6379/0'
 #CELERY_BROKER_URL ='redis://default:41da53354d064f858c4351214738c197@fly-allenkit-dc-redis.upstash.io:6379'
 
 CELERY_ACCEPT_CONTENT = ['json']
@@ -272,11 +276,11 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'static'
-STATICFILES_DIRS = [
-    BASE_DIR / 'staticfiles',
-]
+#STATIC_URL = '/static/'
+#STATIC_ROOT = BASE_DIR / 'static'
+#STATICFILES_DIRS = [
+#    BASE_DIR / 'staticfiles',
+#]
 
 from import_export.formats.base_formats import CSV
 IMPORT_FORMATS = [CSV]

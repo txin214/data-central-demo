@@ -59,12 +59,11 @@ class SiteworkQuoteAdmin(ImportExportModelAdmin):
 admin.site.register(SiteworkQuote,SiteworkQuoteAdmin)
 
 
-
-
 class SiteworkSubCatAdmin(ImportExportModelAdmin):
     resource_classes = [SiteworkSubCatResource]        
-    search_fields = ['workdesc','group']
-    list_filter = ["calckey", "orderby", "group", "siteworkcat__id"]
+    search_fields = ['workdesc','group','calckey']
+    #list_filter = ["calckey", "orderby", "group", "siteworkcat__id"]
+    
     
 admin.site.register(SiteworkSubCat, SiteworkSubCatAdmin)
 

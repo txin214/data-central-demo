@@ -14,6 +14,7 @@ class CustomS3Boto3Storage(S3Boto3Storage):
         """
         Return a signed URL if files are private, otherwise return public URL
         """
+        print(f"Generating super URL for {name}")
         # If files are public, use the default public URL
         if getattr(settings, 'AWS_DEFAULT_ACL', 'public-read') == 'public-read':
             return super().url(name)
@@ -30,7 +31,7 @@ class CustomS3Boto3Storage(S3Boto3Storage):
             region_name=settings.AWS_S3_REGION_NAME,
             config=Config(signature_version='s3v4')
         )
-        
+        print(f"Generating signed URL for {name}")
         return s3_client.generate_presigned_url(
             'get_object',
             Params={
