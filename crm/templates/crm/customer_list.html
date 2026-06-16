@@ -116,7 +116,7 @@
                     <th>City</th>
                     <th>State</th>
                     <th>Customer Code</th>
-                    <th>Assigned Staff</th>
+                    <th>-</th>
                     <th>More</th>
                 </tr>
             </thead>
@@ -167,7 +167,7 @@
                             -
                         {% endif %}
                     </td>
-                    <td>{{ customer.assigned_staff|default:'-' }}</td>
+                    <td>'-'</td>
                     <td>
                         <a href="{% url 'crm:detail_customer' customer.uuid %}" class="btn btn-sm btn-outline-primary">View</a>
                         <a href="{% url 'crm:update_customer' customer.uuid %}" class="btn btn-sm btn-outline-info">Edit</a>

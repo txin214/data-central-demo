@@ -41,8 +41,7 @@ class Customer(models.Model):
     work_phone = models.CharField(max_length=12,blank=True)
     work_phone2 = models.CharField(max_length=12,blank=True)
     status_flag = models.CharField(max_length=1,blank=True)
-    # assignedto assigned_staff
-    assigned_staff = models.CharField(max_length=100,blank=True)
+  
     # custcode prefix for jobcodes, was 5chars
     # needs to be vetted against old jobs to prevent repeats
     cust_code = models.CharField(max_length=7,blank=True)     

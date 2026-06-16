@@ -1,0 +1,234 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls static admin_list %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <link rel="stylesheet" href="{% static 'admin/css/changelists.css' %}">
+  <style>
+    /* Custom layout styles matching subcat_form.html */
+    .admin-two-col {
+      display: flex;
+      gap: 0;
+      min-height: 600px;
+    }
+    .admin-left-col {
+      width: 25%;
+      min-width: 200px;
+      border-right: 1px solid #dee2e6;
+      padding-right: 0;
+    }
+    .admin-right-col {
+      width: 75%;
+      padding-left: 20px;
+    }
+    .category-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .category-list li {
+      margin-bottom: 2px;
+    }
+    .category-list a {
+      display: block;
+      padding: 8px 12px;
+      color: #333;
+      text-decoration: none;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    .category-list a:hover {
+      background: #e9ecef;
+    }
+    .category-list a.active {
+      background: #007bff;
+      color: white;
+    }
+    .item-count {
+      float: right;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+    .category-list a .item-count {
+      background: #6c757d;
+      color: white;
+    }
+    .category-list a.active .item-count {
+      background: rgba(255,255,255,0.3);
+    }
+    /* Table styles */
+    .subcat-table {
+      width: 100%;
+      font-size: 0.85rem;
+    }
+    .subcat-table th {
+      background: #f8f9fa;
+      font-weight: 600;
+      padding: 8px;
+      border-bottom: 2px solid #dee2e6;
+    }
+    .subcat-table td {
+      padding: 6px 8px;
+      border-bottom: 1px solid #dee2e6;
+      vertical-align: middle;
+    }
+    .subcat-table tr:hover {
+      background: #f8f9fa;
+    }
+    .group-header {
+      background: #e9ecef !important;
+      font-weight: 600;
+    }
+    .edit-btn {
+      padding: 2px 8px;
+      font-size: 0.75rem;
+    }
+  </style>
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+<a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+&rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">{{ opts.app_config.verbose_name }}</a>
+&rsaquo; {{ opts.verbose_name_plural|capfirst }}
+</div>
+{% endblock %}
+
+{% block content %}
+  <div id="content-main">
+    <div class="module" id="changelist">
+
+      <!-- Search Bar -->
+      <div style="margin-bottom: 15px;">
+        <form method="get" action="" style="display: flex; gap: 8px;">
+          <input type="text" name="q" value="{{ q }}" placeholder="Search descriptions..." class="form-control" style="max-width: 300px;">
+          {% if current_category %}
+          <input type="hidden" name="category" value="{{ current_category }}">
+          {% endif %}
+          <button type="submit" class="btn btn-primary">Search</button>
+          {% if q %}
+          <a href="?{% if current_category %}category={{ current_category }}{% endif %}" class="btn btn-outline-secondary">Clear</a>
+          {% endif %}
+        </form>
+      </div>
+      
+      <div class="admin-two-col">
+        <!-- Left Column: Categories -->
+        <div class="admin-left-col">
+          <h5 style="margin-bottom: 15px; padding-left: 8px;">Categories</h5>
+          <ul class="category-list">
+            <li>
+              <a href="?{% if q %}q={{ q }}{% endif %}" 
+                 class="{% if not current_category %}active{% endif %}">
+                All Items
+                <span class="item-count">{{ total_count }}</span>
+              </a>
+            </li>
+            {% for cat in categories %}
+            <li>
+              <a href="?category={{ cat.id }}{% if q %}&q={{ q }}{% endif %}" 
+                 class="{% if current_category == cat.id|stringformat:'s' %}active{% endif %}">
+                {{ cat.name }}
+                <span class="item-count">{{ cat.item_count }}</span>
+              </a>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        <!-- Right Column: Subcat Items -->
+        <div class="admin-right-col">
+          {% block result_list %}
+            {% if result_count > 0 %}
+              <div class="results">
+                <table class="subcat-table" id="result_list">
+                  <thead>
+                    <tr>
+                      <th>Calc Key</th>
+                      <th>Description</th>
+                      <th>Qty Desc</th>
+                      <th>Base Cost</th>
+                      <th>Unit Amt</th>
+                      <th>Group</th>
+                      <th>Order</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for item in result_list %}
+                      {% ifchanged item.group %}
+                        {% if item.group > 0 %}
+                          <tr class="group-header">
+                            <td colspan="8">{{ item.get_group_display }}</td>
+                          </tr>
+                        {% endif %}
+                      {% endifchanged %}
+                      <tr>
+                        <td>{{ item.calckey }}</td>
+                        <td>{{ item.workdesc|truncatechars:60 }}</td>
+                        <td>{{ item.quantitydesc }}</td>
+                        <td>${{ item.basecost|default:"0" }}</td>
+                        <td>${{ item.unitamount|default:"0" }}</td>
+                        <td>{{ item.group }}</td>
+                        <td>{{ item.orderby }}</td>
+                        <td>
+                          <a href="{% url 'admin:sitework_siteworksubcat_change' item.id %}" class="edit-btn button">Edit</a>
+                        </td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              
+              <!-- Pagination -->
+              {% if is_paginated %}
+              <div class="pagination" style="margin-top: 15px;">
+                <span class="step-links">
+                  {% if page_obj.has_previous %}
+                    <a href="?page=1{% if current_category %}&category={{ current_category }}{% endif %}{% if q %}&q={{ q }}{% endif %}">&laquo; first</a>
+                    <a href="?page={{ page_obj.previous_page_number }}{% if current_category %}&category={{ current_category }}{% endif %}{% if q %}&q={{ q }}{% endif %}">previous</a>
+                  {% endif %}
+                  
+                  <span class="current">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                  </span>
+                  
+                  {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}{% if current_category %}&category={{ current_category }}{% endif %}{% if q %}&q={{ q }}{% endif %}">next</a>
+                    <a href="?page={{ page_obj.paginator.num_pages }}{% if current_category %}&category={{ current_category }}{% endif %}{% if q %}&q={{ q }}{% endif %}">last &raquo;</a>
+                  {% endif %}
+                </span>
+              </div>
+              {% endif %}
+              
+              <p class="paginator" style="margin-top: 10px;">
+                {{ result_count }} total
+              </p>
+            {% else %}
+              <p class="paginator" style="padding: 20px; text-align: center; color: #6c757d;">
+                No items found. Select a category from the left or 
+                <a href="{% url 'admin:sitework_siteworksubcat_add' %}">add a new item</a>.
+              </p>
+            {% endif %}
+          {% endblock %}
+          
+          {% block object-tools %}
+            <ul class="object-tools" style="margin-bottom: 20px;">
+              {% block object-tools-items %}
+                {% if has_add_permission %}
+                  <li>
+                    <a href="{% url 'admin:sitework_siteworksubcat_add' %}" class="addlink">
+                      Add {{ opts.verbose_name }}
+                    </a>
+                  </li>
+                {% endif %}
+              {% endblock %}
+            </ul>
+          {% endblock %}
+        </div>
+      </div>
+      
+    </div>
+  </div>
+{% endblock %}

@@ -69,6 +69,13 @@ class SiteworkSubCat(models.Model):
         # this is more useful in the admin screens
         return f"{self.calckey}: {self.workdesc}"    
 
+    def get_group_display(self):
+        """Get the display name for the group"""
+        if self.group == 0:
+            return ""
+        group = SiteworkSubCatGroup.objects.filter(group=self.group).first()
+        return group.desc if group else f"Group {self.group}"
+
 # These are the titles/subheadings shown in the sitework editor screens
 class SiteworkSubCatGroup(models.Model):
     # id
