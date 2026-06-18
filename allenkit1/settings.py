@@ -54,7 +54,7 @@ AWS_S3_ENDPOINT_URL = f"https://{TIGRIS_STORAGE_BUCKET_NAME}.t3.tigrisfiles.io/"
 
 AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'global')
 MEDIA_URL = f"https://{AWS_S3_ENDPOINT_URL}"
-STATIC_URL = f"https://{AWS_S3_ENDPOINT_URL}/static/"
+#STATIC_URL = f"https://{AWS_S3_ENDPOINT_URL}/static/"
 
 # Check if Spaces should be used (auto-enable if all credentials are provided)
 USE_SPACES = os.environ.get('USE_SPACES', '').lower() == 'true' or (
@@ -276,8 +276,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
-#STATIC_URL = '/static/'
-#STATIC_ROOT = BASE_DIR / 'static'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'static'
 #STATICFILES_DIRS = [
 #    BASE_DIR / 'staticfiles',
 #]

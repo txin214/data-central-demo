@@ -1,5 +1,6 @@
 {% extends "admin/base_site.html" %}
 {% load i18n admin_urls static admin_list %}
+{# FILE: sitework/templates/admin/sitework/siteworksubcat/change_list.html #}
 
 {% block extrastyle %}
   {{ block.super }}
@@ -54,6 +55,9 @@
       background: #6c757d;
       color: white;
     }
+    .category-list a.hover {
+    filter: invert(100%);
+    }
     .category-list a.active .item-count {
       background: rgba(255,255,255,0.3);
     }
@@ -63,7 +67,7 @@
       font-size: 0.85rem;
     }
     .subcat-table th {
-      background: #f8f9fa;
+      /* background: #f8f9fa; */
       font-weight: 600;
       padding: 8px;
       border-bottom: 2px solid #dee2e6;
@@ -74,10 +78,11 @@
       vertical-align: middle;
     }
     .subcat-table tr:hover {
-      background: #f8f9fa;
+      /* background: #f8f9fa; */
+      filter: invert(100%);
     }
     .group-header {
-      background: #e9ecef !important;
+      /* background: #e9ecef !important; */
       font-weight: 600;
     }
     .edit-btn {
@@ -120,7 +125,7 @@
           <ul class="category-list">
             <li>
               <a href="?{% if q %}q={{ q }}{% endif %}" 
-                 class="{% if not current_category %}active{% endif %}">
+                 class="{% if not current_category %}active {% endif %}">
                 All Items
                 <span class="item-count">{{ total_count }}</span>
               </a>
