@@ -65,7 +65,16 @@ class SiteworkSubCat(models.Model):
     lastmodifieddate = models.DateTimeField(null=False, blank=False,default=timezone.now)
         
     def __str__(self):
-        return f"{self.workdesc}"    
+        #return f"{self.workdesc}"
+        # this is more useful in the admin screens
+        return f"{self.calckey}: {self.workdesc}"    
+
+    def get_group_display(self):
+        """Get the display name for the group"""
+        if self.group == 0:
+            return ""
+        group = SiteworkSubCatGroup.objects.filter(group=self.group).first()
+        return group.desc if group else f"Group {self.group}"
 
 # These are the titles/subheadings shown in the sitework editor screens
 class SiteworkSubCatGroup(models.Model):
@@ -77,11 +86,9 @@ class SiteworkSubCatGroup(models.Model):
         return f"{self.desc}"    
 
 def sitework_image_upload_to(instance, filename):
-    # Extract file extension
-    ext = os.path.splitext(filename)[1]    
-    # Return path: sitework_images/{new_filename}
     return os.path.join('sitework_images', filename)
 
+    
 ## An optional image andor PDF document associated with a sitework subcategory
 class SiteworkSubCatImage(models.Model):
     # id
@@ -102,21 +109,16 @@ class SiteworkSubCatImage(models.Model):
             return self.doc.url  # "/media/sitework_images/name.pdf"
         return ""
     
-    @admin.display(description='Sitework SubCategory')
-    def get_calckey(self):
-        print(f"get_calckey: {self.calckey}")
-        s=SiteworkSubCat.objects.filter(calckey=self.calckey).first()
-        print(s)
-        # Find the SiteworkSubCat that matches this image's calckey
-        return f'{self.calckey}: {s}'
-    
     def __str__(self):
         if self.image:
             return f'{self.desc} : {self.calckey} Image'
         elif self.doc:
             return f'{self.desc} : {self.calckey} Document'
         return f'{self.desc} : {self.calckey} Image'
-    
+
+  
+
+
     
 
 
@@ -246,7 +248,7 @@ class QuoteLineManager(models.Manager):
         # Material = base cost + qty * per-unit cost
         # Unit Amount = (Allowance + Material + CarpenterLabor + Subfee) /Profit
         
-        my_verbose = 1
+        my_verbose = 0
         # 1. Create an array of qty values, all 0. (It will be a dictionary not an array)
         qtyvals = {}
         if my_verbose>0: print("calcprice-----------------------")
@@ -410,8 +412,9 @@ class QuoteLineManager(models.Manager):
                 #SiteworkQuoteLine.objects.filter(quote=quoteid,calckey=item.calckey).update(quantity=tempval)
 
         # for all sitework items in this quote where quantity > 0
-        drywall = {item.drywall for item in SiteworkQuoteLine.objects.filter(quote=quoteid,quantity__gt=0) }
-        if my_verbose>0: print (drywall)
+        drywall = 0
+        drywall = {item.drywall * item.quantity for item in SiteworkQuoteLine.objects.filter(quote=quoteid,quantity__gt=0) }
+        if my_verbose>0: print ("drywall comprehension=",drywall)
         # 352 is drywall repair.  558 is drywall setup
         drywall_sum = sum(drywall)
         if my_verbose>0: print("drywall sum=",drywall_sum)

@@ -183,7 +183,6 @@ def report_show(request,qte:int):
     template_name = 'sitework/report_show.html'
     return TemplateResponse(request,template_name, context)
 
-
 # show the sitework calc results as a simple report (no pricing in line items)
 @login_required
 def report_show_simple(request,qte:int):
@@ -381,6 +380,7 @@ def quote_delete(request, quote_id):
     context = {'quote': quote}
     return TemplateResponse(request, template_name, context)
 
+
 #
 # subcat_form 
 # shows the list of sitework items and allows editing the quantiy and comments for any item.
@@ -419,11 +419,10 @@ def subcat_form(request,cat:int,qte:int):
         # lookup the subcat by calckey
         sw.attached = SiteworkSubCatImage.objects.filter(calckey=sw.calckey).first()
         if sw.attached:
-            sw.image_url = sw.attached.get_url()
+            sw.image_url = sw.attached.get_url() 
             sw.image_thumb = sw.attached.get_url()
-            if sw.image_url.endswith("pdf"):
-                sw.image_thumb = "/media/sitework_images/PDF_file.png"
-            print("BILLY sw.image_url:", sw.image_url," calckey:", sw.calckey)
+            if sw.attached.doc.name.endswith('.pdf'):
+                sw.image_thumb = '/media/sitework_images/PDF_file.png'
 
     context = {
         "cat": cat,

@@ -9,11 +9,19 @@ from accounts.models import UserRole
 class QtyForm(forms.Form):
     qty = forms.IntegerField(label="Qty", min_value=0)
 
-# not used
-class SiteworkSubCatForm(ModelForm):
+
+class SiteworkSubCatAdminForm(ModelForm):
     class Meta:
         model = SiteworkSubCat
-        fields = ["workdesc","quantitydesc","basecost","unitamount","allowance","material","labor","profit","subfee"]
+        fields = '__all__'
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        # Add custom validation here if needed
+        return cleaned_data
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        print(f"DEBUG: BILLFORD fields: {list(self.fields.keys())}")
 
 ##NEW
 class SiteworkQuoteForm(forms.ModelForm):
