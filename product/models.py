@@ -5,6 +5,13 @@ import os
 from django.db import models
 from smart_selects.db_fields import ChainedForeignKey
 from django.utils.timezone import now
+from .storage import product_image_storage, strip_product_image_prefix
+
+
+PRODUCT_COSTPOOL_DEFAULT_RETAIL_MULTIPLIER = Decimal('0.6')
+PRODUCT_COSTPOOL_DEFAULT_BUILDER_MULTIPLIER = Decimal('0.7')
+PRODUCT_COSTPOOL_DEFAULT_SURPLUS_MULTIPLIER = Decimal('1')
+ADHOC_DEFAULT_RETAIL_MARKUP = Decimal('1.4')
 
 
 def product_image_upload_to(instance, filename):
@@ -173,9 +180,24 @@ class Manufacturer(models.Model):
 
 class ProductImage(models.Model):
     product = models.ForeignKey('Product', on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to=product_image_upload_to)
+    image = models.ImageField(upload_to=product_image_upload_to, storage=product_image_storage)
     is_primary = models.BooleanField(default=False)
     is_spec = models.BooleanField(default=False)
+
+    @property
+    def display_url(self):
+        """Return the configured product image URL while keeping relative keys in the database."""
+        if not self.image:
+            return ''
+
+        from django.conf import settings
+
+        base_url = getattr(settings, 'PRODUCT_IMAGE_PUBLIC_BASE_URL', '').strip()
+        if base_url:
+            key = strip_product_image_prefix(self.image.name)
+            return f"{base_url.rstrip('/')}/{key}"
+
+        return self.image.url
 
     def save(self, *args, **kwargs):
         # Ensure there is only one primary image for each product
@@ -330,6 +352,7 @@ class CostPool(models.Model):
     
 class Product(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+    legacy_product_id = models.IntegerField(null=True, blank=True, db_index=True)
     category = models.ForeignKey(ProductCategory, on_delete=models.CASCADE, null=True, blank=True)
     sub_category1 = ChainedForeignKey(
         ProductSubCategory1,
@@ -506,17 +529,34 @@ class Product(models.Model):
         else:
             return False, None, 'no_match'
 
+    def apply_cost_pool_multipliers(self):
+        """
+        Align sell multipliers with CostPool taxonomy (linked pool or matched pool).
+        When no CostPool matches, use 0.6 / 0.7 / 1.
+
+        Does not change retail_sell, builder_sell, or surplus_sell — entered prices
+        stay as authoritative; the multiplier fields drive the algo when prices are blank
+        (see ProductForm.clean).
+        """
+        if getattr(self, 'cost_pool_id', None):
+            self.sync_multipliers_from_cost_pool()
+            return
+
+        ok, _, _ = self.link_to_matching_cost_pool()
+        if ok:
+            self.sync_multipliers_from_cost_pool()
+            return
+
+        self.retail_sell_multiplier = PRODUCT_COSTPOOL_DEFAULT_RETAIL_MULTIPLIER
+        self.builder_sell_multiplier = PRODUCT_COSTPOOL_DEFAULT_BUILDER_MULTIPLIER
+        self.surplus_sell_multiplier = PRODUCT_COSTPOOL_DEFAULT_SURPLUS_MULTIPLIER
+
     def save(self, *args, **kwargs):
         if not self.pk and not self.date_entered:  
             self.date_entered = now()
         
-        # Auto-link to CostPool if not already linked
-        if not self.cost_pool:
-            success, cost_pool, match_type = self.link_to_matching_cost_pool()
-            if success:
-                # Sync multipliers from the linked CostPool
-                self.sync_multipliers_from_cost_pool()
-        
+        self.apply_cost_pool_multipliers()
+
         # Always update the date_updated field when saving
         self.date_updated = now()
         
@@ -795,9 +835,23 @@ class AdHoc(models.Model):
     
     def __str__(self):
         return f"{self.part_no} - {self.description}"
+
+    @classmethod
+    def compute_retail_price(cls, cost, retail_price=None):
+        """Return retail_price if set, otherwise cost × 40% markup."""
+        if retail_price is not None:
+            return retail_price
+        if cost is not None:
+            return (Decimal(cost) * ADHOC_DEFAULT_RETAIL_MARKUP).quantize(Decimal('0.01'))
+        return None
+
+    def get_quote_unit_price(self):
+        """Unit price for quote lines: retail, defaulting to 1.4 × cost."""
+        return self.compute_retail_price(self.cost, self.retail_price) or Decimal('0.00')
     
     def save(self, *args, **kwargs):
-        # Django handles date_entered and date_updated automatically with auto_now_add and auto_now
+        if self.retail_price is None and self.cost is not None:
+            self.retail_price = self.compute_retail_price(self.cost)
         super().save(*args, **kwargs)
 
 
@@ -824,7 +878,7 @@ class AdHocQuoteLine(models.Model):
         Ensure the copied price (unit_price) remains unchanged for existing lines.
         """
         if self.unit_price is None:
-            self.unit_price = self.adhoc.cost or Decimal(0.0)  # Copy cost if not already set
+            self.unit_price = self.adhoc.get_quote_unit_price()
 
         if not self.adhoc_description:
             self.adhoc_description = self.adhoc.description
@@ -837,11 +891,11 @@ class AdHocQuoteLine(models.Model):
         self.quote.calculate_subtotal()
 
     def get_current_price(self):
-        """Return the current adhoc cost."""
-        return self.adhoc.cost or Decimal(0.0)
+        """Return the current adhoc retail price."""
+        return self.adhoc.get_quote_unit_price()
 
     def get_current_total(self):
-        """Calculate the current total based on the current adhoc cost."""
+        """Calculate the current total based on the current adhoc retail price."""
         return self.get_current_price() * self.quantity
 
     def __str__(self):

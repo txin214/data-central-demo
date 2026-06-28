@@ -57,7 +57,7 @@
                     </td>
                     <td>
                         {% if primary_image %}
-                            <img src="{{ primary_image.image.url }}" alt="{{ product.description }}" class="product-img-thumb" style="width: 32px; height: 32px;">
+                            <img src="{{ primary_image.display_url }}" alt="{{ product.description }}" class="product-img-thumb" style="width: 32px; height: 32px;">
                         {% else %}
                             <img src="{% static 'product/image-not-found.png' %}" alt="No image" class="product-img-thumb" style="width: 32px; height: 32px;">
                         {% endif %}

@@ -2,16 +2,16 @@ from collections import defaultdict
 from decimal import Decimal
 import json
 import re
-import os
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth.decorators import permission_required, login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from .decorators import role_permission_required
 from django.views import View
-from django.views.generic import TemplateView, ListView, DetailView, UpdateView, DeleteView, CreateView
+from django.views.generic import TemplateView, ListView, DetailView, UpdateView, CreateView
 from django.urls import reverse, reverse_lazy
 from django.db.models import Q, Prefetch
+from django.db.models.functions import Lower
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.decorators.http import require_GET, require_POST
@@ -75,276 +75,34 @@ def get_dropdown_data(model_class, name_field, status_field='status', cache_key_
 
 # Model imports
 from .models import (
-    Color, Product, ProductAccessory, ProductCategory, ProductImage, ProductQuote, ProductQuoteLine, 
-    ProductSubCategory1, ProductSubCategory2, Manufacturer, 
-    Vendor, LeadTime, Finish, AdHoc, AdHocQuoteLine, CostPool
+    Product, ProductAccessory, ProductCategory, ProductImage, ProductQuote, ProductQuoteLine,
+    ProductSubCategory1, ProductSubCategory2, Manufacturer,
+    Vendor, Finish, AdHoc, AdHocQuoteLine, CostPool
 )
 from .forms import (
-    ColorForm, FinishForm, ManufacturerForm, ProductCategoryForm, ProductForm, ProductQuoteForm, 
-    ProductSubCategory1Form, ProductSubCategory2Form, VendorForm, AdHocForm, CostPoolForm
+    ManufacturerForm, ProductForm, ProductQuoteForm,
+    VendorForm, AdHocForm
 )
 
-# Generic AJAX CRUD classes
-class CategoryAjaxCRUD:
-    """AJAX CRUD operations for ProductCategory"""
-    name_field = 'product_category'
-    
-    @classmethod
-    def ajax_add(cls, request):
-        from .models import ProductCategory
-        return cls.ajax_add_generic(request, ProductCategoryForm, ProductCategory)
-    
-    @classmethod
-    def ajax_update(cls, request, pk):
-        from .models import ProductCategory
-        return cls.ajax_update_generic(request, ProductCategory, pk, ProductCategoryForm)
-    
-    @classmethod
-    def ajax_delete(cls, request, pk):
-        from .models import ProductCategory
-        return cls.ajax_delete_generic(request, ProductCategory, pk)
-    
-    @classmethod
-    def ajax_add_generic(cls, request, form_class, model_class):
-        form = form_class(request.POST)
-        if form.is_valid():
-            instance = form.save()
-            # Invalidate all category caches
-            cache.delete('category_view_categories')
-            cache.delete('category_view_subcategories1')
-            cache.delete('category_view_subcategories2')
-            cache.delete('category_view_colors')
-            return JsonResponse({
-                'success': True, 
-                'id': instance.id,
-                'name': getattr(instance, cls.name_field, str(instance))
-            })
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-    
-    @classmethod
-    def ajax_update_generic(cls, request, model_class, pk, form_class):
-        try:
-            instance = model_class.objects.get(pk=pk)
-            form = form_class(request.POST, instance=instance)
-            if form.is_valid():
-                form.save()
-                # Invalidate all category caches
-                cache.delete('category_view_categories')
-                cache.delete('category_view_subcategories1')
-                cache.delete('category_view_subcategories2')
-                cache.delete('category_view_colors')
-                return JsonResponse({
-                    'success': True, 
-                    'id': instance.id,
-                    'name': getattr(instance, cls.name_field, str(instance))
-                })
-            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-        except model_class.DoesNotExist:
-            return JsonResponse({'success': False, 'error': f'{model_class.__name__} not found'}, status=404)
-    
-    @classmethod
-    def ajax_delete_generic(cls, request, model_class, pk):
-        try:
-            instance = model_class.objects.get(pk=pk)
-            instance.delete()
-            # Invalidate all category caches
-            cache.delete('category_view_categories')
-            cache.delete('category_view_subcategories1')
-            cache.delete('category_view_subcategories2')
-            cache.delete('category_view_colors')
-            return JsonResponse({'success': True})
-        except model_class.DoesNotExist:
-            return JsonResponse({'success': False, 'error': f'{model_class.__name__} not found'}, status=404)
 
 
-class SubCategory1AjaxCRUD:
-    """AJAX CRUD operations for ProductSubCategory1"""
-    name_field = 'product_sub_category'
-    
-    @classmethod
-    def ajax_add(cls, request):
-        from .models import ProductSubCategory1, ProductCategory
-        form = ProductSubCategory1Form(request.POST)
-        if form.is_valid():
-            instance = form.save(commit=False)
-            category_id = request.POST.get('category_id')
-            instance.category = ProductCategory.objects.get(id=category_id)
-            instance.save()
-            return JsonResponse({
-                'success': True, 
-                'id': instance.id,
-                'name': getattr(instance, cls.name_field, str(instance)),
-                'category_id': category_id
-            })
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-    
-    @classmethod
-    def ajax_update(cls, request, pk):
-        from .models import ProductSubCategory1
-        return cls.ajax_update_generic(request, ProductSubCategory1, pk, ProductSubCategory1Form)
-    
-    @classmethod
-    def ajax_delete(cls, request, pk):
-        from .models import ProductSubCategory1
-        return cls.ajax_delete_generic(request, ProductSubCategory1, pk)
-    
-    @classmethod
-    def ajax_update_generic(cls, request, model_class, pk, form_class):
-        try:
-            instance = model_class.objects.get(pk=pk)
-            form = form_class(request.POST, instance=instance)
-            if form.is_valid():
-                form.save()
-                return JsonResponse({
-                    'success': True, 
-                    'id': instance.id,
-                    'name': getattr(instance, cls.name_field, str(instance))
-                })
-            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-        except model_class.DoesNotExist:
-            return JsonResponse({'success': False, 'error': f'{model_class.__name__} not found'}, status=404)
-    
-    @classmethod
-    def ajax_delete_generic(cls, request, model_class, pk):
-        try:
-            instance = model_class.objects.get(pk=pk)
-            instance.delete()
-            return JsonResponse({'success': True})
-        except model_class.DoesNotExist:
-            return JsonResponse({'success': False, 'error': f'{model_class.__name__} not found'}, status=404)
-
-
-class SubCategory2AjaxCRUD:
-    """AJAX CRUD operations for ProductSubCategory2"""
-    name_field = 'product_sub_category2'
-    
-    @classmethod
-    def ajax_add(cls, request):
-        from .models import ProductSubCategory2, ProductSubCategory1
-        form = ProductSubCategory2Form(request.POST)
-        if form.is_valid():
-            instance = form.save(commit=False)
-            subcategory1_id = request.POST.get('subcategory1_id')
-            instance.sub_category1 = ProductSubCategory1.objects.get(id=subcategory1_id)
-            instance.save()
-            return JsonResponse({
-                'success': True, 
-                'id': instance.id,
-                'name': getattr(instance, cls.name_field, str(instance)),
-                'subcategory1_id': subcategory1_id
-            })
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-    
-    @classmethod
-    def ajax_update(cls, request, pk):
-        from .models import ProductSubCategory2
-        return cls.ajax_update_generic(request, ProductSubCategory2, pk, ProductSubCategory2Form)
-    
-    @classmethod
-    def ajax_delete(cls, request, pk):
-        from .models import ProductSubCategory2
-        return cls.ajax_delete_generic(request, ProductSubCategory2, pk)
-    
-    @classmethod
-    def ajax_update_generic(cls, request, model_class, pk, form_class):
-        try:
-            instance = model_class.objects.get(pk=pk)
-            form = form_class(request.POST, instance=instance)
-            if form.is_valid():
-                form.save()
-                return JsonResponse({
-                    'success': True, 
-                    'id': instance.id,
-                    'name': getattr(instance, cls.name_field, str(instance))
-                })
-            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-        except model_class.DoesNotExist:
-            return JsonResponse({'success': False, 'error': f'{model_class.__name__} not found'}, status=404)
-    
-    @classmethod
-    def ajax_delete_generic(cls, request, model_class, pk):
-        try:
-            instance = model_class.objects.get(pk=pk)
-            instance.delete()
-            return JsonResponse({'success': True})
-        except model_class.DoesNotExist:
-            return JsonResponse({'success': False, 'error': f'{model_class.__name__} not found'}, status=404)
-
-
-class ColorAjaxCRUD:
-    """AJAX CRUD operations for Color"""
-    name_field = 'color_name'
-    
-    @classmethod
-    def ajax_add(cls, request):
-        from .models import Color, ProductSubCategory2
-        form = ColorForm(request.POST)
-        if form.is_valid():
-            instance = form.save(commit=False)
-            subcategory2_id = request.POST.get('subcategory2_id')
-            instance.sub_category2 = ProductSubCategory2.objects.get(id=subcategory2_id)
-            instance.save()
-            return JsonResponse({
-                'success': True, 
-                'id': instance.id,
-                'name': getattr(instance, cls.name_field, str(instance)),
-                'subcategory2_id': subcategory2_id
-            })
-        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-    
-    @classmethod
-    def ajax_update(cls, request, pk):
-        from .models import Color
-        return cls.ajax_update_generic(request, Color, pk, ColorForm)
-    
-    @classmethod
-    def ajax_delete(cls, request, pk):
-        from .models import Color
-        return cls.ajax_delete_generic(request, Color, pk)
-    
-    @classmethod
-    def ajax_update_generic(cls, request, model_class, pk, form_class):
-        try:
-            instance = model_class.objects.get(pk=pk)
-            form = form_class(request.POST, instance=instance)
-            if form.is_valid():
-                form.save()
-                return JsonResponse({
-                    'success': True, 
-                    'id': instance.id,
-                    'name': getattr(instance, cls.name_field, str(instance))
-                })
-            return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-        except model_class.DoesNotExist:
-            return JsonResponse({'success': False, 'error': f'{model_class.__name__} not found'}, status=404)
-    
-    @classmethod
-    def ajax_delete_generic(cls, request, model_class, pk):
-        try:
-            instance = model_class.objects.get(pk=pk)
-            instance.delete()
-            return JsonResponse({'success': True})
-        except model_class.DoesNotExist:
-            return JsonResponse({'success': False, 'error': f'{model_class.__name__} not found'}, status=404)
-
-
-
-
-class ProductThankYouView(LoginRequiredMixin, TemplateView):
-    template_name = 'product/thank_you.html'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Get context from session or query parameters
-        context['action_type'] = self.request.GET.get('action', 'create')
-        context['product_id'] = self.request.GET.get('product_id')
-        return context
 
 class ProductCreateView(LoginRequiredMixin, ImageHandlingMixin, BreadcrumbMixin, CreateView):
     model = Product
     form_class = ProductForm
     template_name = 'product/productform3.html'
-    success_url = reverse_lazy('product:thank_you')  
+
+    def get_success_url(self):
+        return reverse('product:product-list')
+
+    def form_valid(self, form):
+        self.object = form.save()
+        self.handle_product_images(form, self.object)
+        messages.success(
+            self.request,
+            f'Product "{self.object.part_no}" created successfully.',
+        )
+        return redirect(self.get_success_url())
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -364,8 +122,10 @@ class ProductCreateView(LoginRequiredMixin, ImageHandlingMixin, BreadcrumbMixin,
 class ProductDuplicateUpdateView(LoginRequiredMixin, ImageHandlingMixin, BreadcrumbMixin, UpdateView):
     model = Product
     form_class = ProductForm
-    template_name = 'product/productform3.html' 
-    success_url = reverse_lazy('product:thank_you') 
+    template_name = 'product/productform3.html'
+
+    def get_success_url(self):
+        return reverse('product:product-list')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -387,6 +147,7 @@ class ProductDuplicateUpdateView(LoginRequiredMixin, ImageHandlingMixin, Breadcr
         
         primary_image = original_product.images.filter(is_primary=True).first()
         context['primary_image'] = primary_image
+        context['product'] = self.object
         return context
 
     def get_breadcrumbs(self):
@@ -425,7 +186,11 @@ class ProductDuplicateUpdateView(LoginRequiredMixin, ImageHandlingMixin, Breadcr
         duplicated_product = form.save(commit=False)
         self.handle_product_images(form, duplicated_product)
         duplicated_product.save()
-        return redirect(self.success_url)
+        messages.success(
+            self.request,
+            f'Product "{duplicated_product.part_no}" created successfully.',
+        )
+        return redirect(self.get_success_url())
 
     def form_invalid(self, form):
         print(form.errors)  # Debugging form errors
@@ -448,11 +213,8 @@ class EditProductImagesView(LoginRequiredMixin, View):
         if delete_image_id:
             try:
                 image = ProductImage.objects.get(id=delete_image_id, product=product)
-                # Delete the file if it exists
                 if image.image:
-                    if hasattr(image.image, 'path') and os.path.exists(image.image.path):
-                        os.remove(image.image.path)
-                # Delete the database record
+                    image.image.delete(save=False)
                 image.delete()
                 messages.success(request, 'Image deleted successfully.')
             except ProductImage.DoesNotExist:
@@ -499,8 +261,7 @@ def view_product_images(request, pk):
 class ProductUpdateView2(LoginRequiredMixin, ImageHandlingMixin, BreadcrumbMixin, UpdateView):
     model = Product
     form_class = ProductForm
-    template_name = 'product/productform3.html'  
-    success_url = reverse_lazy('product:thank_you')
+    template_name = 'product/productform3.html'
     
     def get_object(self, queryset=None):
         """Override to use uuid instead of pk"""
@@ -510,9 +271,10 @@ class ProductUpdateView2(LoginRequiredMixin, ImageHandlingMixin, BreadcrumbMixin
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['product_id'] = self.object.id
-        context['action'] = 'Update'  
-        
-        product = self.object  
+        context['action'] = 'Update'
+        context['product'] = self.object
+
+        product = self.object
         # Get finishes related to this product's category/subcategories
         finishes = Finish.objects.filter(
             category=product.category,
@@ -526,9 +288,16 @@ class ProductUpdateView2(LoginRequiredMixin, ImageHandlingMixin, BreadcrumbMixin
         return context
 
     def get_success_url(self):
-        """Redirect to thank you page with context for update action"""
-        return f"{reverse('product:thank_you')}?action=update&product_id={self.object.uuid}"
+        return reverse('product:product-update2', kwargs={'pk': self.object.uuid})
 
+    def form_valid(self, form):
+        self.object = form.save()
+        self.handle_product_images(form, self.object)
+        messages.success(
+            self.request,
+            f'Product "{self.object.part_no}" updated successfully.',
+        )
+        return redirect(self.get_success_url())
 
     def get_breadcrumbs(self):
         return [
@@ -614,153 +383,16 @@ class ProductDetail2View(LoginRequiredMixin, BreadcrumbMixin, DetailView):
         ]
     
 
-class ProductDeleteView(LoginRequiredMixin, DeleteView):
-    model = Product
-    template_name = 'product/product_confirm_delete.html'
-    success_url = reverse_lazy('product:product-list')
-    
-    def get_object(self, queryset=None):
-        """Override to use uuid instead of pk"""
-        uuid = self.kwargs.get('pk')
-        return Product.objects.get(uuid=uuid)
-    
-class CategoryView(LoginRequiredMixin, TemplateView):
-    template_name = 'product/category_view.html'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        
-        # Use separate cache keys for different data types
-        categories_cache_key = 'category_view_categories'
-        subcategories1_cache_key = 'category_view_subcategories1'
-        subcategories2_cache_key = 'category_view_subcategories2'
-        colors_cache_key = 'category_view_colors'
-        
-        # Try to get cached data
-        categories = cache.get(categories_cache_key)
-        subcategories1 = cache.get(subcategories1_cache_key)
-        subcategories2 = cache.get(subcategories2_cache_key)
-        colors = cache.get(colors_cache_key)
-        
-        # If any cache is missing, rebuild all data
-        if any(data is None for data in [categories, subcategories1, subcategories2, colors]):
-            
-            # Get categories - only select needed fields
-            categories = list(ProductCategory.objects.filter(status=True).only('id', 'product_category', 'status').prefetch_related(
-                Prefetch(
-                    'productsubcategory1_set',
-                    queryset=ProductSubCategory1.objects.filter(status=True).only('id', 'product_sub_category', 'category_id', 'status').prefetch_related(
-                        Prefetch(
-                            'productsubcategory2_set',
-                            queryset=ProductSubCategory2.objects.filter(status=True).only('id', 'product_sub_category2', 'sub_category1_id', 'status').prefetch_related(
-                                'color_set'
-                            )
-                        )
-                    )
-                )
-            ))
-            
-            # Get all subcategories and colors in optimized queries - only select needed fields
-            subcategories1 = list(ProductSubCategory1.objects.filter(status=True).select_related('category').only(
-                'id', 'product_sub_category', 'category_id', 'category__id', 'category__product_category', 'status'
-            ).values('id', 'product_sub_category', 'category_id', 'category__id', 'category__product_category', 'status').iterator())
-            
-            subcategories2 = list(ProductSubCategory2.objects.filter(status=True).select_related(
-                'sub_category1', 'sub_category1__category'
-            ).only(
-                'id', 'product_sub_category2', 'sub_category1_id', 'sub_category1__id', 
-                'sub_category1__product_sub_category', 'sub_category1__category_id', 
-                'sub_category1__category__id', 'sub_category1__category__product_category', 'status'
-            ).values('id', 'product_sub_category2', 'sub_category1_id', 'sub_category1__id', 
-                'sub_category1__product_sub_category', 'sub_category1__category_id', 
-                'sub_category1__category__id', 'sub_category1__category__product_category', 'status').iterator())
-            
-            colors = list(Color.objects.filter(status=True).select_related(
-                'sub_category2', 'sub_category2__sub_category1', 'sub_category2__sub_category1__category'
-            ).only(
-                'id', 'color_name', 'sub_category2_id', 'sub_category2__id', 
-                'sub_category2__product_sub_category2', 'sub_category2__sub_category1_id',
-                'sub_category2__sub_category1__id', 'sub_category2__sub_category1__product_sub_category',
-                'sub_category2__sub_category1__category_id', 'sub_category2__sub_category1__category__id',
-                'sub_category2__sub_category1__category__product_category', 'status'
-            ).values('id', 'color_name', 'sub_category2_id', 'sub_category2__id', 
-                'sub_category2__product_sub_category2', 'sub_category2__sub_category1_id',
-                'sub_category2__sub_category1__id', 'sub_category2__sub_category1__product_sub_category',
-                'sub_category2__sub_category1__category_id', 'sub_category2__sub_category1__category__id',
-                'sub_category2__sub_category1__category__product_category', 'status').iterator())
-            
-            # Cache each data type separately for 15 minutes
-            cache.set(categories_cache_key, list(categories), 900)
-            cache.set(subcategories1_cache_key, list(subcategories1), 900)
-            cache.set(subcategories2_cache_key, list(subcategories2), 900)
-            cache.set(colors_cache_key, list(colors), 900)
-        
-        context.update({
-            'categories': categories,
-            'subcategories1': subcategories1,
-            'subcategories2': subcategories2,
-            'colors': colors,
-        })
-        context['category_form'] = ProductCategoryForm()
-        return context
-
-    def post(self, request, *args, **kwargs):
-        form = ProductCategoryForm(request.POST)
-        if form.is_valid():
-            form.save()  # Save the new cate
-            return redirect(reverse_lazy('product:product-category'))  # avoid re-submitting the form
-        # If invalid, re-render the page with errors
-        context = self.get_context_data()
-        context['category_form'] = form
-        return self.render_to_response(context)
-    
+@login_required
 @require_POST
-def ajax_update_category(request, pk):
-    result = CategoryAjaxCRUD.ajax_update(request, pk)
-    # Cache invalidation is handled in the generic method
-    return result
+def product_delete(request, pk):
+    """Delete a product after POST confirmation from the product list."""
+    product = get_object_or_404(Product, uuid=pk)
+    part_no = product.part_no or product.pk
+    product.delete()
+    messages.success(request, f'Product "{part_no}" deleted successfully.')
+    return redirect('product:product-list')
 
-@require_POST
-def ajax_update_subcategory1(request, pk):
-    result = SubCategory1AjaxCRUD.ajax_update(request, pk)
-    # Cache invalidation is handled in the generic method
-    return result
-
-@require_POST
-def ajax_update_subcategory2(request, pk):
-    result = SubCategory2AjaxCRUD.ajax_update(request, pk)
-    # Cache invalidation is handled in the generic method
-    return result
-
-@require_POST
-def ajax_update_color(request, pk):
-    result = ColorAjaxCRUD.ajax_update(request, pk)
-    # Cache invalidation is handled in the generic method
-    return result
-
-@require_POST
-def ajax_delete_category(request, pk):
-    result = CategoryAjaxCRUD.ajax_delete(request, pk)
-    # Cache invalidation is handled in the generic method
-    return result
-
-@require_POST
-def ajax_delete_subcategory1(request, pk):
-    result = SubCategory1AjaxCRUD.ajax_delete(request, pk)
-    # Cache invalidation is handled in the generic method
-    return result
-
-@require_POST
-def ajax_delete_subcategory2(request, pk):
-    result = SubCategory2AjaxCRUD.ajax_delete(request, pk)
-    # Cache invalidation is handled in the generic method
-    return result
-
-@require_POST
-def ajax_delete_color(request, pk):
-    result = ColorAjaxCRUD.ajax_delete(request, pk)
-    # Cache invalidation is handled in the generic method
-    return result
 
 @login_required
 def load_subcategories(request):
@@ -1227,70 +859,6 @@ def ajax_filter_manufacturers_by_status(request):
     })
 
 
-@login_required
-def lead_time_list(request):
-    lead_times = LeadTime.objects.all()
-    return render(request, 'product/lead_time.html', {'lead_times': lead_times})
-
-@login_required
-def finish_list(request):
-    # Retrieve and sort the finishes with related data
-    finishes = Finish.objects.select_related(
-        'manufacturer', 'category', 'sub_category1', 'sub_category2'
-    ).order_by('finish_id')
-
-    # Calculate counts
-    total_finishes = finishes.count()
-    active_finishes = finishes.filter(status=True).count()
-    inactive_finishes = total_finishes - active_finishes
-
-    if request.method == "POST":
-        form = FinishForm(request.POST)  
-        if form.is_valid():
-            form.save()
-            return redirect('product:finishes')  
-    else:
-        form = FinishForm()
-
-    context = {
-        'finishes': finishes,
-        'form': form,
-        'total_finishes': total_finishes,
-        'active_finishes': active_finishes,
-        'inactive_finishes': inactive_finishes,
-    }
-
-    return render(request, 'product/finishes.html', context)
-
-@login_required
-def edit_finish(request, finish_id):
-    # Handle both creation (finish_id=0) and editing
-    if finish_id == 0:
-        finish = None
-        is_creating = True
-    else:
-        finish = get_object_or_404(Finish, finish_id=finish_id)
-        is_creating = False
-    
-    # Check if this is view mode
-    is_view_mode = request.GET.get('mode') == 'view'
-    
-    # Handle form submission
-    if request.method == "POST":
-        form = FinishForm(request.POST, instance=finish)
-        if form.is_valid():
-            form.save()
-            return redirect('product:finishes')
-    else:
-        form = FinishForm(instance=finish)
-
-    return render(request, 'product/edit_finish.html', {
-        'form': form, 
-        'finish': finish,
-        'is_creating': is_creating,
-        'is_view_mode': is_view_mode
-    })
-
 def search_accessories(request):
     query = request.GET.get('q', '')  
     filterby = request.GET.get('filterby', 'part_no') 
@@ -1396,6 +964,30 @@ def remove_component(request):
 
     return JsonResponse({'success': False}, status=400)
 
+def _serialize_assembly_components(product):
+    """Build JSON rows + hidden field value for the Edit Product components tab."""
+    from .models import ProductComponent
+    rows = []
+    hidden_parts = []
+    for pc in (
+        ProductComponent.objects.filter(product=product)
+        .select_related('component')
+        .order_by('component__part_no')
+    ):
+        c = pc.component
+        rows.append({
+            'component_id': c.id,
+            'part_no': c.part_no or '',
+            'description': c.description or '',
+            'product_type': c.product_type or '',
+            'unit_total_cost': float(c.unit_total_cost) if c.unit_total_cost is not None else None,
+            'qty': str(pc.component_qty),
+        })
+        hidden_parts.append(f'{c.id}:{pc.component_qty}')
+    hidden = ','.join(hidden_parts) if hidden_parts else 'none'
+    return rows, hidden
+
+
 @csrf_exempt
 def add_components(request):
     if request.method == 'POST':
@@ -1407,59 +999,97 @@ def add_components(request):
             return JsonResponse({'success': False, 'error': 'Invalid product or component data'}, status=400)
 
         try:
-            product = get_object_or_404(Product, id=product_id)
+            try:
+                product_id = int(product_id)
+            except (TypeError, ValueError):
+                return JsonResponse({'success': False, 'error': 'Invalid product id'}, status=400)
+
+            try:
+                product = Product.objects.get(id=product_id)
+            except Product.DoesNotExist:
+                return JsonResponse(
+                    {'success': False, 'error': 'No Product matches the given query.'},
+                    status=404,
+                )
+
             from .models import ProductComponent
-            from django.db import IntegrityError
-            
+
             added_components = []
             skipped_components = []
-            
+
             for component_data in components_data:
                 if isinstance(component_data, dict):
-                    component_id = component_data.get('id')
-                    qty = component_data.get('qty', 1)
+                    raw_id = component_data.get('id')
+                    qty_raw = component_data.get('qty', 1)
                 else:
-                    # Handle legacy format where components_data might be a list of IDs
-                    component_id = component_data
-                    qty = 1
-                
-                if component_id:
-                    component = get_object_or_404(Product, id=component_id)
-                    
-                    # Check if this component is already added to this product
-                    existing_component = ProductComponent.objects.filter(
-                        product=product, 
-                        component=component
-                    ).first()
-                    
-                    if existing_component:
-                        # Add to existing quantity if component already exists
-                        old_qty = existing_component.component_qty
-                        existing_component.component_qty += qty
-                        existing_component.save()
-                        skipped_components.append(f"{component.part_no} (added {qty} to existing {old_qty}, new total: {existing_component.component_qty})")
-                    else:
-                        # Create new component relationship
-                        ProductComponent.objects.create(
-                            product=product, 
-                            component=component, 
-                            component_qty=qty
-                        )
-                        added_components.append(component.part_no)
-            
-            response_data = {'success': True}
+                    raw_id = component_data
+                    qty_raw = 1
+
+                try:
+                    component_id = int(raw_id)
+                except (TypeError, ValueError):
+                    continue
+
+                try:
+                    qty = Decimal(str(qty_raw))
+                except Exception:
+                    qty = Decimal('1')
+                if qty <= 0:
+                    continue
+
+                try:
+                    component = Product.objects.get(id=component_id)
+                except Product.DoesNotExist:
+                    return JsonResponse(
+                        {'success': False, 'error': f'No product found for component id {component_id}.'},
+                        status=400,
+                    )
+
+                if component_id == product_id:
+                    return JsonResponse(
+                        {'success': False, 'error': 'A product cannot be a component of itself.'},
+                        status=400,
+                    )
+
+                existing_component = ProductComponent.objects.filter(
+                    product=product,
+                    component=component,
+                ).first()
+
+                if existing_component:
+                    old_qty = existing_component.component_qty
+                    existing_component.component_qty += qty
+                    existing_component.save()
+                    skipped_components.append(
+                        f'{component.part_no} (+{qty} to existing {old_qty}, total {existing_component.component_qty})'
+                    )
+                else:
+                    ProductComponent.objects.create(
+                        product=product,
+                        component=component,
+                        component_qty=qty,
+                    )
+                    added_components.append(component.part_no)
+
+            rows, hidden = _serialize_assembly_components(product)
+            response_data = {
+                'success': True,
+                'selected_components': rows,
+                'components_hidden': hidden,
+            }
             if added_components:
                 response_data['added'] = added_components
             if skipped_components:
                 response_data['skipped'] = skipped_components
-                
+
             return JsonResponse(response_data)
-            
+
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
     return JsonResponse({'success': False}, status=400)
 
+@login_required
 def product_quote_list(request):
     """View to list product quotes with the option to use original or current prices."""
     from crm.models import Customer
@@ -2014,7 +1644,11 @@ def ajax_filter_products(request):
         primary_image = product.primary_images[0] if product.primary_images else None
         products_with_images.append((product, primary_image))
     
-    html = render_to_string('product/_product_table_rows.html', {'products_with_images': products_with_images})
+    html = render_to_string(
+        'product/_product_table_rows.html',
+        {'products_with_images': products_with_images},
+        request=request,
+    )
     
     return JsonResponse({
         'html': html, 
@@ -2130,31 +1764,6 @@ def optimized_product_list(request):
         ]
     })
 
-@require_POST
-def ajax_add_category(request):
-    result = CategoryAjaxCRUD.ajax_add(request)
-    # Cache invalidation is handled in the generic method
-    return result
-
-@require_POST
-def ajax_add_subcategory1(request):
-    result = SubCategory1AjaxCRUD.ajax_add(request)
-    # Cache invalidation is handled in the generic method
-    return result
-
-@require_POST
-def ajax_add_subcategory2(request):
-    result = SubCategory2AjaxCRUD.ajax_add(request)
-    # Cache invalidation is handled in the generic method
-    return result
-
-@require_POST
-def ajax_add_color(request):
-    result = ColorAjaxCRUD.ajax_add(request)
-    # Cache invalidation is handled in the generic method
-    return result
-
-
 @login_required
 @require_POST
 def ajax_create_adhoc(request):
@@ -2169,6 +1778,7 @@ def ajax_create_adhoc(request):
                 'part_no': adhoc.part_no,
                 'description': adhoc.description,
                 'cost': str(adhoc.cost) if adhoc.cost else '0.00',
+                'retail_price': str(adhoc.get_quote_unit_price()),
                 'category': adhoc.category.product_category if adhoc.category else '',
                 'manufacturer': adhoc.manufacturer.manufacturer_name if adhoc.manufacturer else '',
                 'vendor': adhoc.vendor.vendor_name if adhoc.vendor else '',
@@ -2211,7 +1821,7 @@ def ajax_add_adhoc_to_quote(request, quote_id):
                 quote=quote,
                 adhoc=adhoc,
                 quantity=quantity,
-                unit_price=adhoc.cost or Decimal(0.0),
+                unit_price=adhoc.get_quote_unit_price(),
                 adhoc_description=adhoc.description
             )
         
@@ -2219,6 +1829,7 @@ def ajax_add_adhoc_to_quote(request, quote_id):
             'success': True,
             'message': f'Added {quantity} of {adhoc.part_no} to quote',
             'line_item_id': line_item.id,
+            'adhoc_id': adhoc.id,
             'part_no': adhoc.part_no,
             'description': adhoc.description,
             'quantity': quantity,
@@ -2305,7 +1916,7 @@ def adhoc_list(request):
     # Get all active Ad-Hoc items with related data
     adhoc_items = AdHoc.objects.select_related(
         'category', 'manufacturer', 'vendor'
-    ).filter(status=True).order_by('part_no')
+    ).filter(status=True)
     
     # Add search functionality
     search_query = request.GET.get('search', '')
@@ -2332,6 +1943,48 @@ def adhoc_list(request):
     vendor_filter = request.GET.get('vendor', '')
     if vendor_filter:
         adhoc_items = adhoc_items.filter(vendor_id=vendor_filter)
+
+    sort_fields = {
+        'vendor': 'vendor__vendor_name',
+        'manufacturer': 'manufacturer__manufacturer_name',
+        'description': 'description',
+        'part_no': 'part_no',
+    }
+    default_sort = ['vendor', 'manufacturer', 'description', 'part_no']
+    sort = request.GET.get('sort', 'vendor')
+    order = request.GET.get('order', 'asc')
+    if sort not in sort_fields:
+        sort = 'vendor'
+    if order not in ['asc', 'desc']:
+        order = 'asc'
+
+    primary_order = Lower(sort_fields[sort])
+    if order == 'desc':
+        primary_order = primary_order.desc()
+
+    order_by_fields = [primary_order]
+    for fallback_sort in default_sort:
+        if fallback_sort != sort:
+            order_by_fields.append(Lower(sort_fields[fallback_sort]))
+    adhoc_items = adhoc_items.order_by(*order_by_fields)
+
+    sort_links = {}
+    for field in sort_fields:
+        params = request.GET.copy()
+        params['sort'] = field
+        params['order'] = 'desc' if sort == field and order == 'asc' else 'asc'
+        params.pop('page', None)
+        sort_links[field] = params.urlencode()
+
+    total_count = adhoc_items.count()
+    paginator = Paginator(adhoc_items, 16)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    page_query_params = request.GET.copy()
+    page_query_params.pop('page', None)
+    page_query = page_query_params.urlencode()
+    page_url_prefix = f'?{page_query}&' if page_query else '?'
     
     # Get filter options for the template
     categories = ProductCategory.objects.all().order_by('product_category')
@@ -2339,7 +1992,9 @@ def adhoc_list(request):
     vendors = Vendor.objects.all().order_by('vendor_name')
     
     context = {
-        'adhoc_items': adhoc_items,
+        'adhoc_items': page_obj,
+        'page_obj': page_obj,
+        'total_count': total_count,
         'categories': categories,
         'manufacturers': manufacturers,
         'vendors': vendors,
@@ -2347,9 +2002,60 @@ def adhoc_list(request):
         'category_filter': category_filter,
         'manufacturer_filter': manufacturer_filter,
         'vendor_filter': vendor_filter,
+        'sort': sort,
+        'order': order,
+        'sort_links': sort_links,
+        'page_url_prefix': page_url_prefix,
     }
     
     return render(request, 'product/adhoc_list.html', context)
+
+
+@login_required
+def create_adhoc(request):
+    """Create a new Ad-Hoc product."""
+    if request.method == 'POST':
+        form = AdHocForm(request.POST)
+        if form.is_valid():
+            adhoc = form.save()
+            messages.success(request, f'Ad-Hoc item "{adhoc.part_no}" created successfully.')
+            return redirect('product:adhoc-list')
+    else:
+        form = AdHocForm()
+
+    dummy_adhoc = type('DummyAdHoc', (), {'id': None, 'part_no': '', 'date_entered': None, 'date_updated': None})()
+
+    return render(request, 'product/edit_adhoc.html', {
+        'form': form,
+        'adhoc': dummy_adhoc,
+        'is_view_mode': False,
+    })
+
+
+@login_required
+def edit_adhoc(request, adhoc_id):
+    """View or edit an Ad-Hoc product."""
+    adhoc = get_object_or_404(
+        AdHoc.objects.select_related('category', 'manufacturer', 'vendor'),
+        id=adhoc_id,
+    )
+    is_view_mode = request.GET.get('mode') == 'view'
+
+    if request.method == 'POST' and not is_view_mode:
+        form = AdHocForm(request.POST, instance=adhoc)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'Ad-Hoc item "{adhoc.part_no}" updated successfully.')
+            return redirect('product:adhoc-list')
+    else:
+        form = AdHocForm(instance=adhoc)
+
+    return render(request, 'product/edit_adhoc.html', {
+        'form': form,
+        'adhoc': adhoc,
+        'is_view_mode': is_view_mode,
+    })
+
 
 @login_required
 @require_POST
@@ -2395,479 +2101,6 @@ def update_line_item_price_type(request, line_item_id):
             return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
-
-# ===== COST POOL MANAGEMENT VIEWS =====
-
-@login_required
-def costpool_list(request):
-    """View for listing all Cost Pools with pagination."""
-    from django.core.paginator import Paginator
-    
-    # Get filter parameters
-    manufacturer = request.GET.get('manufacturer')
-    category = request.GET.get('category')
-    subcat1 = request.GET.get('subcat1')
-    subcat2 = request.GET.get('subcat2')
-    status_filter = request.GET.get('status', 'active')
-    page = request.GET.get('page', 1)
-    
-    # Build queryset
-    costpools = CostPool.objects.select_related(
-        'manufacturer', 'category', 'sub_category1', 'sub_category2'
-    ).order_by('manufacturer__manufacturer_name', 'category__product_category')
-    
-    # Apply status filter
-    if status_filter == 'active':
-        costpools = costpools.filter(status=True)
-    elif status_filter == 'inactive':
-        costpools = costpools.filter(status=False)
-    # For 'all', no status filter is applied
-    
-    # Apply other filters
-    if manufacturer:
-        costpools = costpools.filter(manufacturer_id=manufacturer)
-    if category:
-        costpools = costpools.filter(category_id=category)
-    if subcat1:
-        costpools = costpools.filter(sub_category1_id=subcat1)
-    if subcat2:
-        costpools = costpools.filter(sub_category2_id=subcat2)
-    
-    # Pagination - 16 items per page
-    paginator = Paginator(costpools, 16)
-    costpools_page = paginator.get_page(page)
-    
-    # Get counts for display (all cost pools for stats)
-    all_costpools = CostPool.objects.all()
-    active_costpools = all_costpools.filter(status=True).count()
-    inactive_costpools = all_costpools.filter(status=False).count()
-    total_costpools = all_costpools.count()
-    
-    context = {
-        'costpools': costpools_page,
-        'active_costpools': active_costpools,
-        'inactive_costpools': inactive_costpools,
-        'total_costpools': total_costpools,
-        'current_filters': {
-            'manufacturer': manufacturer,
-            'category': category,
-            'subcat1': subcat1,
-            'subcat2': subcat2,
-            'status': status_filter,
-        }
-    }
-    
-    return render(request, 'product/costpools.html', context)
-
-@login_required
-def create_costpool(request):
-    """Create a new cost pool using the edit_costpool template"""
-    if request.method == "POST":
-        form = CostPoolForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('product:costpools')
-    else:
-        form = CostPoolForm()
-
-    # Create a dummy costpool object for the template
-    dummy_costpool = type('DummyCostPool', (), {
-        'id': None,
-        'manufacturer': None,
-        'category': None,
-        'sub_category1': None,
-        'sub_category2': None
-    })()
-
-    return render(request, 'product/edit_costpool.html', {
-        'form': form, 
-        'costpool': dummy_costpool, 
-        'is_view_mode': False
-    })
-
-@login_required
-def edit_costpool(request, costpool_id):
-    """Edit an existing cost pool"""
-    costpool = get_object_or_404(CostPool, id=costpool_id)
-    is_view_mode = request.GET.get('mode') == 'view'
-    
-    if request.method == "POST" and not is_view_mode:
-        form = CostPoolForm(request.POST, instance=costpool)
-        if form.is_valid():
-            # Check if user wants to update selected products
-            update_all_products = request.POST.get('update_all_products') == 'on'
-            
-            if update_all_products:
-                # Get selected product IDs from the form
-                selected_products_str = request.POST.get('selected_products', '')
-                
-                if selected_products_str:
-                    # Parse selected product IDs
-                    selected_product_ids = [int(pid) for pid in selected_products_str.split(',') if pid.strip()]
-                    
-                    # Update CostPool fields manually and save with skip_auto_sync
-                    costpool.retail = form.cleaned_data['retail']
-                    costpool.builder = form.cleaned_data['builder']
-                    costpool.surplus = form.cleaned_data['surplus']
-                    costpool.manufacturer = form.cleaned_data['manufacturer']
-                    costpool.category = form.cleaned_data['category']
-                    costpool.sub_category1 = form.cleaned_data['sub_category1']
-                    costpool.sub_category2 = form.cleaned_data['sub_category2']
-                    costpool.status = form.cleaned_data['status']
-                    costpool.save(skip_auto_sync=True)
-                    
-                    # Update only selected products manually
-                    selected_products = Product.objects.filter(
-                        id__in=selected_product_ids,
-                        cost_pool=costpool,
-                        status=True
-                    )
-                    
-                    updated_count = 0
-                    for product in selected_products:
-                        product.retail_sell_multiplier = costpool.retail
-                        product.builder_sell_multiplier = costpool.builder
-                        product.surplus_sell_multiplier = costpool.surplus
-                        product.save()
-                        updated_count += 1
-                    
-                    messages.success(request, f'CostPool updated and {updated_count} selected products updated with new multipliers.')
-                else:
-                    # Save CostPool normally (will auto-sync all products)
-                    form.save()
-                    messages.success(request, 'CostPool updated. No products were selected for update.')
-            else:
-                # Save CostPool normally (will auto-sync all products)
-                form.save()
-                messages.success(request, 'CostPool updated. Use the "Update Selected Products" button below to update specific products.')
-            
-            return redirect('product:costpools')
-    else:
-        form = CostPoolForm(instance=costpool)
-
-    return render(request, 'product/edit_costpool.html', {
-        'form': form, 
-        'costpool': costpool, 
-        'is_view_mode': is_view_mode
-    })
-
-@require_POST
-def ajax_delete_costpool(request, pk):
-    """AJAX delete cost pool"""
-    try:
-        costpool = CostPool.objects.get(pk=pk)
-        costpool.delete()
-        return JsonResponse({'success': True})
-    except CostPool.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Cost Pool not found'}, status=404)
-
-# ===== COST POOL AJAX FILTERING VIEWS =====
-
-@require_GET
-def ajax_filter_costpools(request):
-    """Filter cost pools based on manufacturer, category, subcategory, and status filters with pagination"""
-    from django.core.paginator import Paginator
-    
-    manufacturer = request.GET.get('manufacturer')
-    category = request.GET.get('category')
-    subcat1 = request.GET.get('subcat1')
-    subcat2 = request.GET.get('subcat2')
-    status_filter = request.GET.get('status', 'active')
-    page = request.GET.get('page', 1)
-    
-    # Build optimized queryset
-    queryset = CostPool.objects.select_related(
-        'manufacturer', 'category', 'sub_category1', 'sub_category2'
-    ).order_by('manufacturer__manufacturer_name', 'category__product_category')
-    
-    # Apply status filter
-    if status_filter == 'active':
-        queryset = queryset.filter(status=True)
-    elif status_filter == 'inactive':
-        queryset = queryset.filter(status=False)
-    # For 'all', no status filter is applied
-    
-    # Apply other filters
-    if manufacturer:
-        queryset = queryset.filter(manufacturer_id=manufacturer)
-    if category:
-        queryset = queryset.filter(category_id=category)
-    if subcat1:
-        queryset = queryset.filter(sub_category1_id=subcat1)
-    if subcat2:
-        queryset = queryset.filter(sub_category2_id=subcat2)
-    
-    # Pagination - 16 items per page
-    paginator = Paginator(queryset, 16)
-    costpools_page = paginator.get_page(page)
-    
-    # Generate HTML for filtered results
-    html = render_to_string('product/_costpool_table_rows.html', {
-        'costpools': costpools_page
-    })
-    
-    # Generate pagination HTML
-    pagination_html = render_to_string('product/_costpool_pagination.html', {
-        'page_obj': costpools_page,
-        'current_filters': {
-            'manufacturer': manufacturer,
-            'category': category,
-            'subcat1': subcat1,
-            'subcat2': subcat2,
-            'status': status_filter,
-        }
-    })
-    
-    return JsonResponse({
-        'html': html,
-        'pagination_html': pagination_html,
-        'count': queryset.count(),
-        'page_info': {
-            'current_page': costpools_page.number,
-            'total_pages': paginator.num_pages,
-            'has_previous': costpools_page.has_previous(),
-            'has_next': costpools_page.has_next(),
-        }
-    })
-
-@require_GET
-def ajax_costpool_manufacturers(request):
-    """Get manufacturers available for cost pools"""
-    manufacturers = Manufacturer.objects.filter(status=True).values('id', 'manufacturer_name').order_by('manufacturer_name')
-    
-    return JsonResponse({
-        'manufacturers': [{'id': m['id'], 'name': m['manufacturer_name']} for m in manufacturers]
-    })
-
-@require_GET
-def ajax_costpool_linked_products(request, costpool_id):
-    """Get products linked to a specific cost pool with pagination"""
-    from django.core.paginator import Paginator
-    
-    try:
-        costpool = CostPool.objects.get(id=costpool_id)
-    except CostPool.DoesNotExist:
-        return JsonResponse({'error': 'CostPool not found'}, status=404)
-    
-    page = request.GET.get('page', 1)
-    
-    # Get linked products
-    products = Product.objects.filter(
-        cost_pool=costpool,
-        status=True
-    ).select_related(
-        'category', 'sub_category1', 'sub_category2'
-    ).order_by('part_no')
-    
-    # Pagination - 16 items per page
-    paginator = Paginator(products, 16)
-    products_page = paginator.get_page(page)
-    
-    # Serialize products
-    products_data = []
-    for product in products_page:
-        products_data.append({
-            'id': product.id,
-            'part_no': product.part_no,
-            'description': product.description,
-            'category': product.category.product_category if product.category else None,
-            'sub_category1': product.sub_category1.product_sub_category if product.sub_category1 else None,
-            'sub_category2': product.sub_category2.product_sub_category2 if product.sub_category2 else None,
-            'retail_sell_multiplier': float(product.retail_sell_multiplier) if product.retail_sell_multiplier else None,
-            'builder_sell_multiplier': float(product.builder_sell_multiplier) if product.builder_sell_multiplier else None,
-            'surplus_sell_multiplier': float(product.surplus_sell_multiplier) if product.surplus_sell_multiplier else None,
-        })
-    
-    return JsonResponse({
-        'products': products_data,
-        'pagination': {
-            'current_page': products_page.number,
-            'total_pages': paginator.num_pages,
-            'has_previous': products_page.has_previous(),
-            'has_next': products_page.has_next(),
-            'previous_page': products_page.previous_page_number() if products_page.has_previous() else None,
-            'next_page': products_page.next_page_number() if products_page.has_next() else None,
-        }
-    })
-
-@require_POST
-def ajax_update_costpool_products(request, costpool_id):
-    """Update selected products with CostPool multipliers"""
-    try:
-        costpool = CostPool.objects.get(id=costpool_id)
-    except CostPool.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'CostPool not found'}, status=404)
-    
-    try:
-        data = json.loads(request.body)
-        product_ids = data.get('product_ids', [])
-        
-        if not product_ids:
-            return JsonResponse({'success': False, 'error': 'No products selected'})
-        
-        # Get selected products
-        products = Product.objects.filter(
-            id__in=product_ids,
-            cost_pool=costpool,
-            status=True
-        )
-        
-        updated_count = 0
-        for product in products:
-            # Update multipliers from CostPool
-            product.retail_sell_multiplier = costpool.retail
-            product.builder_sell_multiplier = costpool.builder
-            product.surplus_sell_multiplier = costpool.surplus
-            product.save()
-            updated_count += 1
-        
-        return JsonResponse({
-            'success': True,
-            'updated_count': updated_count
-        })
-        
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON data'}, status=400)
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
-@require_GET 
-def ajax_costpool_categories(request):
-    """Get categories available for cost pools with caching"""
-    cache_key = 'costpool_categories'
-    cached_data = cache.get(cache_key)
-    
-    if cached_data is None:
-        categories = ProductCategory.objects.filter(
-            status=True,
-            costpool__isnull=False  # Only categories that have cost pools
-        ).distinct().values('id', 'product_category').order_by('product_category')
-        
-        cached_data = {
-            'categories': [{'id': c['id'], 'name': c['product_category']} for c in categories]
-        }
-        # Cache for 1 hour
-        cache.set(cache_key, cached_data, 3600)
-    
-    return JsonResponse(cached_data)
-
-@require_GET
-def ajax_costpool_subcat1(request, category_id):
-    """Get subcategory1 options for cost pools filtered by category"""
-    cache_key = f'costpool_subcat1_{category_id}'
-    cached_data = cache.get(cache_key)
-    
-    if cached_data is None:
-        subcats = ProductSubCategory1.objects.filter(
-            category_id=category_id,
-            status=True,
-            costpool__isnull=False  # Only subcategories that have cost pools
-        ).distinct().values('id', 'product_sub_category').order_by('product_sub_category')
-        
-        cached_data = {
-            'subcategories': [{'id': s['id'], 'name': s['product_sub_category']} for s in subcats]
-        }
-        # Cache for 1 hour
-        cache.set(cache_key, cached_data, 3600)
-    
-    return JsonResponse(cached_data)
-
-@require_GET
-def ajax_costpool_subcat2(request, subcat1_id):
-    """Get subcategory2 options for cost pools filtered by subcategory1"""
-    cache_key = f'costpool_subcat2_{subcat1_id}'
-    cached_data = cache.get(cache_key)
-    
-    if cached_data is None:
-        subcats = ProductSubCategory2.objects.filter(
-            sub_category1_id=subcat1_id,
-            status=True,
-            costpool__isnull=False  # Only subcategories that have cost pools
-        ).distinct().values('id', 'product_sub_category2').order_by('product_sub_category2')
-        
-        cached_data = {
-            'subcategories': [{'id': s['id'], 'name': s['product_sub_category2']} for s in subcats]
-        }
-        # Cache for 1 hour
-        cache.set(cache_key, cached_data, 3600)
-    
-    return JsonResponse(cached_data)
-
-@require_GET
-def ajax_costpool_manufacturers(request):
-    """Get manufacturers available for cost pools with caching"""
-    cache_key = 'costpool_manufacturers'
-    cached_data = cache.get(cache_key)
-    
-    if cached_data is None:
-        manufacturers = Manufacturer.objects.filter(
-            status=True,
-            costpool__isnull=False  # Only manufacturers that have cost pools
-        ).distinct().values('id', 'manufacturer_name').order_by('manufacturer_name')
-        
-        cached_data = {
-            'manufacturers': [{'id': m['id'], 'name': m['manufacturer_name']} for m in manufacturers]
-        }
-        # Cache for 1 hour
-        cache.set(cache_key, cached_data, 3600)
-    
-    return JsonResponse(cached_data)
-
-@require_POST
-def ajax_delete_finish(request, pk):
-    """AJAX delete finish"""
-    try:
-        finish = Finish.objects.get(pk=pk)
-        finish.delete()
-        return JsonResponse({'success': True})
-    except Finish.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Finish not found'}, status=404)
-
-@require_GET
-def ajax_search_finishes(request):
-    """AJAX search finishes with status filtering (no pagination)"""
-    query = request.GET.get('q', '').strip()
-    status_filter = request.GET.get('status', 'active')
-    
-    finishes = Finish.objects.select_related(
-        'manufacturer', 'category', 'sub_category1', 'sub_category2'
-    )
-    
-    # Apply status filter
-    if status_filter == 'active':
-        finishes = finishes.filter(status=True)
-    elif status_filter == 'inactive':
-        finishes = finishes.filter(status=False)
-    # For 'all', no additional filter is applied
-    
-    if query:
-        finishes = finishes.filter(
-            Q(description__icontains=query)
-        )
-    
-    # Order by finish_id
-    finishes = finishes.order_by('finish_id')
-    
-    results = []
-    for finish in finishes:
-        results.append({
-            'finish_id': finish.finish_id,
-            'description': finish.description,
-            'manufacturer_name': finish.manufacturer.manufacturer_name if finish.manufacturer else '-',
-            'category_name': finish.category.product_category if finish.category else '-',
-            'sub_category1_name': finish.sub_category1.product_sub_category if finish.sub_category1 else '-',
-            'sub_category2_name': finish.sub_category2.product_sub_category2 if finish.sub_category2 else '-',
-            'status': finish.status,
-            'edit_url': reverse('product:edit_finish', args=[finish.finish_id]),
-            'view_url': reverse('product:edit_finish', args=[finish.finish_id]) + '?mode=view',
-            'delete_url': reverse('product:ajax_delete_finish', args=[finish.finish_id]),
-        })
-    
-    return JsonResponse({
-        'finishes': results,
-        'count': len(results)
-    })
-
 
 @login_required
 def batch_update_products(request):

@@ -70,16 +70,17 @@
             {% if action != 'view' %}
             <div class="row mt-3">
                 <div class="col-12">
-                    <button type="submit" class="btn btn-primary btn-sm">
-                        {% if action == 'update' %}Update{% else %}Create{% endif %} Product Quote
+                    {% if action == 'create' %}
+                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                        Create Product Quote
                     </button>
+                    {% endif %}
                     {% if product_quote %}
-                    <a href="{% url 'job:job_quote_products' job.id product_quote.id %}" class="btn btn-outline-secondary btn-sm">
+                    <a href="{% url 'job:job_quote_products' job.id product_quote.id %}" class="btn btn-sm btn-outline-info" title="Products in quote">
                         Products
                     </a>
                     {% endif %}
-                    <a href="{% url 'job:job_quotes' job.id %}" class="btn btn-secondary btn-sm">
-                        <i class="fas fa-times me-1"></i>
+                    <a href="{% url 'job:job_quotes' job.id %}" class="btn btn-outline-secondary btn-sm">
                         Cancel
                     </a>
                 </div>
@@ -87,11 +88,10 @@
             {% else %}
             <div class="row mt-3">
                 <div class="col-12">
-                    <a href="{% url 'job:job_quote_products' job.id product_quote.id %}" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-boxes me-1"></i>Products
+                    <a href="{% url 'job:job_quote_products' job.id product_quote.id %}" class="btn btn-sm btn-outline-info" title="Products in quote">
+                        Products
                     </a>
-                    <a href="{% url 'job:job_quotes' job.id %}" class="btn btn-secondary btn-sm">
-                        <i class="fas fa-arrow-left me-1"></i>
+                    <a href="{% url 'job:job_quotes' job.id %}" class="btn btn-outline-secondary btn-sm">
                         Back to Product Quotes
                     </a>
                 </div>

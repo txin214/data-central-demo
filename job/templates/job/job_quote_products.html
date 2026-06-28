@@ -2,17 +2,22 @@
 
 {% block job_content %}
 {% load static %}
-<div class="mt-3 mb-2">
-    <a href="{% url 'job:job_product_quote_update_specific' job.id product_quote.id %}" class="btn btn-sm btn-outline-secondary"><i class="fas fa-arrow-left me-1"></i>Back to Quote Details</a>
-</div>
 <style>
 .product-img-thumb {
-    width: 36px;
-    height: 36px;
+    width: 56px;
+    height: 56px;
     object-fit: contain;
     border-radius: 4px;
     background: #fff;
     border: 1px solid #eee;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    position: relative;
+    z-index: 1;
+}
+.product-img-thumb:hover {
+    transform: scale(2.2);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    z-index: 20;
 }
 .search-bar {
     max-width: 1250px;
@@ -41,6 +46,15 @@
 .table {
     font-size: 13px;
 }
+.quote-products-card {
+    border-bottom: 0 !important;
+}
+.quote-products-card .quote-products-table tfoot tr:last-child > * {
+    border-bottom: 1px solid #dee2e6 !important;
+}
+.quote-products-card .quote-products-table {
+    margin-bottom: 0 !important;
+}
 .adhoc-bar .form-control,
 .adhoc-bar .form-select {
     width: 120px;
@@ -51,8 +65,39 @@
 .adhoc-bar #adhoc_part_no {
     width: 150px;
 }
+.adhoc-bar #adhoc_manufacturer {
+    width: 170px;
+}
+.adhoc-bar #adhoc_cost {
+    width: 110px;
+}
+.adhoc-bar #adhoc_retail_price {
+    width: 140px;
+}
 .adhoc-bar #adhocCreateBtn {
-    width: 150px;
+    width: 120px;
+    height: calc(1.5em + 0.5rem + 2px);
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+}
+.quote-products-card .quote-products-table th,
+.quote-products-card .quote-products-table td {
+    border-right: 1px solid #dee2e6;
+}
+.quote-products-card .quote-products-table th:last-child,
+.quote-products-card .quote-products-table td:last-child {
+    border-right: none;
+}
+.adhoc-frozen-select {
+    background-color: #e9ecef !important;
+    cursor: not-allowed;
+    opacity: 0.85;
 }
 </style>
 <script src="{% static 'product/js/quote_products.js' %}"></script>
@@ -114,6 +159,7 @@
                     {% endfor %}
                 </select>
                 <input type="number" class="form-control form-control-sm" id="adhoc_cost" name="cost" step="0.01" min="0" placeholder="Cost">
+                <input type="number" class="form-control form-control-sm" id="adhoc_retail_price" name="retail_price" step="0.01" min="0" placeholder="Retail (1.4× cost)" title="Defaults to 1.4× cost; enter to override">
                 <select class="form-select form-select-sm" id="adhoc_manufacturer" name="manufacturer">
                     <option value="">Manufacturer</option>
                     {% for manufacturer in manufacturers %}
@@ -126,33 +172,30 @@
                         <option value="{{ vendor.id }}">{{ vendor.vendor_name }}</option>
                     {% endfor %}
                 </select>
-                <input type="number" class="form-control form-control-sm" id="adhoc_retail_price" name="retail_price" step="0.01" min="0" placeholder="Retail Price">
                 <input type="number" class="form-control form-control-sm" id="adhoc_quantity" name="quantity" min="1" value="1" placeholder="Qty">
                 <button type="submit" class="btn btn-primary btn-sm" id="adhocCreateBtn">
                     <span id="adhocCreateBtnSpinner" class="spinner-border spinner-border-sm me-1" style="display:none;" role="status" aria-hidden="true"></span>
-                    <i class="fas fa-plus"></i> Create & Add
+                    Create and Add
                 </button>
             </form>
         </div>
     </div>
 </div>
+</div>
 
 <!-- Products in Quote Section -->
-<div class="container-fluid px-0">
-        <div class="card mb-3">
+<div class="card mb-3 quote-products-card">
             <div class="card-header">
                 <h6 class="mb-0">{% if product_quote.name %}Products in {{ product_quote.name }}{% else %}Products in Quote{% endif %}</h6>
             </div>
+            <div id="adhocProductsContainer" class="table-responsive">
             {% if line_items_with_images or adhoc_line_items %}
-            <div class="card-body">
-                <div id="adhocProductsContainer" class="table-responsive">
-                    <table class="table table-bordered table-hover align-middle mb-0" style="max-width: 100%;">
+                    <table class="table table-hover align-middle mb-0 quote-products-table" style="max-width: 100%;">
                         <thead class="sticky-header">
                             <tr style="background-color: #f2f2f2;">
-                                <th>Type</th>
-                                <th>Image</th>
                                 <th>Name</th>
                                 <th>Description</th>
+                                <th>Image</th>
                                 <th>Cost As</th>
                                 <th>Quantity</th>
                                 <th>Unit Price</th>
@@ -166,16 +209,19 @@
                         <tbody id="quoteProductsTableBody">
                             {% for line_item, primary_image, product_note in line_items_with_images %}
                             <tr>
-                                <td><span class="small fw-semibold text-muted">Catalog</span></td>
+                                <td>
+                                    <a href="{% url 'product:product-detail2' line_item.product.uuid %}" target="_blank">
+                                        {{ line_item.product.part_no }}
+                                    </a>
+                                </td>
+                                <td>{{ line_item.product_description }}</td>
                                 <td>
                                     {% if primary_image %}
-                                        <img src="{{ primary_image.image.url }}" alt="{{ line_item.product.description }}" class="product-img-thumb">
+                                        <img src="{{ primary_image.display_url }}" alt="{{ line_item.product.description }}" class="product-img-thumb">
                                     {% else %}
-                                        <img src="{% static 'product/images.png' %}" alt="No image" class="product-img-thumb">
+                                        <img src="{% static 'product/image-not-found.png' %}" alt="No image" class="product-img-thumb">
                                     {% endif %}
                                 </td>
-                                <td>{{ line_item.product.part_no }}</td>
-                                <td>{{ line_item.product_description }}</td>
                                 <td>
                                     <select name="price_type_{{ line_item.id }}" class="form-select form-select-sm" style="width: 100px; font-size: 12px;" onchange="updatePriceType({{ line_item.id }}, this.value)">
                                         <option value="retail_sell" {% if line_item.price_type == 'retail_sell' %}selected{% endif %}>Retail</option>
@@ -214,27 +260,34 @@
                                 <td style="white-space: nowrap;">
                                     <div class="d-flex gap-1">
                                         <button onclick="updateQuantity({{ line_item.id }}, 'quantity_{{ line_item.id }}')" class="btn btn-sm btn-outline-primary" title="Update Quantity" style="padding: 2px 6px;">
-                                            <i class="fas fa-save"></i>
+                                            Save
                                         </button>
                                         <form method="post" action="{% url 'job:delete_product_from_quote' job.id product_quote.id line_item.id %}" style="display: inline;">
                                             {% csrf_token %}
                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete Product" style="padding: 2px 6px;" onclick="return confirm('Are you sure you want to delete this product?')">
-                                                <i class="fas fa-trash"></i>
+                                                Delete
                                             </button>
                                         </form>
                                     </div>
                                 </td>
                             </tr>
                             {% endfor %}
-                        </tbody>
-                        <tbody id="adhocProductsTableBody">
                             {% for adhoc_line_item in adhoc_line_items %}
-                            <tr class="table-warning" id="adhoc-row-{{ adhoc_line_item.id }}">
-                                <td><span class="small fw-semibold text-muted">Ad-Hoc</span></td>
-                                <td><i class="fas fa-tools text-warning"></i></td>
-                                <td>{{ adhoc_line_item.adhoc.part_no }}</td>
+                            <tr id="adhoc-row-{{ adhoc_line_item.id }}" data-adhoc-row="1">
+                                <td>
+                                    <a href="{% url 'product:edit-adhoc' adhoc_line_item.adhoc.id %}?mode=view" target="_blank">
+                                        {{ adhoc_line_item.adhoc.part_no }}
+                                    </a>
+                                </td>
                                 <td>{{ adhoc_line_item.adhoc_description }}</td>
-                                <td><span class="text-muted">Ad-Hoc</span></td>
+                                <td>
+                                    <img src="{% static 'product/image-not-found.png' %}" alt="Ad-Hoc" class="product-img-thumb">
+                                </td>
+                                <td>
+                                    <select class="form-select form-select-sm" style="width: 100px; font-size: 12px;" disabled aria-label="Cost type">
+                                        <option selected>Ad-Hoc</option>
+                                    </select>
+                                </td>
                                 <td>
                                     <input type="number" name="adhoc_quantity_{{ adhoc_line_item.id }}" value="{{ adhoc_line_item.quantity }}" style="width: 60px; text-align: center; font-size: 13px; padding: 2px 4px;" min="0">
                                 </td>
@@ -242,75 +295,44 @@
                                 <td>{% if adhoc_line_item.total_price and adhoc_line_item.total_price != 0 %}${{ adhoc_line_item.total_price|floatformat:2 }}{% else %}-{% endif %}</td>
                                 <td class="optional-column" style="display: none;">-</td>
                                 <td class="optional-column" style="display: none;">-</td>
-                                <td><span class="text-muted small">No note</span></td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <span class="text-muted small">No note</span>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" disabled title="Notes not available for ad-hoc items" style="padding: 1px 4px;">
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                    </div>
+                                </td>
                                 <td style="white-space: nowrap;">
                                     <div class="d-flex gap-1">
                                         <button onclick="updateAdhocQuantity({{ adhoc_line_item.id }}, 'adhoc_quantity_{{ adhoc_line_item.id }}')" class="btn btn-sm btn-outline-primary" title="Update Quantity" style="padding: 2px 6px;">
-                                            <i class="fas fa-save"></i>
+                                            Save
                                         </button>
-                                        <button onclick="deleteAdhocFromQuote({{ product_quote.id }}, {{ adhoc_line_item.id }})" class="btn btn-sm btn-outline-danger" title="Delete Ad-Hoc Item" style="padding: 2px 6px;">
-                                            <i class="fas fa-trash"></i>
+                                        <button type="button" onclick="deleteAdhocFromQuote({{ product_quote.id }}, {{ adhoc_line_item.id }})" class="btn btn-sm btn-outline-danger" title="Delete Ad-Hoc Item" style="padding: 2px 6px;">
+                                            Delete
                                         </button>
                                     </div>
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="11" class="text-end bg-light">
+                                    <strong>Quote Total:</strong>
+                                    <span class="fs-6 fw-bold text-success ms-2" id="quoteTotalDisplay">${{ product_quote.subtotal|floatformat:2 }}</span>
+                                </td>
+                            </tr>
+                        </tfoot>
                     </table>
-                </div>
-            </div>
-            {% else %}
-            <!-- Quick Navigation Card -->
-            <div class="card-body border-bottom">
-                <div class="d-flex gap-2 flex-wrap">
-                    <a href="{% url 'product:product_quote_list' %}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-list"></i> All Quotes
-                    </a>
-                    <a href="{% url 'product:product_quote_report' product_quote.id %}" class="btn btn-sm btn-outline-info">
-                        <i class="fas fa-eye"></i> View Report
-                    </a>
-                    <a href="{% url 'product:quote_products' product_quote.id %}" class="btn btn-sm btn-outline-secondary">
-                        <i class="fas fa-external-link-alt"></i> Full Quote View
-                    </a>
-                </div>
-            </div>
-            <div class="card-body">
-                <div class="alert alert-info">
-                    <h5>No products in this quote yet.</h5>
-                    <p class="mb-0">Use the search section above to find and add products to your quote.</p>
-                </div>
-            </div>
             {% endif %}
-        </div>
-        
-        <!-- Quote Total Display -->
-        <div class="alert mb-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <strong>Quote Total:</strong>
-                    <span class="fs-5 fw-bold text-success ms-2" id="quoteTotalDisplay">${{ product_quote.subtotal|floatformat:2 }}</span>
-                </div>
             </div>
-        </div>
 </div>
 
-<!-- Confirmation Modal -->
-<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteConfirmModalLabel">Confirm Delete</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to delete this Ad-Hoc item?
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
-            </div>
-        </div>
-    </div>
+<div class="mt-2 mb-3 text-start">
+    <a href="{% url 'job:job_product_quote_update_specific' job.id product_quote.id %}" class="btn btn-sm btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i>Back to Quote Details
+    </a>
 </div>
 
 <script>
@@ -557,12 +579,80 @@ function validateQuantities() {
     return true;
 }
 
-// Ad-Hoc functionality
+// Ad-Hoc functionality — freeze category/manufacturer/vendor after a successful add (until page refresh)
+const ADHOC_FROZEN_FIELD_IDS = ['adhoc_category', 'adhoc_manufacturer', 'adhoc_vendor'];
+const ADHOC_RETAIL_MARKUP = 1.4;
+let adhocRetailManual = false;
+
+function syncAdhocRetailFromCost() {
+    if (adhocRetailManual) {
+        return;
+    }
+    const costInput = document.getElementById('adhoc_cost');
+    const retailInput = document.getElementById('adhoc_retail_price');
+    if (!costInput || !retailInput) {
+        return;
+    }
+    const cost = parseFloat(costInput.value);
+    if (!isNaN(cost) && costInput.value !== '') {
+        retailInput.value = (cost * ADHOC_RETAIL_MARKUP).toFixed(2);
+    } else {
+        retailInput.value = '';
+    }
+}
+
+function setAdhocFieldsFrozen(frozen) {
+    ADHOC_FROZEN_FIELD_IDS.forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.disabled = frozen;
+        el.classList.toggle('adhoc-frozen-select', frozen);
+    });
+}
+
+function enableAdhocFieldsForSubmit() {
+    ADHOC_FROZEN_FIELD_IDS.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = false;
+    });
+}
+
+function getFrozenAdhocFieldValues() {
+    return {
+        category: document.getElementById('adhoc_category')?.value || '',
+        manufacturer: document.getElementById('adhoc_manufacturer')?.value || '',
+        vendor: document.getElementById('adhoc_vendor')?.value || '',
+    };
+}
+
+function restoreFrozenAdhocFields(values) {
+    const category = document.getElementById('adhoc_category');
+    const manufacturer = document.getElementById('adhoc_manufacturer');
+    const vendor = document.getElementById('adhoc_vendor');
+    if (category) category.value = values.category;
+    if (manufacturer) manufacturer.value = values.manufacturer;
+    if (vendor) vendor.value = values.vendor;
+    setAdhocFieldsFrozen(true);
+}
+
+function resetAdhocEntryFields(keepFrozenValues) {
+    const form = document.getElementById('adhocForm');
+    if (!form) return;
+    form.reset();
+    adhocRetailManual = false;
+    document.getElementById('adhoc_quantity').value = '1';
+    restoreFrozenAdhocFields(keepFrozenValues);
+    document.getElementById('adhoc_part_no')?.focus();
+}
+
 function createAndAddAdhoc() {
     const form = document.getElementById('adhocForm');
-    const formData = new FormData(form);
     const createBtn = document.getElementById('adhocCreateBtn');
     const spinner = document.getElementById('adhocCreateBtnSpinner');
+
+    // Disabled fields are omitted from FormData — enable briefly for submit
+    enableAdhocFieldsForSubmit();
+    const formData = new FormData(form);
     
     // Disable button and show spinner
     createBtn.disabled = true;
@@ -599,11 +689,9 @@ function createAndAddAdhoc() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Add the new Ad-Hoc item to the table dynamically
             addAdhocItemToTable(data);
-            // Clear the form
-            form.reset();
-            showNotification(data.message, 'success');
+            const frozenValues = getFrozenAdhocFieldValues();
+            resetAdhocEntryFields(frozenValues);
         } else {
             throw new Error(data.error || 'Failed to add Ad-Hoc item to quote');
         }
@@ -611,29 +699,39 @@ function createAndAddAdhoc() {
     .catch(error => {
         console.error('Error:', error);
         showNotification('Error: ' + error.message, 'error');
+        // Re-apply freeze if fields had been frozen before a failed submit
+        if (document.getElementById('adhoc_category')?.classList.contains('adhoc-frozen-select')) {
+            setAdhocFieldsFrozen(true);
+        }
     })
     .finally(() => {
-        // Re-enable button and hide spinner
         createBtn.disabled = false;
         spinner.style.display = 'none';
     });
 }
 
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text ?? '';
+    return div.innerHTML;
+}
+
 function addAdhocItemToTable(data) {
     const container = document.getElementById('adhocProductsContainer');
-    const tableBody = document.getElementById('adhocProductsTableBody');
-    
+    let tableBody = document.getElementById('quoteProductsTableBody');
+    const placeholderImage = '{% static "product/image-not-found.png" %}';
+    const adhocEditUrlBase = '{% url "product:edit-adhoc" 0 %}?mode=view'.replace('/0/', `/${data.adhoc_id}/`);
+
     // If no table exists, create a unified quote table skeleton
     if (!tableBody) {
         const tableHTML = `
-            <table class="table table-bordered table-hover align-middle mb-0" style="max-width: 100%;">
+            <table class="table table-hover align-middle mb-0 quote-products-table" style="max-width: 100%;">
                 <thead class="sticky-header">
                     <tr style="background-color: #f2f2f2;">
-                        <th>Type</th>
-                        <th>Image</th>
                         <th>Name</th>
                         <th>Description</th>
-                        <th>Price Type</th>
+                        <th>Image</th>
+                        <th>Cost As</th>
                         <th>Quantity</th>
                         <th>Unit Price</th>
                         <th>Total Price</th>
@@ -644,22 +742,36 @@ function addAdhocItemToTable(data) {
                     </tr>
                 </thead>
                 <tbody id="quoteProductsTableBody"></tbody>
-                <tbody id="adhocProductsTableBody"></tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="11" class="text-end bg-light">
+                            <strong>Quote Total:</strong>
+                            <span class="fs-6 fw-bold text-success ms-2" id="quoteTotalDisplay">${{ product_quote.subtotal|floatformat:2 }}</span>
+                        </td>
+                    </tr>
+                </tfoot>
             </table>
         `;
         container.innerHTML = tableHTML;
+        tableBody = document.getElementById('quoteProductsTableBody');
     }
-    
-    // Add the new row
+
+    const partNoLink = data.adhoc_id
+        ? `<a href="${adhocEditUrlBase}" target="_blank">${escapeHtml(data.part_no)}</a>`
+        : escapeHtml(data.part_no);
+
     const newRow = document.createElement('tr');
-    newRow.className = 'table-warning';
     newRow.id = `adhoc-row-${data.line_item_id}`;
+    newRow.dataset.adhocRow = '1';
     newRow.innerHTML = `
-        <td><span class="small fw-semibold text-muted">Ad-Hoc</span></td>
-        <td><i class="fas fa-tools text-warning"></i></td>
-        <td>${data.part_no}</td>
-        <td>${data.description}</td>
-        <td><span class="text-muted">Ad-Hoc</span></td>
+        <td>${partNoLink}</td>
+        <td>${escapeHtml(data.description)}</td>
+        <td><img src="${placeholderImage}" alt="Ad-Hoc" class="product-img-thumb"></td>
+        <td>
+            <select class="form-select form-select-sm" style="width: 100px; font-size: 12px;" disabled aria-label="Cost type">
+                <option selected>Ad-Hoc</option>
+            </select>
+        </td>
         <td>
             <input type="number" name="adhoc_quantity_${data.line_item_id}" value="${data.quantity}" style="width: 60px; text-align: center; font-size: 13px; padding: 2px 4px;" min="0">
         </td>
@@ -667,27 +779,26 @@ function addAdhocItemToTable(data) {
         <td>$${parseFloat(data.total_price).toFixed(2)}</td>
         <td class="optional-column" style="display: none;">-</td>
         <td class="optional-column" style="display: none;">-</td>
-        <td><span class="text-muted small">No note</span></td>
-        <td style="white-space: nowrap;">
-            <div class="d-flex gap-1">
-                <button onclick="updateAdhocQuantity(${data.line_item_id}, 'adhoc_quantity_${data.line_item_id}')" class="btn btn-sm btn-outline-primary" title="Update Quantity" style="padding: 2px 6px;">
-                    <i class="fas fa-save"></i>
-                </button>
-                <button onclick="deleteAdhocFromQuote({{ product_quote.id }}, ${data.line_item_id})" class="btn btn-sm btn-outline-danger" title="Delete Ad-Hoc Item" style="padding: 2px 6px;">
-                    <i class="fas fa-trash"></i>
+        <td>
+            <div class="d-flex align-items-center gap-1">
+                <span class="text-muted small">No note</span>
+                <button type="button" class="btn btn-sm btn-outline-primary" disabled title="Notes not available for ad-hoc items" style="padding: 1px 4px;">
+                    <i class="fas fa-plus"></i>
                 </button>
             </div>
         </td>
+        <td style="white-space: nowrap;">
+            <div class="d-flex gap-1">
+                <button type="button" onclick="updateAdhocQuantity(${data.line_item_id}, 'adhoc_quantity_${data.line_item_id}')" class="btn btn-sm btn-outline-primary" title="Update Quantity" style="padding: 2px 6px;">Save</button>
+                <button type="button" onclick="deleteAdhocFromQuote({{ product_quote.id }}, ${data.line_item_id})" class="btn btn-sm btn-outline-danger" title="Delete Ad-Hoc Item" style="padding: 2px 6px;">Delete</button>
+            </div>
+        </td>
     `;
-    
-    const tbody = document.getElementById('adhocProductsTableBody');
-    tbody.appendChild(newRow);
+
+    tableBody.appendChild(newRow);
     
     // Update quote total
     updateQuoteTotal(data.quote_subtotal);
-    
-    // Show success notification
-    showNotification(`Added ${data.quantity} of ${data.part_no} to quote`, 'success');
 }
 
 function updateQuoteTotal(newTotal) {
@@ -697,8 +808,8 @@ function updateQuoteTotal(newTotal) {
     }
     
     // Update the item count display
-    const adhocCount = document.getElementById('adhocProductsTableBody')?.children.length || 0;
-    const regularCount = document.querySelectorAll('#quoteProductsTableBody tr').length || 0;
+    const adhocCount = document.querySelectorAll('#quoteProductsTableBody tr[data-adhoc-row]').length || 0;
+    const regularCount = document.querySelectorAll('#quoteProductsTableBody tr:not([data-adhoc-row])').length || 0;
     
     const countElement = document.querySelector('.alert-success small');
     if (countElement) {
@@ -761,7 +872,7 @@ function updateAdhocQuantity(lineItemId, inputName) {
             // Update the total price in the table
             const row = document.getElementById(`adhoc-row-${lineItemId}`);
             if (row) {
-                const totalPriceCell = row.querySelector('td:nth-child(6)');
+                const totalPriceCell = row.querySelector('td:nth-child(7)');
                 if (totalPriceCell) {
                     totalPriceCell.textContent = `$${parseFloat(data.total_price).toFixed(2)}`;
                 }
@@ -780,18 +891,10 @@ function updateAdhocQuantity(lineItemId, inputName) {
 }
 
 function deleteAdhocFromQuote(quoteId, lineItemId) {
-    // Store the lineItemId for the confirmation
-    window.pendingDeleteLineItemId = lineItemId;
-    
-    // Show the confirmation modal
-    const modal = new bootstrap.Modal(document.getElementById('deleteConfirmModal'));
-    modal.show();
-}
+    if (!confirm('Are you sure you want to delete this product?')) {
+        return;
+    }
 
-function confirmDeleteAdhoc() {
-    const lineItemId = window.pendingDeleteLineItemId;
-    if (!lineItemId) return;
-    
     fetch(`{% url "product:ajax-delete-adhoc-from-quote" product_quote.id 0 %}`.replace('0', lineItemId), {
         method: 'POST',
         headers: {
@@ -801,14 +904,11 @@ function confirmDeleteAdhoc() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Remove the row from the table
             const row = document.getElementById(`adhoc-row-${lineItemId}`);
             if (row) {
                 row.remove();
             }
-            // Update quote total
             updateQuoteTotal(data.quote_subtotal);
-            showNotification(data.message, 'success');
         } else {
             showNotification('Error: ' + data.error, 'error');
         }
@@ -822,23 +922,25 @@ function confirmDeleteAdhoc() {
 // Add event listener for Ad-Hoc form submission
 document.addEventListener('DOMContentLoaded', function() {
     const adhocForm = document.getElementById('adhocForm');
+    const adhocCostInput = document.getElementById('adhoc_cost');
+    const adhocRetailInput = document.getElementById('adhoc_retail_price');
+
+    if (adhocCostInput) {
+        adhocCostInput.addEventListener('input', syncAdhocRetailFromCost);
+    }
+    if (adhocRetailInput) {
+        adhocRetailInput.addEventListener('input', function() {
+            adhocRetailManual = adhocRetailInput.value.trim() !== '';
+            if (!adhocRetailManual) {
+                syncAdhocRetailFromCost();
+            }
+        });
+    }
+
     if (adhocForm) {
         adhocForm.addEventListener('submit', function(e) {
             e.preventDefault();
             createAndAddAdhoc();
-        });
-    }
-    
-    // Add event listener for confirm delete button
-    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
-    if (confirmDeleteBtn) {
-        confirmDeleteBtn.addEventListener('click', function() {
-            confirmDeleteAdhoc();
-            // Hide the modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('deleteConfirmModal'));
-            if (modal) {
-                modal.hide();
-            }
         });
     }
     

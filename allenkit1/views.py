@@ -8,7 +8,7 @@ from crm.models import Customer
 # help us get to a home page at the URL root.
 @login_required
 def homeview(request):
-    return redirect("/crm/")
+    return redirect("/dashboard/")
 
 @login_required
 def search_view(request):

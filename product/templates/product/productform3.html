@@ -6,58 +6,39 @@
 {% endblock %}
 
 {% block content %}
-{% load static %}
 <style>
-/* Override pf2.css styles that might interfere with Bootstrap */
-.container-fluid {
-    font-family: var(--bs-body-font-family) !important;
-}
-
-.fw-bold {
-    font-weight: 700 !important;
-}
-
-.text-primary {
-    color: var(--bs-primary) !important;
-}
-
-h2.fw-bold {
-    font-family: var(--bs-body-font-family) !important;
-    font-weight: 700 !important;
-}
-
-/* Change border colors to match Bootstrap table styling from product list */
-/* Only change color of existing borders, don't force borders to show */
-.TabTable {
-    border-color: #dee2e6 !important;
-}
-
-.TabTable td {
-    border-color: #dee2e6 !important;
-}
-
-.ViewTable {
-    border-color: #dee2e6 !important;
-}
-
-.ViewTable td {
-    border-color: #dee2e6 !important;
-}
-
-.ViewTable th {
-    border-color: #dee2e6 !important;
+/*
+ * Scoped to .view-product-page so Create/Edit Product does not override body,
+ * outer .container-fluid, or Bootstrap utilities outside this sheet (sidebar).
+ */
+.view-product-page {
     background-color: #f8f9fa !important;
 }
 
-/* Change border color for any existing borders */
-.TabTable td[style*="border"],
-.ViewTable td[style*="border"],
-.ViewTable th[style*="border"] {
+.view-product-page .container-fluid.mt-4 {
+    font-family: var(--bs-body-font-family) !important;
+    background-color: transparent !important;
+}
+
+.view-product-page .fw-bold {
+    font-weight: 700 !important;
+}
+
+.view-product-page .text-primary {
+    color: var(--bs-primary) !important;
+}
+
+.view-product-page h2.fw-bold {
+    font-family: var(--bs-body-font-family) !important;
+    font-weight: 700 !important;
+}
+
+.view-product-page .TabTable {
     border-color: #dee2e6 !important;
 }
 
-/* Make tab list font match product list table headers */
-.TabTable td {
+.view-product-page .TabTable td {
+    border-color: #dee2e6 !important;
     font-family: var(--bs-body-font-family) !important;
     font-size: 0.875rem !important;
     font-weight: 600 !important;
@@ -65,50 +46,58 @@ h2.fw-bold {
     padding: 0.5rem 0.75rem !important;
 }
 
-/* Change current tab background to match product list table header */
-.CurrentTab {
+.view-product-page .ViewTable {
+    border-color: #dee2e6 !important;
+    background-color: white !important;
+}
+
+.view-product-page .ViewTable td,
+.view-product-page .ViewTable th {
+    border-color: #dee2e6 !important;
+    background-color: white !important;
+}
+
+.view-product-page .TabTable td[style*="border"],
+.view-product-page .ViewTable td[style*="border"],
+.view-product-page .ViewTable th[style*="border"] {
+    border-color: #dee2e6 !important;
+}
+
+.view-product-page .CurrentTab {
     background-color: #e9ecef !important;
     color: black !important;
 }
 
-/* Make part number font match tab table button font */
-table[style*="width: 280px"] td {
+.view-product-page table[style*="width: 280px"] td {
     font-family: var(--bs-body-font-family) !important;
     font-size: 0.875rem !important;
     font-weight: 600 !important;
     vertical-align: middle !important;
 }
 
-/* Make ViewTable background white */
-.ViewTable {
-    background-color: white !important;
+.view-product-page .ViewTable .form-control,
+.view-product-page .ViewTable input[type="text"],
+.view-product-page .ViewTable input[type="number"],
+.view-product-page .ViewTable input[type="url"],
+.view-product-page .ViewTable input[type="datetime-local"],
+.view-product-page .ViewTable input[type="date"],
+.view-product-page .ViewTable input[type="time"],
+.view-product-page .ViewTable select,
+.view-product-page .ViewTable textarea {
+    border: 1px solid #ced4da !important;
+    box-shadow: none !important;
 }
-.ViewTable td {
-    background-color: white !important;
-}
-.ViewTable th {
-    background-color: white !important;
-}
-
-/* Use the same background as product list (remove white override) */
-body {
-    background-color: #f8f9fa !important;
-}
-
-.container-fluid {
-    background-color: transparent !important;
-}
-
-/* Template-specific styles only - responsive styles moved to responsive-forms.css */
 </style>
 
 <!-- Product form CSS and JS -->
 <link rel="stylesheet" href="{% static 'product/css/pf2.css' %}">
 <link rel="stylesheet" href="{% static 'product/css/form-table.css' %}">
-<link rel="stylesheet" href="{% static 'product/css/responsive-forms.css' %}">
+<link rel="stylesheet" href="{% static 'product/css/responsive-forms-view-product.css' %}">
 <script src="{% static 'product/js/productform3-tabs.js' %}"></script>
-<script src="{% static 'product/js/productform3-search.js' %}"></script>
+<script src="{% static 'product/js/productform3-search.js' %}?v=3"></script>
 <script src="{% static 'product/js/productform3-cost.js' %}"></script>
+
+<div class="view-product-page">
 
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -135,8 +124,8 @@ body {
         </div>
       {% endif %}
       {% if object.pk %}
-      <!-- Hidden field to preserve components during form submission -->
-      <input type="hidden" name="components" id="components_field" value="{% if object.product_components.all %}{% for component in object.product_components.all %}{{ component.component.id }}:{{ component.component_qty }}{% if not forloop.last %},{% endif %}{% endfor %}{% else %}none{% endif %}">
+      <!-- Serialized assembly lines (id:qty); must match ProductForm.components -->
+      {{ form.components }}
       <table style="margin-bottom: 0px; border-collapse: collapse; border-radius: 10px 10px 0 0; overflow: hidden; width: 280px; height: 10px;">
         <tr>
           <td style="background-color: #e9ecef; color: black; text-align: center; vertical-align: middle;">{{ form.part_no.value}}</td>
@@ -190,7 +179,7 @@ body {
                             <label style="margin-right: 8px; flex-basis: 150px; text-align: right;">Picture:</label>
                             {% if primary_image %}
                             <!-- If a primary image exists, display it -->
-                            <img id="primary-image" src="{{ primary_image.image.url }}" 
+                            <img id="primary-image" src="{{ primary_image.display_url }}" 
                                  alt="Primary Image" class="img-fluid rounded zoom product-image-responsive">
                             {% else %}
                             <!-- If no primary image exists, display fallback image -->
@@ -448,6 +437,7 @@ body {
 
 
                   <div id="componentsTab" class="tab-content ViewTable">
+                    <span id="product-id" data-product-pk="{{ object.pk }}" hidden></span>
                     <table class="ViewTable" style="border: none">
                       <tr style="border: none">
                         <td colspan="2" style="border: none">
@@ -458,7 +448,9 @@ body {
                             <tr style="border: none">
                               <td colspan="3" style="border: none"></td>
                             </tr>
-                            {% if product.product_components.exists %}
+                            <tbody id="selected-components-tbody">
+                            {% for component in product.product_components.all %}
+                            {% if forloop.first %}
                             <tr style="border: none">
                               <td style="border: none"><b>Component</b></td>
                               <td style="border: none"><b>Description</b></td>
@@ -466,10 +458,8 @@ body {
                               <td style="border: none"><b>Unit Cost</b></td>
                               <td style="border: none"><b>Quantity</b></td>
                               <td style="border: none"><b>Action</b></td>
-                          </tr>
-                          {% endif %}
-                      
-                          {% for component in product.product_components.all %}
+                            </tr>
+                            {% endif %}
                           <tr style="border: none">
                               <td style="border: none">{{ component.component.part_no }}</td>
                               <td style="border: none">{{ component.component.description }}</td>
@@ -483,7 +473,7 @@ body {
                             </td>
                               <td style="border: none">{{ component.component_qty|floatformat:3 }}</td>
                               <td style="border: none">
-                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeComponent({{ component.component.id }}, '{{ component.component.part_no }}')" style="padding: 2px 6px; font-size: 11px; height: 30px;">
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeComponent({{ component.component.id }}, '{{ component.component.part_no|escapejs }}')" style="padding: 2px 6px; font-size: 11px; height: 30px;">
                                   <i class="fa-solid fa-trash"></i> Remove
                                 </button>
                               </td>      
@@ -493,6 +483,7 @@ body {
                             <td colspan="6" class="table-title" style="border: none">No components were found.</td>
                           </tr>
                           {% endfor %}
+                            </tbody>
                             <tr style="border: none">
                               <td colspan="4" style="border: none"></td>
                             </tr>
@@ -514,8 +505,6 @@ body {
                                 <!-- Results will be displayed here -->
                               </td>
                             </tr>
-
-                            <p id="product-id" style="display: none;">Product UUID: {{ object.uuid }}</p>
 
                             <tr style="border: none">
                               <td colspan="3" style="border: none"></td>
@@ -704,5 +693,7 @@ body {
       </table>
       </div>
     </form>   
+</div>
+
 </div>
 {% endblock %}

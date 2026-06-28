@@ -54,13 +54,18 @@ class JobAdmin(admin.ModelAdmin):
             'fields': ('soldby', 'coordinator', 'carpenter')
         }),
         ('Dates', {
-            'fields': ('datesold', 'startdate', 'completDate', 'initalcontactdate', 'initialmeasuredate', 'actualstart', 'actualend')
+            'fields': (
+                'datesold', 'startdate', 'completDate',
+                'initalcontactdate', 'initialmeasuredate',
+                'present1', 'present2', 'present3',
+                'actualstart', 'actualend',
+            )
         }),
         ('Financial', {
             'fields': ('saleamount', 'estdays')
         }),
         ('Installation Dates', {
-            'fields': ('cabneededdate', 'topinstalldate', 'promised', 'estinstall')
+            'fields': ('cabneededdate', 'topinstalldate')
         }),
         ('Quotes', {
             'fields': ('sitework_quote',)

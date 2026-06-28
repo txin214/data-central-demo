@@ -1,7 +1,26 @@
 {% extends "base.html" %}
-{% block title %}Sitework Quote List{% endblock %}
+{% load static %}
+
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/pagination.css' %}">
+<link rel="stylesheet" href="{% static 'css/table_styles.css' %}">
+{% endblock %}
+
 {% block content %}
 <!-- quote_list.html-->
+<style>
+/* Fallback styles to ensure font sizes are correct */
+.table.table-bordered.table-hover th {
+    font-size: 0.875rem !important;
+}
+.table.table-bordered.table-hover td {
+    font-size: 0.875rem !important;
+}
+.form-check-label {
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+}
+</style>
 
 <!-- Progress Bar for Quote Creation -->
 {% if task_id %}
@@ -17,41 +36,77 @@
 </div>
 {% endif %}
 
-<div class="mb-3">
-    <a class="btn btn-primary btn-sm" type="button" href="{% url 'sitework:create_url' %}">Create</a>
-</div>
-
-<!-- Search Form -->
-<div class="mb-3">
-    <form method="GET" class="form-inline">
-        <div class="form-group mr-2">
-            <input type="text" name="q" class="form-control" placeholder="Search quotes..." value="{{ request.GET.q }}">
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Sitework Quotes</h2>
         </div>
-        <button type="submit" class="btn btn-secondary btn-sm">Search</button>
-        {% if request.GET.q %}
-            <a href="{% url 'sitework:list_url' %}" class="btn btn-outline-secondary btn-sm ml-2">Clear</a>
-        {% endif %}
-    </form>
-</div>
+    </div>
 
-{% if request.GET.q %}
-    <p class="text-muted">Found {{ quotes.count }} results for "{{ request.GET.q }}"</p>
-{% endif %}
+    <!-- Search Form -->
+    <div class="mb-3">
+        <form method="GET" class="d-flex align-items-center gap-2">
+            <input type="text" name="q" class="form-control form-control-sm" placeholder="Search sitework quotes..." value="{{ request.GET.q }}">
+            <button type="submit" class="btn btn-outline-secondary btn-sm">Search</button>
+            {% if request.GET.q %}
+                <a href="{% url 'sitework:list_url' %}" class="btn btn-outline-secondary btn-sm">Clear</a>
+            {% endif %}
+        </form>
+    </div>
 
-<ul>
-    {% for q in quotes %}
-    <li>
-        <a class="btn btn-primary btn-sm "  type="button" href="{% url 'sitework:show_url' qte=q.id %}">Update</a>
-      
-        <a class="btn btn-outline-primary btn-sm "  type="button" href="{% url 'sitework:subcat_form' cat=1 qte=q.id %}">Sitework</a>
+    {% if request.GET.q %}
+        <p class="text-muted">Found {{ quotes.count }} results for "{{ request.GET.q }}"</p>
+    {% endif %}
 
-        <a class="btn btn-sm btn-danger"  type="button" href="{% url 'sitework:delete_url' quote_id=q.id %}">DELETE</a>
-        <a class="btn btn-sm btn-outline-primary "  type="button" href="{% url 'sitework:show_report' qte=q.id %}">Breakdown Report</a>
-        <a class="btn btn-sm btn-outline-primary "  type="button" href="{% url 'sitework:show_report_simple' qte=q.id %}">Customer Report</a>
-        # {{ q.id }} {{q.customer.last_name}}-{{q.quotedesc}}  
-    </li>
-    {% endfor %}
-</ul>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle mb-0">
+            <thead class="sticky-header">
+                <tr>
+                    <th>Job Code</th>
+                    <th>Customer</th>
+                    <th>Quoted By</th>
+                    <th>Description</th>
+                    <th>More</th>
+                </tr>
+            </thead>
+            <tbody id="swq-table-body">
+                <tr class="border-top-0 border-bottom-0">
+                    <td colspan="5" class="border-top-0 border-bottom-0 py-2">
+                        <a href="{% url 'sitework:create_url' %}" class="btn btn-sm btn-success">
+                            <i class="fas fa-plus me-1"></i>
+                            Add Sitework
+                        </a>
+                    </td>
+                </tr>
+                {% for q in quotes %}
+                    <tr>
+                        <td>
+                        <strong>{{ q.job.job_code|upper|default:'-' }}</strong>
+                        </td>
+                        <td>{{ q.customer }}</td>
+                        <td>{{ q.quotedby }}</td>
+                        <td>
+                            {% if q.quotedesc %}
+                                {{ q.quotedesc|truncatechars:50 }}
+                            {% else %}
+                                <span class="text-muted">No description</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'sitework:show_url' qte=q.id %}" class="btn btn-sm btn-outline-primary">Update</a>
+                            <a href="{% url 'sitework:subcat_form' cat=1 qte=q.id %}" class="btn btn-sm btn-outline-info">Edit</a>
+                            <a href="{% url 'sitework:show_report' qte=q.id %}" class="btn btn-sm btn-outline-info">Breakdown Report</a>
+                            <a href="{% url 'sitework:show_report_simple' qte=q.id %}" class="btn btn-sm btn-outline-secondary">Customer Report</a>
+                            <a href="{% url 'sitework:delete_url' quote_id=q.id %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+
 
 {% if task_id %}
 <script>

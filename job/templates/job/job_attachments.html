@@ -44,8 +44,8 @@
           {% for a in attachments %}
           <tr>
             <td>
-              {% if a.file.url %}
-                <a href="{{ a.file.url }}" target="_blank">{{ a.file.name|cut:'job_attachments/' }}</a>
+              {% if a.file %}
+                <a href="{% url 'job:job_attachment_open' job.id a.id %}" target="_blank">{{ a.file.name|cut:'job_attachments/' }}</a>
               {% else %}
                 <span class="text-muted">(missing)</span>
               {% endif %}
@@ -54,8 +54,8 @@
             <td>{{ a.uploaded_at|date:"m/d/Y g:i A" }}</td>
             <td>{% if a.uploaded_by %}{{ a.uploaded_by.get_full_name|default:a.uploaded_by.username }}{% else %}-{% endif %}</td>
             <td class="text-center">
-              <a href="{{ a.file.url }}" class="btn btn-sm btn-outline-secondary">Open</a>
-              <a href="{{ a.file.url }}" class="btn btn-sm btn-outline-secondary" download>Download</a>
+              <a href="{% url 'job:job_attachment_open' job.id a.id %}" class="btn btn-sm btn-outline-secondary" target="_blank">Open</a>
+              <a href="{% url 'job:job_attachment_download' job.id a.id %}" class="btn btn-sm btn-outline-secondary">Download</a>
               <form method="post" action="{% url 'job:job_attachment_delete' job.id a.id %}" style="display:inline;">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this attachment?');">Delete</button>

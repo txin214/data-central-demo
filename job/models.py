@@ -1,9 +1,25 @@
+import os
+import uuid
+
 from django.db import models
+from django.utils.text import get_valid_filename
 from crm.models import Customer,County,StoreLocation
 from sitework.models import SiteworkQuote
 from product.models import Vendor
 from django.contrib.auth.models import User
 from django.utils import timezone
+from .storage import job_attachment_storage
+
+
+def job_attachment_upload_to(instance, filename):
+    uploaded_at = timezone.now()
+    base_name, extension = os.path.splitext(filename)
+    safe_base_name = get_valid_filename(base_name)[:80] or 'attachment'
+    unique_suffix = uuid.uuid4().hex[:12]
+    return (
+        f"job_attachments/{uploaded_at:%Y/%m/%d}/"
+        f"{safe_base_name}_{unique_suffix}{extension.lower()}"
+    )
 
 
 class Holiday(models.Model):
@@ -21,34 +37,45 @@ class Holiday(models.Model):
     
     def __str__(self):
         return f"{self.date} - {self.name}"
+
+    # Official names from python-holidays -> scheduler display label
+    US_FEDERAL_HOLIDAY_NAMES = {
+        "New Year's Day": "New Year's Day",
+        "Christmas Day": "Christmas",
+        "Thanksgiving": "Thanksgiving",
+        "Labor Day": "Labor Day",
+        "Independence Day": "Independence Day",
+        "Memorial Day": "Memorial Day",
+    }
+    EXCLUDED_US_HOLIDAY_KEYWORDS = ('Juneteenth',)
+
+    @classmethod
+    def match_us_federal_holiday(cls, holiday_name):
+        """Return display label for an allowed US federal holiday, or None."""
+        if not holiday_name:
+            return None
+        if any(keyword in holiday_name for keyword in cls.EXCLUDED_US_HOLIDAY_KEYWORDS):
+            return None
+        for official, display in cls.US_FEDERAL_HOLIDAY_NAMES.items():
+            if holiday_name == official or holiday_name == f"{official} (Observed)":
+                return display
+        return None
+
+    @classmethod
+    def get_us_federal_holiday_display(cls, date):
+        """Get allowed US federal holiday display name for a date, if any."""
+        try:
+            import holidays
+            us_holidays = holidays.UnitedStates()
+            return cls.match_us_federal_holiday(us_holidays.get(date))
+        except ImportError:
+            return None
     
     @classmethod
     def is_holiday(cls, date):
         """Check if a given date is a holiday."""
-        # Only check for these specific US holidays:
-        # New Year's Day, Christmas, Thanksgiving, Labor Day, Independence Day, Memorial Day
-        try:
-            import holidays
-            us_holidays = holidays.UnitedStates()
-            # Get the holiday name for this date (if any)
-            holiday_name = us_holidays.get(date)
-            if holiday_name:
-                # Only consider these specific holidays
-                allowed_holidays = [
-                    "New Year's Day",
-                    "Christmas",
-                    "Thanksgiving",
-                    "Labor Day",
-                    "Independence Day",
-                    "Memorial Day"
-                ]
-                # Check if the holiday name contains any of our allowed holidays
-                if any(allowed in holiday_name for allowed in allowed_holidays):
-                    return True
-        except ImportError:
-            # If holidays library is not installed, fall back to database only
-            pass
-        
+        if cls.get_us_federal_holiday_display(date):
+            return True
         # Check for custom holidays in database (exact date match)
         if cls.objects.filter(date=date).exists():
             return True
@@ -200,9 +227,26 @@ class JobType(models.Model):
 class Job(models.Model):
     """Job model that links customers with sitework quotes and product quotes."""
     
+    # jobcode suffix codes
+    JOB_SUFFIX_CHOICES = [
+        ('B1', 'B1'),
+        ('B2', 'B2'),
+        ('B3', 'B3'),
+        ('B4', 'B4'),
+        ('KI', 'KI'),    
+        ('LN', 'LN'),    
+        ('MR', 'MR'),    
+        ('LL', 'LL'),    
+        ('FL', 'FL'),    
+        ('TP', 'TP'),    
+        ('DR', 'DR'),    
+        ('OT', 'OT'),    
+    ]
+    
     # Basic job information
     job_code = models.CharField(max_length=20, unique=True, blank=True, null=True)
     job_description = models.TextField(blank=True, null=True)
+    job_suffix = models.CharField(max_length=3, choices=JOB_SUFFIX_CHOICES, blank=True, null=True)
     
     # New fields from provided code
     sold = models.BooleanField(default=False)
@@ -241,6 +285,9 @@ class Job(models.Model):
     # Contact and measurement dates
     initalcontactdate = models.DateTimeField(null=True, blank=True)
     initialmeasuredate = models.DateTimeField(null=True, blank=True)
+    present1 = models.DateTimeField(null=True, blank=True, verbose_name='Present #1')
+    present2 = models.DateTimeField(null=True, blank=True, verbose_name='Present #2')
+    present3 = models.DateTimeField(null=True, blank=True, verbose_name='Present #3')
     actualstart = models.DateTimeField(null=True, blank=True)
     actualend = models.DateTimeField(null=True, blank=True)
     
@@ -260,8 +307,6 @@ class Job(models.Model):
     # Installation dates
     cabneededdate = models.DateTimeField(null=True, blank=True)
     topinstalldate = models.DateTimeField(null=True, blank=True)
-    promised = models.DateTimeField(null=True, blank=True)
-    estinstall = models.DateTimeField(null=True, blank=True)
     
     class Meta:
         ordering = ['-id']
@@ -270,23 +315,39 @@ class Job(models.Model):
     
     def __str__(self):
         return f"Job {self.job_code or self.id} - {self.customer}"
+
+    @classmethod
+    def generate_job_code_for_customer(cls, customer, exclude_job_id=None):
+        """Assign cust_code for the first job, then cust_code-2, cust_code-3, etc."""
+        if not customer.cust_code:
+            customer.save()
+            customer.refresh_from_db()
+        cust_code = customer.cust_code or "XXXXX"
+
+        def code_taken(code):
+            qs = cls.objects.filter(job_code=code)
+            if exclude_job_id:
+                qs = qs.exclude(pk=exclude_job_id)
+            return qs.exists()
+
+        if not code_taken(cust_code):
+            return cust_code
+
+        n = 2
+        while n < 10000:
+            candidate = f"{cust_code}-{n}"
+            if not code_taken(candidate):
+                return candidate
+            n += 1
+
+        raise ValueError(f"Unable to generate unique job code for customer {customer.pk}")
     
     def save(self, *args, **kwargs):
-        # Auto-generate job code if not provided
         if not self.job_code:
-            # Ensure customer has cust_code generated
-            if not self.customer.cust_code:
-                self.customer.save()  # This will trigger cust_code generation
-                self.customer.refresh_from_db()
-            
-            # Get customer code (should exist now)
-            # Job code format: {cust_code}{editable_suffix}
-            # cust_code = first 5 letters of lastname + 2 letters from firstname
-            # editable_suffix can be appended by user (multiple letters allowed)
-            cust_code = self.customer.cust_code if self.customer.cust_code else "XXXXX"
-            
-            # Start with just the cust_code (user can add suffix in edit mode)
-            self.job_code = cust_code
+            self.job_code = self.generate_job_code_for_customer(
+                self.customer,
+                exclude_job_id=self.pk,
+            )
         
         super().save(*args, **kwargs)
 
@@ -436,7 +497,7 @@ class SiteworkLineProgress(models.Model):
 
 class JobAttachment(models.Model):
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name='attachments')
-    file = models.FileField(upload_to='job_attachments/%Y/%m/%d/')
+    file = models.FileField(upload_to=job_attachment_upload_to, storage=job_attachment_storage)
     uploaded_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='+')
     uploaded_at = models.DateTimeField(default=timezone.now)
     title = models.CharField(max_length=255, blank=True)

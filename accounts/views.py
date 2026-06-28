@@ -6,9 +6,12 @@ from django.views.generic import CreateView
 from django.urls import reverse_lazy
 from django.contrib.auth.views import LoginView, LogoutView, PasswordChangeView
 from django.contrib.auth.models import User
-from django.http import JsonResponse
+from django.http import JsonResponse, Http404, HttpResponseRedirect
 from django.views.decorators.http import require_GET
 from django.db.models import Q
+from django.conf import settings
+from botocore.client import Config
+import boto3
 from .forms import CustomUserCreationForm, CustomLoginForm
 from .models import UserProfile, Role, UserRole
 
@@ -118,6 +121,33 @@ def product_info_forms_view(request):
 def company_forms_view(request):
     """Company Forms view - displays company forms"""
     return render(request, 'accounts/company_forms.html')
+
+
+@login_required
+def forms_file_redirect(request, file_key):
+    """Redirect authenticated users to a short-lived signed forms bucket URL."""
+    # Strip FORMS/ prefix — bucket stores files at root level
+    bucket_key = file_key.removeprefix('FORMS/')
+    if not bucket_key or '/' in bucket_key:
+        raise Http404('Form file not found.')
+
+    s3_client = boto3.client(
+        's3',
+        endpoint_url=settings.S3_ENDPOINT_URL,
+        aws_access_key_id=settings.FORMS_TIGRIS_ACCESS_KEY_ID,
+        aws_secret_access_key=settings.FORMS_TIGRIS_SECRET_ACCESS_KEY,
+        region_name=settings.S3_REGION_NAME,
+        config=Config(signature_version='s3v4'),
+    )
+    signed_url = s3_client.generate_presigned_url(
+        'get_object',
+        Params={
+            'Bucket': settings.FORMS_TIGRIS_BUCKET_NAME,
+            'Key': bucket_key,
+        },
+        ExpiresIn=settings.FORMS_TIGRIS_SIGNED_URL_EXPIRES,
+    )
+    return HttpResponseRedirect(signed_url)
 
 
 @login_required

@@ -45,7 +45,7 @@ urlpatterns = [
     path('<int:pk>/', views.JobDetailUpdateView.as_view(), name='job_detail'),
     path('<int:pk>/quotes/', views.JobQuotesView.as_view(), name='job_quotes'),
     path('<int:pk>/edit/', views.JobUpdateView.as_view(), name='job_update'),
-    path('<int:pk>/delete/', views.JobDeleteView.as_view(), name='job_delete'),
+    path('<int:pk>/delete/', views.job_delete, name='job_delete'),
     path('<int:job_id>/customer/', views.job_customer_detail, name='job_customer_detail'),
     
     # Product quote management
@@ -77,6 +77,8 @@ urlpatterns = [
     path('<int:job_id>/sitework/carpenter/set-progress/', views.job_set_sitework_line_progress, name='job_set_sitework_line_progress'),
     # Attachments
     path('<int:job_id>/attachments/', views.job_attachments, name='job_attachments'),
+    path('<int:job_id>/attachments/<int:attachment_id>/open/', views.job_attachment_open, name='job_attachment_open'),
+    path('<int:job_id>/attachments/<int:attachment_id>/download/', views.job_attachment_download, name='job_attachment_download'),
     path('<int:job_id>/attachments/<int:attachment_id>/delete/', views.job_attachment_delete, name='job_attachment_delete'),
     
     # Top Entry (frontend only)

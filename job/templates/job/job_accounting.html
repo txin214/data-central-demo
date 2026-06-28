@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block job_content %}
-<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.1">
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.5">
 
 <style>
 .clickable-edit-row {
@@ -29,7 +29,7 @@
 
     <!-- Combined Sales and Change Orders Table -->
     <div class="table-responsive mt-2">
-        <table class="table table-bordered table-hover align-middle mb-0">
+        <table class="table table-bordered table-hover align-middle mb-0 job-accounting-table">
             <thead class="sticky-header">
                 <tr>
                     <th>Type</th>
@@ -270,7 +270,7 @@
     
     <!-- Payments Table -->
     <div class="table-responsive mt-4">
-        <table class="table table-bordered table-hover align-middle mb-0">
+        <table class="table table-bordered table-hover align-middle mb-0 job-accounting-payments-table">
             <thead class="sticky-header">
                 <tr>
                     <th>Date</th>

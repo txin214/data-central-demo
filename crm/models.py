@@ -25,12 +25,13 @@ class Customer(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    email = models.EmailField(max_length=100)
+    email = models.EmailField(max_length=100,blank=True)
     first_name2 = models.CharField(max_length=100,blank=True)
     last_name2 = models.CharField(max_length=100,blank=True)
+    email2 = models.EmailField(max_length=100, blank=True, verbose_name='Email 2')
     address = models.CharField(max_length=100)
     city = models.CharField(max_length=100)
-    state = models.CharField(max_length=2)
+    state = models.CharField(max_length=2, default='WI')
     zip = models.CharField(max_length=15)
     # county fk
     county = models.ForeignKey(County,on_delete=models.CASCADE,null=True)
@@ -40,9 +41,7 @@ class Customer(models.Model):
     home_phone = models.CharField(max_length=12,blank=True)
     work_phone = models.CharField(max_length=12,blank=True)
     work_phone2 = models.CharField(max_length=12,blank=True)
-    status_flag = models.CharField(max_length=1,blank=True)
-    # assignedto assigned_staff
-    assigned_staff = models.CharField(max_length=100,blank=True)
+    status_flag = models.CharField(max_length=1, blank=True, default='A')
     # custcode prefix for jobcodes, was 5chars
     # needs to be vetted against old jobs to prevent repeats
     cust_code = models.CharField(max_length=7,blank=True)     
@@ -63,8 +62,8 @@ class Customer(models.Model):
     
     @property
     def is_active(self):
-        """Check if customer is active based on status_flag."""
-        return self.status_flag == 'A' if self.status_flag else False
+        """Active when status is Active or unset (model default)."""
+        return not self.status_flag or self.status_flag == 'A'
     
     @property
     def is_builder(self):

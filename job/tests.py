@@ -58,16 +58,17 @@ class JobModelTest(TestCase):
         self.assertEqual(job.status, "A")
         self.assertEqual(job.sitework_quote, self.sitework_quote)
         self.assertIsNotNone(job.job_code)
-        self.assertTrue(job.job_code.startswith("JOB-"))
+        self.assertEqual(job.job_code, self.customer.cust_code)
 
     def test_job_auto_code_generation(self):
-        """Test that job codes are auto-generated correctly."""
+        """Test that job codes are auto-generated with numeric suffixes."""
         job1 = Job.objects.create(customer=self.customer)
         job2 = Job.objects.create(customer=self.customer)
+        job3 = Job.objects.create(customer=self.customer)
         
-        self.assertNotEqual(job1.job_code, job2.job_code)
-        self.assertTrue(job1.job_code.startswith("JOB-"))
-        self.assertTrue(job2.job_code.startswith("JOB-"))
+        self.assertEqual(job1.job_code, self.customer.cust_code)
+        self.assertEqual(job2.job_code, f"{self.customer.cust_code}-2")
+        self.assertEqual(job3.job_code, f"{self.customer.cust_code}-3")
 
     def test_job_product_quote_relationship(self):
         """Test the relationship between jobs and product quotes."""

@@ -7,362 +7,310 @@
         content: " *";
         color: #dc3545;
     }
+    .job-create-page .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.25rem;
+    }
+    .job-create-page .card-header {
+        background: #fff;
+        border-bottom: 1px solid #e9ecef;
+        padding-top: 0.65rem;
+        padding-bottom: 0.65rem;
+    }
+    .job-create-page .form-control,
+    .job-create-page .form-select {
+        font-size: 0.875rem;
+    }
+    .job-create-page .job-description-field textarea,
+    .job-create-page textarea[name="job_description"] {
+        min-height: 230px !important;
+        height: 230px !important;
+        resize: vertical;
+    }
+    .job-create-page .action-bar {
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        margin-top: 1rem;
+        padding: 0.75rem;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
+<div class="container-fluid px-3 px-xl-4 py-3 job-create-page">
     <!-- Header matching job list format -->
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex justify-content-between align-items-start align-items-md-center mb-3 flex-wrap gap-2">
         <div>
             <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
             <h2 class="fw-bold mb-0" style="font-size: 2rem;">{% if object %}Edit Job{% else %}Create New Job{% endif %}</h2>
+            <p class="text-muted small mb-0 mt-1">{% if object %}Update job details, assignment, address, and dates.{% else %}Create the job record, assign the team, and confirm the project address.{% endif %}</p>
         </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <form method="post" id="jobCreateForm">
-                {% csrf_token %}
-                
-                {% if form.errors %}
-                    <div class="alert alert-danger alert-sm mb-2">
-                        <h6 class="mb-1">Please correct the following errors:</h6>
-                        {{ form.errors }}
+    <form method="post" id="jobCreateForm" class="w-100">
+        {% csrf_token %}
+
+        {% if form.errors %}
+            <div class="alert alert-danger mb-3" id="job-form-errors">
+                <h6 class="mb-2">Please fix the following before saving:</h6>
+                <ul class="mb-0 ps-3">
+                    {% for field in form %}
+                        {% if field.errors %}
+                            <li>
+                                <a href="#{{ field.id_for_label }}" class="alert-link">{{ field.label }}</a>:
+                                {{ field.errors|striptags }}
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    {% for error in form.non_field_errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        <!-- Job Information -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">Job Information</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <label for="{{ form.soldby.id_for_label }}" class="form-label small">Designer</label>
+                        {{ form.soldby }}
+                        {% if form.soldby.errors %}
+                            <div class="invalid-feedback d-block small">{{ form.soldby.errors }}</div>
+                        {% endif %}
                     </div>
-                {% endif %}
-                
-                <!-- Job Information -->
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h6 class="card-title mb-0">Job Information</h6>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <label for="{{ form.storelocation.id_for_label }}" class="form-label small">Store Location</label>
+                        {{ form.storelocation }}
+                        {% if form.storelocation.errors %}
+                            <div class="invalid-feedback d-block small">{{ form.storelocation.errors }}</div>
+                        {% endif %}
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <!-- Job Info -->
-                            <div class="col-md-6">
-                                <div class="row">
-                                    <div class="col-md-6 mb-2">
-                                        <label for="{{ form.soldby.id_for_label }}" class="form-label small">Designer</label>
-                                        {{ form.soldby }}
-                                        {% if form.soldby.errors %}
-                                            <div class="invalid-feedback d-block small">
-                                                {{ form.soldby.errors }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label for="{{ form.carpenter.id_for_label }}" class="form-label small">Lead Carpenter</label>
-                                        {{ form.carpenter }}
-                                        {% if form.carpenter.errors %}
-                                            <div class="invalid-feedback d-block small">
-                                                {{ form.carpenter.errors }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label for="{{ form.jobtype.id_for_label }}" class="form-label small">Job Type</label>
-                                        {{ form.jobtype }}
-                                        {% if form.jobtype.errors %}
-                                            <div class="invalid-feedback d-block small">
-                                                {{ form.jobtype.errors }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label for="{{ form.coordinator.id_for_label }}" class="form-label small">Coordinator</label>
-                                        {{ form.coordinator }}
-                                        {% if form.coordinator.errors %}
-                                            <div class="invalid-feedback d-block small">
-                                                {{ form.coordinator.errors }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                <div class="mb-2">
-                                    <label class="form-label small">Status</label>
-                                    <div class="d-flex gap-3">
-                                        <div class="form-check form-check-inline">
-                                            {{ form.active }}
-                                            <label for="{{ form.active.id_for_label }}" class="form-check-label small">Active</label>
-                                        </div>
-                                        <div class="form-check form-check-inline">
-                                            {{ form.sold }}
-                                            <label for="{{ form.sold.id_for_label }}" class="form-check-label small">Sold</label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Customer Info -->
-                            <div class="col-md-6">
-                                <div class="row">
-                                    <div class="col-md-6 mb-2">
-                                        <label for="{{ form.customer.id_for_label }}" class="form-label small required-field">Customer</label>
-                                        <select name="customer" id="id_customer" class="form-select form-select-sm" required>
-                                            <option value="">---------</option>
-                                            {% for c in customers %}
-                                                <option
-                                                    value="{{ c.pk }}"
-                                                    data-address="{{ c.address|default:'' }}"
-                                                    data-city="{{ c.city|default:'' }}"
-                                                    data-state="{{ c.state|default:'' }}"
-                                                    data-zip="{{ c.zip|default:'' }}"
-                                                    data-county-id="{% if c.county_id %}{{ c.county_id }}{% endif %}"
-                                                    {% if form.customer.value|stringformat:'s' == c.pk|stringformat:'s' %}selected{% endif %}
-                                                >
-                                                    {{ c }}
-                                                </option>
-                                            {% endfor %}
-                                        </select>
-                                        {% if form.customer.errors %}
-                                            <div class="invalid-feedback d-block small">
-                                                {{ form.customer.errors }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label for="{{ form.saleamount.id_for_label }}" class="form-label small">Sale Amount</label>
-                                        {{ form.saleamount }}
-                                        {% if form.saleamount.errors %}
-                                            <div class="invalid-feedback d-block small">
-                                                {{ form.saleamount.errors }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label for="{{ form.estdays.id_for_label }}" class="form-label small">Estimated Days</label>
-                                        {{ form.estdays }}
-                                        {% if form.estdays.errors %}
-                                            <div class="invalid-feedback d-block small">
-                                                {{ form.estdays.errors }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label for="{{ form.storelocation.id_for_label }}" class="form-label small">Store Location</label>
-                                        {{ form.storelocation }}
-                                        {% if form.storelocation.errors %}
-                                            <div class="invalid-feedback d-block small">
-                                                {{ form.storelocation.errors }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <label for="{{ form.jobtype.id_for_label }}" class="form-label small">Job Type</label>
+                        {{ form.jobtype }}
+                        {% if form.jobtype.errors %}
+                            <div class="invalid-feedback d-block small">{{ form.jobtype.errors }}</div>
+                        {% endif %}
                     </div>
-                    </div>
-                    
-                <!-- Address Information -->
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h6 class="card-title mb-0">Address Information</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-8 mb-2">
-                                <label for="{{ form.address.id_for_label }}" class="form-label small">Address</label>
-                                {{ form.address }}
-                                {% if form.address.errors %}
-                                    <div class="invalid-feedback d-block small">
-                                        {{ form.address.errors }}
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-4 mb-2">
-                                <label for="{{ form.city.id_for_label }}" class="form-label small">City</label>
-                                {{ form.city }}
-                                {% if form.city.errors %}
-                                    <div class="invalid-feedback d-block small">
-                                        {{ form.city.errors }}
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-2 mb-2">
-                                <label for="{{ form.state.id_for_label }}" class="form-label small">State</label>
-                                {{ form.state }}
-                                {% if form.state.errors %}
-                                    <div class="invalid-feedback d-block small">
-                                        {{ form.state.errors }}
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-2 mb-2">
-                                <label for="{{ form.zip.id_for_label }}" class="form-label small">Zip</label>
-                                {{ form.zip }}
-                                {% if form.zip.errors %}
-                                    <div class="invalid-feedback d-block small">
-                                        {{ form.zip.errors }}
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-4 mb-2">
-                                <label for="{{ form.county.id_for_label }}" class="form-label small">County</label>
-                                {{ form.county }}
-                                {% if form.county.errors %}
-                                    <div class="invalid-feedback d-block small">
-                                        {{ form.county.errors }}
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    </div>
-                    
-                <!-- Job Description -->
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h6 class="card-title mb-0">Job Description</h6>
-                    </div>
-                    <div class="card-body">
-                        {{ form.job_description }}
-                        {% if form.job_description.errors %}
-                            <div class="invalid-feedback d-block small">
-                                {{ form.job_description.errors }}
-                            </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <label for="{{ form.coordinator.id_for_label }}" class="form-label small">Coordinator</label>
+                        {{ form.coordinator }}
+                        {% if form.coordinator.errors %}
+                            <div class="invalid-feedback d-block small">{{ form.coordinator.errors }}</div>
                         {% endif %}
                     </div>
                 </div>
 
-                <!-- Important Dates -->
-                <div class="card mb-3">
-                    <div class="card-header">
-                        <h6 class="card-title mb-0">Important Dates</h6>
+                <div class="row g-2 align-items-end mt-2">
+                    <div class="col-12 col-lg-5 col-xl-4">
+                        <label for="{{ form.customer.id_for_label }}" class="form-label small required-field">Customer</label>
+                        <select name="customer" id="id_customer" class="form-select form-select-sm{% if form.customer.errors %} is-invalid{% endif %}" required>
+                            <option value="">---------</option>
+                            {% for c in customers %}
+                                <option
+                                    value="{{ c.pk }}"
+                                    data-address="{{ c.address|default:'' }}"
+                                    data-city="{{ c.city|default:'' }}"
+                                    data-state="{{ c.state|default:'' }}"
+                                    data-zip="{{ c.zip|default:'' }}"
+                                    data-county-id="{% if c.county_id %}{{ c.county_id }}{% endif %}"
+                                    {% if form.customer.value|stringformat:'s' == c.pk|stringformat:'s' %}selected{% endif %}
+                                >
+                                    {{ c }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        {% if form.customer.errors %}
+                            <div class="invalid-feedback d-block small">{{ form.customer.errors }}</div>
+                        {% endif %}
                     </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="row">
-                                    <div class="col-md-6 mb-2">
-                                        <label for="{{ form.datesold.id_for_label }}" class="form-label small">Date Sold</label>
-                                        {{ form.datesold }}
-                                        {% if form.datesold.errors %}
-                                            <div class="invalid-feedback d-block small">
-                                                {{ form.datesold.errors }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label for="{{ form.startdate.id_for_label }}" class="form-label small">Start Date</label>
-                                        {{ form.startdate }}
-                                        {% if form.startdate.errors %}
-                                            <div class="invalid-feedback d-block small">
-                                                {{ form.startdate.errors }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label for="{{ form.completDate.id_for_label }}" class="form-label small">Completion</label>
-                                        {{ form.completDate }}
-                                        {% if form.completDate.errors %}
-                                            <div class="invalid-feedback d-block small">
-                                                {{ form.completDate.errors }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label for="{{ form.initalcontactdate.id_for_label }}" class="form-label small">Initial Contact</label>
-                                        {{ form.initalcontactdate }}
-                                        {% if form.initalcontactdate.errors %}
-                                            <div class="invalid-feedback d-block small">
-                                                {{ form.initalcontactdate.errors }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
+                    <div class="col-12 col-sm-6 col-lg-3 col-xl-2">
+                        <label for="{{ form.saleamount.id_for_label }}" class="form-label small">Sale Amount</label>
+                        {{ form.saleamount }}
+                        {% if form.saleamount.errors %}
+                            <div class="invalid-feedback d-block small">{{ form.saleamount.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-2 col-xl-2">
+                        <label for="{{ form.estdays.id_for_label }}" class="form-label small">Estimated Days</label>
+                        {{ form.estdays }}
+                        {% if form.estdays.errors %}
+                            <div class="invalid-feedback d-block small">{{ form.estdays.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-12 col-sm-6 col-lg-2 col-xl-2">
+                        <label for="{{ form.terms.id_for_label }}" class="form-label small">Terms</label>
+                        {{ form.terms }}
+                        {% if form.terms.errors %}
+                            <div class="invalid-feedback d-block small">{{ form.terms.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-12 col-sm-6 col-xl-2">
+                        <label class="form-label small">Status</label>
+                        <div class="d-flex gap-3 align-items-center py-1">
+                            <div class="form-check form-check-inline mb-0">
+                                {{ form.active }}
+                                <label for="{{ form.active.id_for_label }}" class="form-check-label small">Active</label>
                             </div>
-                            <div class="col-md-6">
-                                <div class="row">
-                                    <div class="col-md-6 mb-2">
-                                        <label for="{{ form.initialmeasuredate.id_for_label }}" class="form-label small">Initial Measure</label>
-                                        {{ form.initialmeasuredate }}
-                                        {% if form.initialmeasuredate.errors %}
-                                            <div class="invalid-feedback d-block small">
-                                                {{ form.initialmeasuredate.errors }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label for="{{ form.cabneededdate.id_for_label }}" class="form-label small">Cabinet Needed</label>
-                                        {{ form.cabneededdate }}
-                                        {% if form.cabneededdate.errors %}
-                                            <div class="invalid-feedback d-block small">
-                                                {{ form.cabneededdate.errors }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label for="{{ form.topinstalldate.id_for_label }}" class="form-label small">Top Install</label>
-                                        {{ form.topinstalldate }}
-                                        {% if form.topinstalldate.errors %}
-                                            <div class="invalid-feedback d-block small">
-                                                {{ form.topinstalldate.errors }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                    <div class="col-md-6 mb-2">
-                                        <label for="{{ form.promised.id_for_label }}" class="form-label small">Promised</label>
-                                        {{ form.promised }}
-                                        {% if form.promised.errors %}
-                                            <div class="invalid-feedback d-block small">
-                                                {{ form.promised.errors }}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    <div class="row">
-                        <div class="col-md-6 mb-2">
-                                <label for="{{ form.actualstart.id_for_label }}" class="form-label small">Actual Start Date</label>
-                                {{ form.actualstart }}
-                                {% if form.actualstart.errors %}
-                                    <div class="invalid-feedback d-block small">
-                                        {{ form.actualstart.errors }}
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-6 mb-2">
-                                <label for="{{ form.actualend.id_for_label }}" class="form-label small">Actual End Date</label>
-                                {{ form.actualend }}
-                                {% if form.actualend.errors %}
-                                    <div class="invalid-feedback d-block small">
-                                        {{ form.actualend.errors }}
-                                    </div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        <div class="row">
-                        <div class="col-md-6 mb-2">
-                                <label for="{{ form.estinstall.id_for_label }}" class="form-label small">Estimated Install Date</label>
-                                {{ form.estinstall }}
-                                {% if form.estinstall.errors %}
-                                    <div class="invalid-feedback d-block small">
-                                        {{ form.estinstall.errors }}
-                                    </div>
-                                {% endif %}
+                            <div class="form-check form-check-inline mb-0">
+                                {{ form.sold }}
+                                <label for="{{ form.sold.id_for_label }}" class="form-check-label small">Sold</label>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Form Actions -->
-                <div class="card">
+                <div class="row g-2 mt-2">
+                    <div class="col-12 col-xl-5">
+                        <label for="{{ form.address.id_for_label }}" class="form-label small">Address</label>
+                        {{ form.address }}
+                        {% if form.address.errors %}
+                            <div class="invalid-feedback d-block small">{{ form.address.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <label for="{{ form.city.id_for_label }}" class="form-label small">City</label>
+                        {{ form.city }}
+                        {% if form.city.errors %}
+                            <div class="invalid-feedback d-block small">{{ form.city.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-6 col-md-2 col-xl-1">
+                        <label for="{{ form.state.id_for_label }}" class="form-label small">State</label>
+                        {{ form.state }}
+                        {% if form.state.errors %}
+                            <div class="invalid-feedback d-block small">{{ form.state.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-6 col-md-4 col-xl-1">
+                        <label for="{{ form.zip.id_for_label }}" class="form-label small">Zip</label>
+                        {{ form.zip }}
+                        {% if form.zip.errors %}
+                            <div class="invalid-feedback d-block small">{{ form.zip.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-12 col-md-6 col-xl-2">
+                        <label for="{{ form.county.id_for_label }}" class="form-label small required-field">County</label>
+                        {{ form.county }}
+                        {% if form.county.errors %}
+                            <div class="invalid-feedback d-block small">{{ form.county.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <!-- Job Description -->
+            <div class="col-12 col-xl-4">
+                <div class="card mb-3 h-100">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Job Description</h6>
+                    </div>
+                    <div class="card-body job-description-field">
+                        {{ form.job_description }}
+                        {% if form.job_description.errors %}
+                            <div class="invalid-feedback d-block small">{{ form.job_description.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Important Dates -->
+            <div class="col-12 col-xl-8">
+                <div class="card mb-3 h-100">
+                    <div class="card-header">
+                        <h6 class="card-title mb-0">Important Dates</h6>
+                    </div>
                     <div class="card-body">
-                        <div class="d-flex justify-content-between">
-                    <a href="{% url 'job:job_list' %}" class="btn btn-secondary btn-sm">
-                                Cancel
-                    </a>
-                    <button type="submit" class="btn btn-primary btn-sm">
-                                {% if object %}Update Job{% else %}Create Job{% endif %}
-                    </button>
+                        <div class="row g-2">
+                            <div class="col-12 col-md-4">
+                                <label for="{{ form.initalcontactdate.id_for_label }}" class="form-label small">Initial Contact</label>
+                                {{ form.initalcontactdate }}
+                                {% if form.initalcontactdate.errors %}
+                                    <div class="invalid-feedback d-block small">{{ form.initalcontactdate.errors }}</div>
+                                {% endif %}
+                                <label for="{{ form.initialmeasuredate.id_for_label }}" class="form-label small mt-2">Initial Measure</label>
+                                {{ form.initialmeasuredate }}
+                                {% if form.initialmeasuredate.errors %}
+                                    <div class="invalid-feedback d-block small">{{ form.initialmeasuredate.errors }}</div>
+                                {% endif %}
+                                <label for="{{ form.present1.id_for_label }}" class="form-label small mt-2">Present #1</label>
+                                {{ form.present1 }}
+                                {% if form.present1.errors %}
+                                    <div class="invalid-feedback d-block small">{{ form.present1.errors }}</div>
+                                {% endif %}
+                                <label for="{{ form.present2.id_for_label }}" class="form-label small mt-2">Present #2</label>
+                                {{ form.present2 }}
+                                {% if form.present2.errors %}
+                                    <div class="invalid-feedback d-block small">{{ form.present2.errors }}</div>
+                                {% endif %}
+                                <label for="{{ form.present3.id_for_label }}" class="form-label small mt-2">Present #3</label>
+                                {{ form.present3 }}
+                                {% if form.present3.errors %}
+                                    <div class="invalid-feedback d-block small">{{ form.present3.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label for="{{ form.datesold.id_for_label }}" class="form-label small">Date Sold</label>
+                                {{ form.datesold }}
+                                {% if form.datesold.errors %}
+                                    <div class="invalid-feedback d-block small">{{ form.datesold.errors }}</div>
+                                {% endif %}
+                                <label for="{{ form.startdate.id_for_label }}" class="form-label small mt-2">Start Date</label>
+                                {{ form.startdate }}
+                                {% if form.startdate.errors %}
+                                    <div class="invalid-feedback d-block small">{{ form.startdate.errors }}</div>
+                                {% endif %}
+                                <label for="{{ form.completDate.id_for_label }}" class="form-label small mt-2">Completion</label>
+                                {{ form.completDate }}
+                                {% if form.completDate.errors %}
+                                    <div class="invalid-feedback d-block small">{{ form.completDate.errors }}</div>
+                                {% endif %}
+                                <label for="{{ form.cabneededdate.id_for_label }}" class="form-label small mt-2">Cabinet Needed</label>
+                                {{ form.cabneededdate }}
+                                {% if form.cabneededdate.errors %}
+                                    <div class="invalid-feedback d-block small">{{ form.cabneededdate.errors }}</div>
+                                {% endif %}
+                                <label for="{{ form.topinstalldate.id_for_label }}" class="form-label small mt-2">Top Install</label>
+                                {{ form.topinstalldate }}
+                                {% if form.topinstalldate.errors %}
+                                    <div class="invalid-feedback d-block small">{{ form.topinstalldate.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label for="{{ form.actualstart.id_for_label }}" class="form-label small">Actual Start Date</label>
+                                {{ form.actualstart }}
+                                {% if form.actualstart.errors %}
+                                    <div class="invalid-feedback d-block small">{{ form.actualstart.errors }}</div>
+                                {% endif %}
+                                <label for="{{ form.actualend.id_for_label }}" class="form-label small mt-2">Actual End Date</label>
+                                {{ form.actualend }}
+                                {% if form.actualend.errors %}
+                                    <div class="invalid-feedback d-block small">{{ form.actualend.errors }}</div>
+                                {% endif %}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </form>
+            </div>
         </div>
-    </div>
+
+        <!-- Form Actions -->
+        <div class="action-bar d-flex justify-content-between align-items-center gap-2 flex-wrap mt-3 mb-4">
+            <a href="{% url 'job:job_list' %}" class="btn btn-secondary btn-sm">Cancel</a>
+            <button type="submit" class="btn btn-primary btn-sm">
+                {% if object %}Update Job{% else %}Create Job{% endif %}
+            </button>
+        </div>
+    </form>
 </div>
 {% endblock %}
 
@@ -433,15 +381,67 @@ $(document).ready(function() {
 
     populateAddressFromCustomer();
 
+    function showFieldError(selector, message) {
+        var el = $(selector);
+        if (!el.length) return;
+        el.addClass('is-invalid');
+        var feedback = el.siblings('.client-invalid-feedback');
+        if (!feedback.length) {
+            feedback = $('<div class="invalid-feedback d-block small client-invalid-feedback"></div>');
+            el.after(feedback);
+        }
+        feedback.text(message);
+    }
+
+    function clearClientErrors() {
+        $('#jobCreateForm .is-invalid').removeClass('is-invalid');
+        $('#jobCreateForm .client-invalid-feedback').remove();
+    }
+
     // Form validation
-    $('#jobCreateForm').submit(function() {
+    $('#jobCreateForm').submit(function(e) {
+        clearClientErrors();
+        var hasError = false;
+        var firstError = null;
+
         var customer = $('#id_customer').val();
         if (!customer) {
-            alert('Please select a customer.');
+            showFieldError('#id_customer', 'Please select a customer.');
+            hasError = true;
+            firstError = firstError || '#id_customer';
+        }
+
+        var county = $('#id_county').val();
+        if (!county) {
+            showFieldError('#id_county', 'Please select a county.');
+            hasError = true;
+            firstError = firstError || '#id_county';
+        }
+
+        if (hasError) {
+            e.preventDefault();
+            if (firstError) {
+                $(firstError).focus();
+                $('html, body').animate({
+                    scrollTop: $(firstError).offset().top - 120
+                }, 200);
+            }
             return false;
         }
         return true;
     });
+
+    {% if form.errors %}
+    (function() {
+        var errorAlert = document.getElementById('job-form-errors');
+        if (errorAlert) {
+            errorAlert.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        {% if form.customer.errors %}
+        $('#id_customer').addClass('is-invalid');
+        {% endif %}
+    })();
+    {% endif %}
     
     {% if google_places_api_key %}
     // Initialize Google Places Autocomplete directly on the address input field

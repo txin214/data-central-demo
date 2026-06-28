@@ -32,7 +32,7 @@
               <div class="d-flex flex-wrap gap-3 justify-content-start">
                 {% for image in images %}
                   <div class="position-relative" style="width: 180px;">
-                    <img src="{{ image.image.url }}" alt="Product Image" class="img-thumbnail img-clickable" style="width: 180px; height: 120px; object-fit: contain; cursor: pointer;">
+                    <img src="{{ image.display_url }}" alt="Product Image" class="img-thumbnail img-clickable" style="width: 180px; height: 120px; object-fit: contain; cursor: pointer;">
                     {% if image.is_primary %}
                       <span class="badge bg-primary position-absolute top-0 start-0 m-1">Primary</span>
                     {% elif image.is_spec %}

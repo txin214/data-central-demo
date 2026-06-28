@@ -36,6 +36,95 @@
     background-color: rgba(0, 0, 0, 0.075);
 }
 
+/* Job list typography — tab list tables */
+.job-quotes-table th,
+.job-quotes-table td,
+.job-sitework-table th,
+.job-sitework-table td,
+.job-po-table th,
+.job-po-table td,
+.job-sales-primary-table th,
+.job-sales-primary-table td,
+.job-sales-quote-table th,
+.job-sales-quote-table td,
+.job-accounting-table th,
+.job-accounting-table td,
+.job-accounting-payments-table th,
+.job-accounting-payments-table td,
+.job-change-orders-table th,
+.job-change-orders-table td,
+.job-payments-table th,
+.job-payments-table td,
+.job-notes-table th,
+.job-notes-table td {
+    font-size: 0.875rem !important;
+}
+
+/* Job → Quotes tab: override global .table td { vertical-align: top } so text sits mid-row next to action buttons */
+.job-quotes-table thead th,
+.job-quotes-table tbody td {
+    vertical-align: middle !important;
+}
+
+.job-quotes-table thead th {
+    text-align: left !important;
+}
+
+.job-quotes-table thead th.text-center {
+    text-align: center !important;
+}
+
+.job-quotes-table tbody td:nth-child(3) {
+    text-align: right;
+}
+
+.job-quotes-table .job-primary-check {
+    font-size: 0.7rem;
+    color: #0d6efd;
+    line-height: 1;
+}
+
+/* Job → Sitework tab: same vertical alignment as quotes list */
+.job-sitework-table thead th,
+.job-sitework-table tbody td {
+    vertical-align: middle !important;
+}
+
+.job-sitework-table thead th {
+    text-align: left !important;
+}
+
+.job-sitework-table thead th.text-center {
+    text-align: center !important;
+}
+
+.job-sitework-table tbody td:nth-child(3) {
+    text-align: right;
+}
+
+.job-sitework-table .job-primary-check {
+    font-size: 0.7rem;
+    color: #0d6efd;
+    line-height: 1;
+}
+
+/* Job → Notes tab: vertical alignment next to action buttons */
+.job-notes-table thead th,
+.job-notes-table tbody td {
+    vertical-align: middle !important;
+}
+
+/* Job → PO tab: same as quotes/sitework lists */
+.job-po-table thead th,
+.job-po-table tbody td {
+    vertical-align: middle !important;
+}
+
+.job-po-table thead th:nth-child(7),
+.job-po-table tbody td:nth-child(7) {
+    text-align: right;
+}
+
 /* Job sales — primary sales table: left-align block, numeric columns line up */
 .job-sales-primary-wrap {
     text-align: left;

@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+/* Font style only — sizes and layout unchanged */
+.dashboard-home-page .dashboard-card-title {
+    font-style: normal;
+    font-weight: 600;
+}
+.dashboard-home-page .lead {
+    font-style: normal;
+    font-weight: 400;
+}
+.dashboard-home-page .display-4 {
+    font-style: normal;
+    font-weight: 200;
+}
+.dashboard-home-page .card-text,
+.dashboard-home-page .text-muted {
+    font-style: normal;
+}
+</style>
+
+<div class="container-fluid mt-4 dashboard-home-page">
+     <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <p class="lead">Overview of all application modules</p>
+            <p class="lead">{{ now }}</p>
+        </div>
+
+    <div class="row">
+ 
+        <!-- Job Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                 <h5 class="mb-0 dashboard-card-title">Job</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Job Management</p>
+                    <h2 class="display-4">{{ job_count }}</h2>
+                    <p class="text-muted">Jobs</p>
+                    <a href="{% url 'job:job_list' %}" class="btn btn-primary">View Jobs</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                 <h5 class="mb-0 dashboard-card-title">Schedule</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Job Tasks next 10 days</p>
+                    <h2 class="display-4">0</h2>
+                    <p class="text-muted">Tasks</p>
+                    <a href="{% url 'job:master_scheduler' %}" class="btn btn-primary">View Schedule</a> 
+                </div>
+            </div>
+        </div>
+
+ 
+        <!-- CRM Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                 <h5 class="mb-0 dashboard-card-title">Customers</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Customer Relationship Management</p>
+                    <h2 class="display-4">{{ customer_count }}</h2>
+                    <p class="text-muted">Customers</p>
+                    <a href="{% url 'crm:list_customer' %}" class="btn btn-primary">View Customers</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sitework Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                 <h5 class="mb-0 dashboard-card-title">Sitework</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Construction Labor Quotes</p>
+                    <h2 class="display-4">{{ quote_count }}</h2>
+                    <p class="text-muted">Quotes</p>
+                    <a href="{% url 'sitework:list_url' %}" class="btn btn-primary">View Sitework</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Product Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                 <h5 class="mb-0 dashboard-card-title">Product</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Product Quotes</p>
+                    <h2 class="display-4">{{ product_quote_count }}</h2>
+                    <p class="text-muted">Product Quotes</p>
+                    <a href="{% url 'product:product_quote_list' %}" class="btn btn-primary">View Quotes</a>
+                </div>
+            </div>
+        </div>
+
+ 
+        <!-- Accounts Card -->
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header">
+                 <h5 class="mb-0 dashboard-card-title">Accounts</h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Financial Accounts</p>
+                    <h2 class="display-4">{{ account_count }}</h2>
+                    <p class="text-muted">Accounts</p>
+                    <a href="{% url 'accounts:profile' %}" class="btn btn-primary">View Profile</a>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+</div>
+
+{% endblock %}

@@ -2,10 +2,10 @@ from django import forms
 from crm.models import Customer
 from django.forms import ModelForm
 
+
 class CustomerForm(ModelForm):
     status_flag = forms.ChoiceField(
         choices=[
-            ('', '---------'),
             ('A', 'Active'),
             ('B', 'Builder'),
             ('P', 'Pending'),
@@ -13,15 +13,36 @@ class CustomerForm(ModelForm):
             ('C', 'Closed'),
         ],
         widget=forms.Select(attrs={'style': 'width: 150px;'}),
-        required=False
+        required=False,
+        initial='A',
     )
     
     emailoptout = forms.BooleanField(
         widget=forms.CheckboxInput(),
         required=False,
-        label="Email Opt Out"
+        label="Email Opt Out",
     )
-    
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.pk:
+            self.fields['status_flag'].initial = self.instance.status_flag or 'A'
+        else:
+            self.fields['status_flag'].initial = 'A'
+            self.initial.setdefault('state', 'WI')
+        for name, field in self.fields.items():
+            w = field.widget
+            if isinstance(w, forms.CheckboxInput):
+                w.attrs["class"] = (w.attrs.get("class", "") + " form-check-input").strip()
+            elif isinstance(w, forms.Select):
+                w.attrs["class"] = "form-select form-select-sm"
+            elif isinstance(w, forms.Textarea):
+                w.attrs.setdefault("class", "form-control form-control-sm notes-textarea")
+                if name == "notes":
+                    w.attrs.setdefault("rows", 4)
+            else:
+                w.attrs.setdefault("class", "form-control form-control-sm")
+
     def clean_cust_code(self):
         """Convert cust_code to uppercase and validate uniqueness"""
         cust_code = self.cleaned_data.get('cust_code')
@@ -64,4 +85,17 @@ class CustomerForm(ModelForm):
     class Meta:
         model = Customer
         fields = "__all__"
-        exclude = ['status_flag', 'emailoptout']  # Exclude fields we're defining manually
+        exclude = [
+            "status_flag",
+            "emailoptout",
+            "uuid",
+            "created_at",
+            "updated_at",
+            "created_by",
+            "updated_by",
+            "deleted_at",
+            "deleted_by",
+        ]
+        widgets = {
+            "notes": forms.Textarea(attrs={"rows": 4}),
+        }

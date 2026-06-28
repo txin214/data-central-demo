@@ -179,10 +179,6 @@
             <strong>Billing Information</strong>
             <div class="indented">
                 <div class="info-row">
-                    <span class="info-label">Builder:</span>
-                    {{ job.customer.assigned_staff|default:'' }}
-                </div>
-                <div class="info-row">
                     <span class="info-label">Customer:</span>
                     {{ job.customer.first_name }} {{ job.customer.last_name }}
                 </div>
@@ -370,10 +366,6 @@
                 <div class="info-row">
                     <span class="info-label">Cabinet Needed Date:</span>
                     {{ job.cabneededdate|date:"m/d/Y"|default:"" }}
-                </div>
-                <div class="info-row">
-                    <span class="info-label">Promised Date:</span>
-                    {{ job.promised|date:"m/d/Y"|default:"" }}
                 </div>
             </div>
         </div>

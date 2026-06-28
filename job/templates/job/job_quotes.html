@@ -2,11 +2,11 @@
 {% load static %}
 
 {% block job_content %}
-<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.1">
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.4">
 <link rel="stylesheet" type="text/css" href="{% static 'job/css/job_forms.css' %}?v=1.0">
 
     <div class="table-responsive mt-3">
-        <table class="table table-bordered table-hover align-middle mb-0">
+        <table class="table table-bordered table-hover align-middle mb-0 job-quotes-table">
             <thead class="sticky-header">
                 <tr>
                     <th>Quote Name</th>
@@ -14,7 +14,7 @@
                     <th>Subtotal</th>
                     <th>Status</th>
                     <th>Added Date</th>
-                    <th colspan="6" class="text-center bg-light">More</th>
+                    <th>More</th>
                 </tr>
             </thead>
             <tbody>
@@ -27,23 +27,29 @@
                     </td>
                 </tr>
                 {% for product_quote in product_quotes %}
-                <tr {% if product_quote.is_primary %}class="table-warning"{% endif %}>
+                <tr>
                     <td>
-                        {{ product_quote.name }}
-                        {% if product_quote.is_primary %}
-                            <span class="badge bg-warning text-dark ms-1">Primary</span>
-                        {% endif %}
+                        <span class="d-inline-flex align-items-center gap-1">
+                            {{ product_quote.name }}
+                            {% if product_quote.is_primary %}
+                                <i class="fas fa-check job-primary-check" title="Primary quote" aria-label="Primary quote"></i>
+                            {% endif %}
+                        </span>
                     </td>
                     <td>{{ product_quote.customer }}</td>
-                    <td>
-                        <strong class="text-success">${{ product_quote.subtotal|floatformat:2 }}</strong>
-                    </td>
+                    <td>{{ product_quote.subtotal|floatformat:2 }}</td>
                     <td>{{ product_quote.status|yesno:"A,I" }}</td>
                     <td>{{ product_quote.quoted_date|date:"M d, Y" }}</td>
-                    <td>
+                    <td class="text-center">
                         <div class="d-flex gap-2">
-                            <a href="{% url 'job:job_product_quote_update_specific' job.id product_quote.id %}" class="btn btn-sm btn-outline-primary" title="View or edit this quote">
-                                View / Edit
+                            <a href="{% url 'job:job_product_quote_view' job.id product_quote.id %}" class="btn btn-sm btn-outline-secondary" title="View quote">
+                                View
+                            </a>
+                            <a href="{% url 'job:job_product_quote_update_specific' job.id product_quote.id %}" class="btn btn-sm btn-outline-primary" title="Edit quote">
+                                Edit
+                            </a>
+                            <a href="{% url 'job:job_quote_products' job.id product_quote.id %}" class="btn btn-sm btn-outline-info" title="Products in quote">
+                                Products
                             </a>
                             <a href="{% url 'product:product_quote_pdf' product_quote.id %}" class="btn btn-sm btn-outline-success" target="_blank">
                                 Print Preview

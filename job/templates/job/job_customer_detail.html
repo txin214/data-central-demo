@@ -42,7 +42,7 @@
                 <h6 class="card-title mb-0 text-uppercase text-muted small">Customer information</h6>
             </div>
             <div class="card-body py-2">
-                <!-- Row 1: primary names, phones, email -->
+                <!-- Row 1: primary contact (6 equal columns) -->
                 <div class="row g-2">
                     <div class="col-12 col-md-2">
                         <label class="form-label small required-field">First Name</label>
@@ -51,10 +51,6 @@
                     <div class="col-12 col-md-2">
                         <label class="form-label small">Last Name</label>
                         <input type="text" class="form-control form-control-sm" value="{{ customer.last_name|default:'' }}" readonly>
-                    </div>
-                    <div class="col-12 col-md-2">
-                        <label class="form-label small">Home Phone</label>
-                        <input type="tel" class="form-control form-control-sm" value="{{ customer.home_phone|default:'' }}" readonly>
                     </div>
                     <div class="col-12 col-md-2">
                         <label class="form-label small">Cellphone</label>
@@ -68,27 +64,35 @@
                         <label class="form-label small">Email</label>
                         <input type="email" class="form-control form-control-sm" value="{{ customer.email|default:'' }}" readonly>
                     </div>
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small">Home Phone</label>
+                        <input type="tel" class="form-control form-control-sm" value="{{ customer.home_phone|default:'' }}" readonly>
+                    </div>
                 </div>
 
-                <!-- Row 2: secondary names, phones, email opt-out -->
+                <!-- Row 2: secondary contact (aligned with row 1) -->
                 <div class="row g-2 mt-2">
-                    <div class="col-12 col-md-3 col-lg-2">
+                    <div class="col-12 col-md-2">
                         <label class="form-label small">First Name2</label>
                         <input type="text" class="form-control form-control-sm" value="{{ customer.first_name2|default:'' }}" readonly>
                     </div>
-                    <div class="col-12 col-md-3 col-lg-2">
+                    <div class="col-12 col-md-2">
                         <label class="form-label small">Last Name2</label>
                         <input type="text" class="form-control form-control-sm" value="{{ customer.last_name2|default:'' }}" readonly>
                     </div>
-                    <div class="col-12 col-md-3 col-lg-2">
+                    <div class="col-12 col-md-2">
                         <label class="form-label small">Cellphone 2</label>
                         <input type="tel" class="form-control form-control-sm" value="{{ customer.cellphone2|default:'' }}" readonly>
                     </div>
-                    <div class="col-12 col-md-3 col-lg-2">
+                    <div class="col-12 col-md-2">
                         <label class="form-label small">Work Phone 2</label>
                         <input type="tel" class="form-control form-control-sm" value="{{ customer.work_phone2|default:'' }}" readonly>
                     </div>
-                    <div class="col-12 col-md-3 col-lg-4">
+                    <div class="col-12 col-md-2">
+                        <label class="form-label small">Email 2</label>
+                        <input type="email" class="form-control form-control-sm" value="{{ customer.email2|default:'' }}" readonly>
+                    </div>
+                    <div class="col-12 col-md-2">
                         <label class="form-label small">Email opt out</label>
                         <div class="d-flex gap-2 flex-wrap align-items-center pt-1">
                             <div class="form-check form-check-inline mb-0">
@@ -180,10 +184,6 @@
                                 <label class="form-check-label small" for="builderCheck">This customer is a builder</label>
                             </div>
                         </div>
-                    </div>
-                    <div class="col-md-4 mb-2">
-                        <label class="form-label small">Assigned Staff</label>
-                        <input type="text" class="form-control form-control-sm" value="{{ customer.assigned_staff|default:'' }}" readonly>
                     </div>
                 </div>
             </div>

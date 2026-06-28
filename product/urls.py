@@ -4,9 +4,9 @@ from django.conf.urls.static import static
 
 from . import views
 from .views import (
-    EditProductImagesView, ProductThankYouView,
+    EditProductImagesView,
     ProductListView, ProductDetail2View,
-    ProductDeleteView, CategoryView, ProductCreateView, ProductDuplicateUpdateView, ProductUpdateView2, view_product_images,
+    ProductCreateView, ProductDuplicateUpdateView, ProductUpdateView2, view_product_images,
     ajax_categories, ajax_subcat1, ajax_subcat2, ajax_manufacturers, ajax_filter_products, save_quote_content, ajax_all_categories
 )
 
@@ -14,9 +14,6 @@ app_name = 'product'
 
 urlpatterns = [
     # ===== PRODUCT MANAGEMENT URLs =====
-    # Thank you page after successful product operations
-    path('thank_you/', ProductThankYouView.as_view(), name='thank_you'),
-    
     # Product CRUD operations
     path('create_product/', ProductCreateView.as_view(), name='product-create'),  # Create new product
     path('list_product/', ProductListView.as_view(), name='product-list'),  # List all products
@@ -24,28 +21,11 @@ urlpatterns = [
     path('product_detail2/<uuid:pk>', ProductDetail2View.as_view(), name='product-detail2'),  # View product details
     path('product_update2/<uuid:pk>', ProductUpdateView2.as_view(), name='product-update2'),  # Update existing product
     path('product_duplicate/<uuid:pk>', ProductDuplicateUpdateView.as_view(), name='product-duplicate'),  # Duplicate existing product
-    path('product_delete/<uuid:pk>', ProductDeleteView.as_view(), name='product-delete'),  # Delete product
+    path('product_delete/<uuid:pk>', views.product_delete, name='product-delete'),  # Delete product
     
     # Product image management
     path('product/edit-images/<uuid:pk>/', EditProductImagesView.as_view(), name='edit-product-images'),  # Edit product images
     path('product/<uuid:pk>/images/', view_product_images, name='view_product_images'),  # View product images
-    
-    # ===== CATEGORY MANAGEMENT URLs =====
-    path('product-categories/', CategoryView.as_view(), name='product-category'),  # Manage product categories
-    
-    # AJAX category operations
-    path('ajax/update-category/<int:pk>/', views.ajax_update_category, name='ajax-update-category'),  # Update category via AJAX
-    path('ajax/update-subcategory1/<int:pk>/', views.ajax_update_subcategory1, name='ajax-update-subcategory1'),  # Update subcategory1 via AJAX
-    path('ajax/update-subcategory2/<int:pk>/', views.ajax_update_subcategory2, name='ajax-update-subcategory2'),  # Update subcategory2 via AJAX
-    path('ajax/update-color/<int:pk>/', views.ajax_update_color, name='ajax-update-color'),  # Update color via AJAX
-    path('ajax/add-category/', views.ajax_add_category, name='ajax-add-category'),  # Add new category via AJAX
-    path('ajax/add-subcategory1/', views.ajax_add_subcategory1, name='ajax-add-subcategory1'),  # Add new subcategory1 via AJAX
-    path('ajax/add-subcategory2/', views.ajax_add_subcategory2, name='ajax-add-subcategory2'),  # Add new subcategory2 via AJAX
-    path('ajax/add-color/', views.ajax_add_color, name='ajax-add-color'),  # Add new color via AJAX
-    path('ajax/delete-category/<int:pk>/', views.ajax_delete_category, name='ajax-delete-category'),  # Delete category via AJAX
-    path('ajax/delete-subcategory1/<int:pk>/', views.ajax_delete_subcategory1, name='ajax-delete-subcategory1'),  # Delete subcategory1 via AJAX
-    path('ajax/delete-subcategory2/<int:pk>/', views.ajax_delete_subcategory2, name='ajax-delete-subcategory2'),  # Delete subcategory2 via AJAX
-    path('ajax/delete-color/<int:pk>/', views.ajax_delete_color, name='ajax-delete-color'),  # Delete color via AJAX
     
     # ===== MANUFACTURER MANAGEMENT URLs =====
     path('manufacturers/', views.manufacturer_list, name='manufacturers'),  # List all manufacturers
@@ -63,19 +43,6 @@ urlpatterns = [
     path('ajax/search-vendors/', views.ajax_search_vendors, name='ajax_search_vendors'),  # Search vendors via AJAX
     path('ajax/filter-vendors-by-status/', views.ajax_filter_vendors_by_status, name='ajax_filter_vendors_by_status'),  # Filter vendors by status via AJAX
     
-    # ===== COST POOL MANAGEMENT URLs =====
-    path('costpools/', views.costpool_list, name='costpools'),  # List all cost pools
-    path('costpool/create/', views.create_costpool, name='create_costpool'),  # Create cost pool
-    path('costpool/<int:costpool_id>/', views.edit_costpool, name='edit_costpool'),  # Edit cost pool
-    path('ajax/delete-costpool/<int:pk>/', views.ajax_delete_costpool, name='ajax_delete_costpool'),  # Delete cost pool via AJAX
-    path('ajax/filter-costpools/', views.ajax_filter_costpools, name='ajax_filter_costpools'),  # Filter cost pools via AJAX
-    path('ajax/costpool-manufacturers/', views.ajax_costpool_manufacturers, name='ajax_costpool_manufacturers'),  # Get manufacturers for cost pools
-    path('ajax/costpool-categories/', views.ajax_costpool_categories, name='ajax_costpool_categories'),  # Get categories for cost pools
-    path('ajax/costpool-subcat1/<int:category_id>/', views.ajax_costpool_subcat1, name='ajax_costpool_subcat1'),  # Get subcategory1 for cost pools
-    path('ajax/costpool-subcat2/<int:subcat1_id>/', views.ajax_costpool_subcat2, name='ajax_costpool_subcat2'),  # Get subcategory2 for cost pools
-    path('ajax/costpool-linked-products/<int:costpool_id>/', views.ajax_costpool_linked_products, name='ajax_costpool_linked_products'),  # Get linked products for cost pool
-    path('ajax/update-costpool-products/<int:costpool_id>/', views.ajax_update_costpool_products, name='ajax_update_costpool_products'),  # Update selected products with cost pool multipliers
-    
     # ===== BATCH UPDATE MANAGEMENT URLs =====
     path('batch-update/', views.batch_update_products, name='batch-update'),  # Batch update products page
     path('ajax/batch-update/manufacturers/', views.ajax_batch_update_manufacturers, name='ajax_batch_update_manufacturers'),  # Get manufacturers for batch update
@@ -84,13 +51,6 @@ urlpatterns = [
     path('ajax/batch-update/subcategories2/', views.ajax_batch_update_subcategories2, name='ajax_batch_update_subcategories2'),  # Get subcategories2 for batch update
     path('ajax/batch-update/products/', views.ajax_batch_update_products, name='ajax_batch_update_products'),  # Get filtered products for batch update
     path('ajax/batch-update/apply/', views.ajax_batch_update_apply, name='ajax_batch_update_apply'),  # Apply batch updates to products
-    
-    # ===== FINISH & LEAD TIME MANAGEMENT URLs =====
-    path('finishes/', views.finish_list, name='finishes'),  # List all finishes
-    path('finishes/edit/<int:finish_id>/', views.edit_finish, name='edit_finish'),  # Edit finish
-    path('ajax/delete-finish/<int:pk>/', views.ajax_delete_finish, name='ajax_delete_finish'),  # Delete finish via AJAX
-    path('ajax/search-finishes/', views.ajax_search_finishes, name='ajax_search_finishes'),  # Search finishes via AJAX
-    path('lead-times/', views.lead_time_list, name='lead_time'),  # List lead times
     
     # ===== AJAX DATA LOADING URLs =====
     path('ajax/load-subcategories/', views.load_subcategories, name='ajax_load_subcategories'),  # Load subcategories dynamically
@@ -136,12 +96,14 @@ urlpatterns = [
     # AJAX quote operations
     path('ajax/product-quotes/', views.ajax_product_quotes, name='ajax_product_quotes'),  # Get product quotes via AJAX
     
-    # ===== ADHOC QUOTE LINE MANAGEMENT URLs =====
-    path('ajax/create-adhoc/', views.ajax_create_adhoc, name='ajax-create-adhoc'),  # Create adhoc line item via AJAX
+    # ===== AD-HOC PRODUCT URLs =====
+    path('ajax/create-adhoc/', views.ajax_create_adhoc, name='ajax-create-adhoc'),  # Create adhoc line item via AJAX (AJAX)
     path('quotes/<int:quote_id>/add-adhoc/', views.ajax_add_adhoc_to_quote, name='ajax-add-adhoc-to-quote'),  # Add adhoc item to quote
     path('quotes/<int:quote_id>/delete-adhoc/<int:line_item_id>/', views.ajax_delete_adhoc_from_quote, name='ajax-delete-adhoc-from-quote'),  # Delete adhoc item from quote
     path('quotes/edit-adhoc-quantity/<int:line_item_id>/', views.ajax_update_adhoc_quantity, name='ajax-update-adhoc-quantity'),  # Update adhoc item quantity
     path('adhoc/', views.adhoc_list, name='adhoc-list'),  # List all adhoc items
+    path('adhoc/create/', views.create_adhoc, name='create-adhoc'),  # Create adhoc item
+    path('adhoc/<int:adhoc_id>/', views.edit_adhoc, name='edit-adhoc'),  # View/edit adhoc item
     path('adhoc/delete/<int:adhoc_id>/', views.delete_adhoc, name='delete-adhoc'),  # Delete adhoc item
 ]
 

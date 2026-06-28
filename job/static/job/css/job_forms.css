@@ -1,12 +1,12 @@
 /* Job Forms Common Styles */
 /* Fallback styles to ensure font sizes are correct */
-.table.table-bordered.table-hover th {
+.table.table-hover.quote-products-table th {
     font-size: 0.875rem !important;
     background-color: #f8f9fa !important;
     border-color: #dee2e6 !important;
     font-weight: 600 !important;
 }
-.table.table-bordered.table-hover td {
+.table.table-hover.quote-products-table td {
     font-size: 0.875rem !important;
 }
 .sticky-header th {
@@ -14,6 +14,13 @@
     top: 0 !important;
     background: #f8f9fa !important;
     z-index: 2 !important;
+}
+
+/* Avoid double-thick bottom border (card + table) */
+.quote-products-card {
+    border-bottom: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
 }
 
 /* Add Quote Form Styles */

@@ -375,6 +375,18 @@
         </div>
     </div>
 </div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const oldBase = 'https://dcimage.sfo3.digitaloceanspaces.com';
+    const proxyBase = '{% url "accounts:forms_file_redirect" "FORMS/__placeholder__" %}'.replace('FORMS/__placeholder__', '');
+
+    document.querySelectorAll(`a[href^="${oldBase}/FORMS/"]`).forEach(function(link) {
+        const oldUrl = new URL(link.href);
+        const fileKey = oldUrl.pathname.replace(/^\/+/, '');
+        link.href = proxyBase + fileKey;
+    });
+});
+</script>
 {% endblock %}
 
 

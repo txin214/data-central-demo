@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 {% extends "base.html" %}
 {% load static %}
 
@@ -8,31 +7,30 @@
 
 {% block content %}
 <style>
-/* Ensure consistent margins and styling with productform3 */
-.container-fluid {
+/*
+ * Scope all overrides to .view-product-page so body / container-fluid /
+ * bootstrap utilities do not change the sidebar (sibling outside this wrapper).
+ */
+.view-product-page .container-fluid.mt-4 {
     background-color: transparent !important;
 }
 
-body {
-    background-color: #f8f9fa !important;
-}
-
 /* Make ViewTable background white */
-.ViewTable {
+.view-product-page .ViewTable {
     background-color: white !important;
 }
-.ViewTable td {
+.view-product-page .ViewTable td {
     background-color: white !important;
 }
-.ViewTable th {
+.view-product-page .ViewTable th {
     background-color: white !important;
 }
-
-/* Template-specific styles only - responsive styles moved to responsive-forms.css */
 </style>
 
-<!-- Include shared responsive styles -->
-<link rel="stylesheet" href="{% static 'product/css/responsive-forms.css' %}">
+<!-- Include shared responsive styles (scoped to this page wrapper) -->
+<link rel="stylesheet" href="{% static 'product/css/responsive-forms-view-product.css' %}">
+
+<div class="view-product-page">
 
   <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-2">
@@ -523,8 +521,8 @@ body {
                               <div style="display: flex; flex-wrap: wrap; gap: 15px;">
                                 {% for image in product.images.all|dictsortreversed:"is_primary"|dictsortreversed:"is_spec" %}
                                   <div style="position: relative; width: 180px; border: 1px solid #dee2e6; border-radius: 0px; padding: 10px; background-color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                                    <a href="{{ image.image.url }}" target="_blank" style="display: block; cursor: pointer;">
-                                      <img src="{{ image.image.url }}" alt="Product Image" style="width: 100%; height: 120px; object-fit: contain; border-radius: 0px; margin-bottom: 10px;">
+                                    <a href="{{ image.display_url }}" target="_blank" style="display: block; cursor: pointer;">
+                                      <img src="{{ image.display_url }}" alt="Product Image" style="width: 100%; height: 120px; object-fit: contain; border-radius: 0px; margin-bottom: 10px;">
                                     </a>
                                     
                                     {% if image.is_primary %}
@@ -578,81 +576,85 @@ body {
     }
   </script>
   <style>
-    /* Basic styles for layout and table formatting */
-    body {
+    /*
+     * All rules scoped under .view-product-page so typography and .btn tweaks
+     * do not bleed into templates/base.html sidebar.
+     */
+    .view-product-page {
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
+      background-color: #f8f9fa !important;
     }
 
-    .ContentBody {
+    .view-product-page .ContentBody {
       padding: 20px;
     }
 
-    .TabTable {
+    .view-product-page .TabTable {
       width: 100%;
       border-collapse: collapse;
       margin-bottom: -1px;
     }
 
-    .TabTable td {
+    .view-product-page .TabTable td {
       padding: 8px;
       text-align: center;
       border: 1px solid #000;
       cursor: pointer;
     }
 
-    .CurrentTab {
-      background-color: #0099ff; /* Background color */
-      color: white; /* Text color */
+    .view-product-page .CurrentTab {
+      background-color: #0099ff;
+      color: white;
     }
 
-    .ViewTable {
+    .view-product-page .ViewTable {
       width: 100%;
       border-collapse: collapse;
     }
 
-    .ViewTable td {
+    .view-product-page .ViewTable td {
       padding: 8px;
       border: 1px solid #000;
     }
 
-    .ViewTable th {
+    .view-product-page .ViewTable th {
       background-color: #f2f2f2;
     }
 
-    .ViewTable input[type="text"] {
+    .view-product-page .ViewTable input[type="text"] {
       width: 100%;
       padding: 5px;
       box-sizing: border-box;
     }
 
-    .ViewTable input[readonly] {
+    .view-product-page .ViewTable input[readonly] {
       background-color: #e9ecef;
       color: #6c757d;
       cursor: not-allowed;
       border: 1px solid #ced4da;
     }
 
-    .ViewTable a {
+    .view-product-page .ViewTable a {
       color: #0000ff;
       text-decoration: none;
     }
 
-    .ViewTable a:hover {
+    .view-product-page .ViewTable a:hover {
       text-decoration: underline;
     }
 
-    .ViewTable p {
+    .view-product-page .ViewTable p {
       margin: 0;
       padding: 0;
     }
 
-    .ViewTable small {
+    .view-product-page .ViewTable small {
       color: #ff0000;
     }
 
-    .btn {
+    .view-product-page .btn {
       padding: 10px 20px;
       border: none;
       background-color: #007bff;
@@ -662,130 +664,113 @@ body {
       margin: 5px;
     }
 
-    .btn:disabled {
+    .view-product-page .btn:disabled {
       background-color: #6c757d;
       cursor: not-allowed;
       opacity: 0.6;
     }
 
-    .btn.cancel {
+    .view-product-page .btn.cancel {
       background-color: #6c757d;
     }
 
-    .btn:hover:not(:disabled) {
+    .view-product-page .btn:hover:not(:disabled) {
       opacity: 0.8;
     }
 
-    .btn.cancel:hover:not(:disabled) {
+    .view-product-page .btn.cancel:hover:not(:disabled) {
       opacity: 0.8;
     }
 
-    .table-title {
+    .view-product-page .table-title {
       font-weight: bold;
       font-size: 16px;
       color: navy;
     }
 
-    .align-left {
+    .view-product-page .align-left {
       text-align: left;
     }
 
-    .tab-content {
+    .view-product-page .tab-content {
       display: none;
     }
 
-    .tab-content.active {
+    .view-product-page .tab-content.active {
       display: table;
     }
 
-    select:disabled {
+    .view-product-page select:disabled {
       background-color: #e9ecef;
       color: #6c757d;
       cursor: not-allowed;
     }
 
-    input[type="radio"]:disabled {
+    .view-product-page input[type="radio"]:disabled {
       cursor: not-allowed;
       opacity: 0.6;
     }
 
-    /* Override pf2.css styles that might interfere with Bootstrap */
-    .container-fluid {
-        font-family: var(--bs-body-font-family) !important;
+    /* Override pf2.css styles — only inside View Product */
+    .view-product-page .container-fluid.mt-4 {
+      font-family: var(--bs-body-font-family) !important;
+      background-color: transparent !important;
     }
-    .fw-bold {
-        font-weight: 700 !important;
+    .view-product-page .fw-bold {
+      font-weight: 700 !important;
     }
-    .text-primary {
-        color: var(--bs-primary) !important;
+    .view-product-page .text-primary {
+      color: var(--bs-primary) !important;
     }
-    h2.fw-bold {
-        font-family: var(--bs-body-font-family) !important;
-        font-weight: 700 !important;
-    }
-
-    /* Make tab list font match product list table headers */
-    .TabTable td {
-        font-family: var(--bs-body-font-family) !important;
-        font-size: 0.875rem !important;
-        font-weight: 600 !important;
-        vertical-align: middle !important;
-        padding: 0.5rem 0.75rem !important;
+    .view-product-page h2.fw-bold {
+      font-family: var(--bs-body-font-family) !important;
+      font-weight: 700 !important;
     }
 
-    /* Change current tab background to match product list table header */
-    .CurrentTab {
-        background-color: #e9ecef !important;
-        color: black !important;
+    .view-product-page .TabTable td {
+      font-family: var(--bs-body-font-family) !important;
+      font-size: 0.875rem !important;
+      font-weight: 600 !important;
+      vertical-align: middle !important;
+      padding: 0.5rem 0.75rem !important;
     }
 
-    /* Make part number font match tab table button font */
-    table[style*="width: 280px"] td {
-        font-family: var(--bs-body-font-family) !important;
-        font-size: 0.875rem !important;
-        font-weight: 600 !important;
-        vertical-align: middle !important;
+    .view-product-page .CurrentTab {
+      background-color: #e9ecef !important;
+      color: black !important;
     }
 
-    /* Make ViewTable background white */
-    .ViewTable {
-        background-color: white !important;
-    }
-    .ViewTable td {
-        background-color: white !important;
-    }
-    .ViewTable th {
-        background-color: white !important;
+    .view-product-page table[style*="width: 280px"] td {
+      font-family: var(--bs-body-font-family) !important;
+      font-size: 0.875rem !important;
+      font-weight: 600 !important;
+      vertical-align: middle !important;
     }
 
-    /* Use the same background as product list */
-    body {
-        background-color: #f8f9fa !important;
+    .view-product-page .ViewTable {
+      background-color: white !important;
+      border-color: #dee2e6 !important;
     }
-    .container-fluid {
-        background-color: transparent !important;
+    .view-product-page .ViewTable td {
+      background-color: white !important;
+      border-color: #dee2e6 !important;
+    }
+    .view-product-page .ViewTable th {
+      background-color: white !important;
+      border-color: #dee2e6 !important;
     }
 
-    /* Change table border colors to match product list styling */
-    .TabTable {
-        border-color: #dee2e6 !important;
+    .view-product-page .TabTable {
+      border-color: #dee2e6 !important;
     }
-    .TabTable td {
-        border-color: #dee2e6 !important;
+    .view-product-page .TabTable td {
+      border-color: #dee2e6 !important;
     }
-    .ViewTable {
-        border-color: #dee2e6 !important;
-    }
-    .ViewTable td {
-        border-color: #dee2e6 !important;
-    }
-    .ViewTable th {
-        border-color: #dee2e6 !important;
-    }
-    .TabTable td[style*="border"],
-    .ViewTable td[style*="border"],
-    .ViewTable th[style*="border"] {
-        border-color: #dee2e6 !important;
+    .view-product-page .TabTable td[style*="border"],
+    .view-product-page .ViewTable td[style*="border"],
+    .view-product-page .ViewTable th[style*="border"] {
+      border-color: #dee2e6 !important;
     }
   </style>
+</div>
 {% endblock %}

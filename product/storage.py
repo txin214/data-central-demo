@@ -1,9 +1,64 @@
-"""Custom storage backend with signed URL support"""
-from storages.backends.s3boto3 import S3Boto3Storage
-from django.conf import settings
 import boto3
 from botocore.client import Config
-from datetime import timedelta
+from django.conf import settings
+from django.utils.deconstruct import deconstructible
+from storages.backends.s3boto3 import S3Boto3Storage
+
+
+def strip_product_image_prefix(name):
+    """Map Django's product_images/... names to the bucket's real key layout."""
+    normalized_name = str(name).replace('\\', '/').lstrip('/')
+    strip_prefix = getattr(settings, 'PRODUCT_IMAGE_PUBLIC_STRIP_PREFIX', '')
+    if strip_prefix and normalized_name.startswith(strip_prefix):
+        return normalized_name[len(strip_prefix):]
+    return normalized_name
+
+
+@deconstructible
+class TigrisProductImageStorage(S3Boto3Storage):
+    """Tigris storage for product images while preserving existing DB file names."""
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('access_key', settings.PRODUCT_IMAGES_TIGRIS_ACCESS_KEY_ID)
+        kwargs.setdefault('secret_key', settings.PRODUCT_IMAGES_TIGRIS_SECRET_ACCESS_KEY)
+        kwargs.setdefault('bucket_name', settings.PRODUCT_IMAGES_TIGRIS_BUCKET_NAME)
+        kwargs.setdefault('endpoint_url', settings.S3_ENDPOINT_URL)
+        kwargs.setdefault('region_name', settings.S3_REGION_NAME)
+        kwargs.setdefault('default_acl', settings.PRODUCT_IMAGES_TIGRIS_DEFAULT_ACL)
+        kwargs.setdefault('file_overwrite', settings.PRODUCT_IMAGES_TIGRIS_FILE_OVERWRITE)
+        kwargs.setdefault('querystring_auth', False)
+        kwargs.setdefault('object_parameters', {
+            'CacheControl': settings.PRODUCT_IMAGES_TIGRIS_CACHE_CONTROL,
+        })
+        super().__init__(*args, **kwargs)
+
+    def _save(self, name, content):
+        original_name = str(name).replace('\\', '/').lstrip('/')
+        super()._save(strip_product_image_prefix(original_name), content)
+        return original_name
+
+    def exists(self, name):
+        return super().exists(strip_product_image_prefix(name))
+
+    def delete(self, name):
+        return super().delete(strip_product_image_prefix(name))
+
+    def open(self, name, mode='rb'):
+        return super().open(strip_product_image_prefix(name), mode)
+
+    def size(self, name):
+        return super().size(strip_product_image_prefix(name))
+
+    def url(self, name, parameters=None, expire=None, http_method=None):
+        key = strip_product_image_prefix(name)
+        base_url = getattr(settings, 'PRODUCT_IMAGE_PUBLIC_BASE_URL', '').strip()
+        if base_url:
+            return f"{base_url.rstrip('/')}/{key}"
+        return super().url(key, parameters=parameters, expire=expire, http_method=http_method)
+
+
+product_image_storage = TigrisProductImageStorage()
+
 
 class CustomS3Boto3Storage(S3Boto3Storage):
     """

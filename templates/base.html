@@ -274,7 +274,7 @@
     </div>
     <div class="sidebar d-flex flex-column align-items-start">
         <nav class="nav flex-column w-100 flex-grow-1">
-            <a class="nav-link" href="#" onclick="collapseProductSubmenu(); collapseCustomerSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); collapseBatchEntrySubmenu(); collapseReportsSubmenu();"><i class="fa fa-home me-2"></i> Home</a>
+            <a class="nav-link" href="/dashboard/" onclick="collapseProductSubmenu(); collapseCustomerSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); collapseBatchEntrySubmenu(); collapseReportsSubmenu();"><i class="fa fa-home me-2"></i> Home</a>
             <a class="nav-link submenu-parent" href="#" onclick="toggleCustomerSubmenu(this)"><i class="fa fa-users me-2"></i> Customers</a>
             <div class="submenu" id="customer-submenu">
                 <a class="nav-link" href="{% url 'crm:list_customer' %}" onclick="expandCustomerSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); return true;">List Customers</a>
@@ -290,15 +290,10 @@
             <div class="submenu" id="product-submenu">
                 <a class="nav-link" href="{% url 'product:product-list' %}" onclick="expandProductSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); return true;">View Products</a>
                 <a class="nav-link" href="{% url 'product:adhoc-list' %}" onclick="expandProductSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); return true;">Ad-Hoc Products</a>
-                <a class="nav-link" href="{% url 'product:product-category' %}" onclick="expandProductSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); return true;">Product Categories</a>
-                <a class="nav-link" href="{% url 'product:lead_time' %}" onclick="expandProductSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); return true;">Lead Time</a>
-                <a class="nav-link" href="{% url 'product:finishes' %}" onclick="expandProductSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); return true;">Finishes</a>
                 <a class="nav-link" href="{% url 'product:product_quote_list' %}" onclick="expandProductSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); return true;">Product Quotes</a>
-                <a class="nav-link" href="{% url 'product:costpools' %}" onclick="expandProductSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); return true;">Cost Pools</a>
-                <a class="nav-link" href="{% url 'product:batch-update' %}" onclick="expandProductSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); return true;">Batch Updating</a>
+                <a class="nav-link" href="{% url 'product:manufacturers' %}" onclick="expandProductSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); return true;">Manufacturers</a>
+                <a class="nav-link" href="{% url 'product:vendors' %}" onclick="expandProductSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); return true;">Vendors</a>
             </div>
-            <a class="nav-link" href="{% url 'product:manufacturers' %}" onclick="collapseProductSubmenu(); collapseCustomerSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu();"><i class="fa fa-building me-2"></i> Manufacturers</a>
-            <a class="nav-link" href="{% url 'product:vendors' %}" onclick="collapseProductSubmenu(); collapseCustomerSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu();"><i class="fa fa-truck me-2"></i> Vendors</a>
             <a class="nav-link submenu-parent" href="#" onclick="toggleJobSubmenu(this)"><i class="fa fa-briefcase me-2"></i> Jobs</a>
             <div class="submenu" id="job-submenu">
                 <a class="nav-link" href="{% url 'job:job_list' %}" onclick="expandJobSubmenu(); collapseCompanySubmenu(); return true;">List Jobs</a>
@@ -320,6 +315,7 @@
                 <a class="nav-link" href="{% url 'job:batch_entry_receipts' %}" onclick="expandBatchEntrySubmenu(); return true;">Receipts</a>
                 <a class="nav-link" href="{% url 'job:batch_entry_sales' %}" onclick="expandBatchEntrySubmenu(); return true;">Sales</a>
                 <a class="nav-link" href="{% url 'job:batch_entry_change_orders' %}" onclick="expandBatchEntrySubmenu(); return true;">Change Orders</a>
+                <a class="nav-link" href="{% url 'product:batch-update' %}" onclick="expandBatchEntrySubmenu(); return true;">Product Updates</a>
             </div>
             <!-- <a class="nav-link" href="#" onclick="collapseProductSubmenu(); collapseCustomerSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu();"><i class="fa fa-folder me-2"></i> Files</a> -->
             <a class="nav-link submenu-parent" href="#" onclick="toggleReportsSubmenu(this)"><i class="fa fa-chart-bar me-2"></i> Reports</a>
@@ -411,7 +407,7 @@
         
         function expandProductSubmenu() {
             const submenu = document.getElementById('product-submenu');
-            const productButton = document.querySelector('.nav-link.submenu-parent');
+            const productButton = document.querySelector('.nav-link.submenu-parent[onclick*="toggleProductSubmenu"]');
             
             // Ensure submenu is expanded
             submenu.classList.add('expanded');
@@ -420,7 +416,7 @@
         
         function collapseProductSubmenu() {
             const submenu = document.getElementById('product-submenu');
-            const productButton = document.querySelector('.nav-link.submenu-parent');
+            const productButton = document.querySelector('.nav-link.submenu-parent[onclick*="toggleProductSubmenu"]');
             
             // Collapse Product submenu
             if (submenu && submenu.classList.contains('expanded')) {

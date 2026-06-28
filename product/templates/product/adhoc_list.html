@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block extrahead %}
+<link rel="stylesheet" href="{% static 'css/pagination.css' %}">
 <link rel="stylesheet" href="{% static 'css/table_styles.css' %}">
 {% endblock %}
 
@@ -31,6 +32,20 @@
     }
     .table th, .table td {
         white-space: nowrap;
+    }
+    .sort-link {
+        color: inherit;
+        text-decoration: none;
+    }
+    .sort-link:hover {
+        color: #0d6efd;
+        text-decoration: underline;
+    }
+    .sort-indicator {
+        display: inline-block;
+        margin-left: 4px;
+        color: #6c757d;
+        font-size: 0.75rem;
     }
 </style>
 
@@ -83,21 +98,41 @@
         <table class="table table-bordered table-hover align-middle mb-0">
             <thead class="sticky-header">
                 <tr>
-                    <th>Part Number</th>
-                    <th>Description</th>
+                    <th>
+                        <a class="sort-link" href="?{{ sort_links.part_no }}">
+                            Part Number
+                            {% if sort == 'part_no' %}<span class="sort-indicator">{% if order == 'asc' %}&uarr;{% else %}&darr;{% endif %}</span>{% endif %}
+                        </a>
+                    </th>
+                    <th>
+                        <a class="sort-link" href="?{{ sort_links.description }}">
+                            Description
+                            {% if sort == 'description' %}<span class="sort-indicator">{% if order == 'asc' %}&uarr;{% else %}&darr;{% endif %}</span>{% endif %}
+                        </a>
+                    </th>
                     <th>Category</th>
-                    <th>Manufacturer</th>
-                    <th>Vendor</th>
+                    <th>
+                        <a class="sort-link" href="?{{ sort_links.manufacturer }}">
+                            Manufacturer
+                            {% if sort == 'manufacturer' %}<span class="sort-indicator">{% if order == 'asc' %}&uarr;{% else %}&darr;{% endif %}</span>{% endif %}
+                        </a>
+                    </th>
+                    <th>
+                        <a class="sort-link" href="?{{ sort_links.vendor }}">
+                            Vendor
+                            {% if sort == 'vendor' %}<span class="sort-indicator">{% if order == 'asc' %}&uarr;{% else %}&darr;{% endif %}</span>{% endif %}
+                        </a>
+                    </th>
                     <th>Cost</th>
                     <th>Retail Price</th>
                     <th>Status</th>
-                    <th>Actions</th>
+                    <th>More</th>
                 </tr>
             </thead>
             <tbody>
                 <tr class="border-top-0 border-bottom-0">
                     <td colspan="9" class="border-top-0 border-bottom-0 py-2">
-                        <a href="{% url 'admin:product_adhoc_add' %}" class="btn btn-sm btn-success" target="_blank">
+                        <a href="{% url 'product:create-adhoc' %}" class="btn btn-sm btn-success">
                             <i class="fas fa-plus me-1"></i>
                             Add New Ad-Hoc
                         </a>
@@ -106,16 +141,10 @@
                 {% for adhoc in adhoc_items %}
                             <tr>
                                 <td>
-                                    <strong>{{ adhoc.part_no }}</strong>
+                                    <a href="{% url 'product:edit-adhoc' adhoc.id %}?mode=view"><strong>{{ adhoc.part_no }}</strong></a>
                                 </td>
                                 <td>{{ adhoc.description }}</td>
-                                <td>
-                                    {% if adhoc.category %}
-                                        <span class="badge bg-info">{{ adhoc.category.product_category }}</span>
-                                    {% else %}
-                                        <span class="text-muted">-</span>
-                                    {% endif %}
-                                </td>
+                                <td>{% if adhoc.category %}{{ adhoc.category.product_category }}{% else %}Other{% endif %}</td>
                                 <td>
                                     {% if adhoc.manufacturer %}
                                         {{ adhoc.manufacturer.manufacturer_name }}
@@ -132,10 +161,11 @@
                                 </td>
                                 <td>{% if adhoc.cost and adhoc.cost != 0 %}${{ adhoc.cost|floatformat:2 }}{% else %}-{% endif %}</td>
                                 <td>{% if adhoc.retail_price and adhoc.retail_price != 0 %}${{ adhoc.retail_price|floatformat:2 }}{% else %}-{% endif %}</td>
-                                <td>{% if adhoc.status %}Active{% else %}Inactive{% endif %}</td>
+                                <td>{% if adhoc.status %}A{% else %}I{% endif %}</td>
                                 <td>
-                                    <a href="{% url 'admin:product_adhoc_change' adhoc.id %}" class="btn btn-sm btn-outline-warning" target="_blank">Edit</a>
-                                    <a href="#" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteAdhoc({{ adhoc.id }}, '{{ adhoc.part_no }}'); return false;">Delete</a>
+                                    <a href="{% url 'product:edit-adhoc' adhoc.id %}?mode=view" class="btn btn-sm btn-outline-primary">View</a>
+                                    <a href="{% url 'product:edit-adhoc' adhoc.id %}" class="btn btn-sm btn-outline-info">Edit</a>
+                                    <a href="#" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteAdhoc({{ adhoc.id }}, '{{ adhoc.part_no|escapejs }}'); return false;">Delete</a>
                                 </td>
                             </tr>
                 {% endfor %}
@@ -144,8 +174,77 @@
     </div>
     
     <div class="mt-2 text-end text-muted small">
-        COUNT <span id="adhocCount">{{ adhoc_items|length }}</span>
+        COUNT <span id="adhocCount">{{ adhoc_items|length }}</span> / <span id="totalCount">{{ total_count }}</span>
+        {% if total_count %}
+            <span class="ms-2">Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ total_count }} ad-hoc products</span>
+        {% endif %}
     </div>
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav aria-label="Ad-Hoc product pagination" class="mt-2 d-flex justify-content-center">
+        <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-1 page-jump-container">
+                <span class="text-muted small">Go to:</span>
+                <input type="number" id="adhocPageJumpInput" class="form-control form-control-sm" style="width: 70px;" min="1" max="{{ page_obj.paginator.num_pages }}" placeholder="Page">
+                <button class="btn btn-sm btn-outline-primary" onclick="jumpToAdhocPage()">Go</button>
+            </div>
+
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.number > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ page_url_prefix }}page=1" aria-label="First">
+                            <span aria-hidden="true">&laquo;&laquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ page_url_prefix }}page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                            <span aria-hidden="true">&laquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num > page_obj.number|add:'-4' and num < page_obj.number|add:'4' %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ page_url_prefix }}page={{ num }}">{{ num }}</a>
+                        </li>
+                    {% elif num == page_obj.number|add:'-4' or num == page_obj.number|add:'4' %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ page_url_prefix }}page={{ page_obj.next_page_number }}" aria-label="Next">
+                            <span aria-hidden="true">&raquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% if page_obj.number < page_obj.paginator.num_pages %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ page_url_prefix }}page={{ page_obj.paginator.num_pages }}" aria-label="Last">
+                            <span aria-hidden="true">&raquo;&raquo;</span>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+
+            <span class="text-muted small ms-2">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+            </span>
+        </div>
+    </nav>
+    {% endif %}
 </div>
 
 <!-- Delete Confirmation Modal -->
@@ -187,12 +286,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const categoryValue = categorySelect.value;
         const manufacturerValue = manufacturerSelect.value;
         const vendorValue = vendorSelect.value;
+        const currentParams = new URLSearchParams(window.location.search);
         
         const params = new URLSearchParams();
         if (searchQuery) params.append('search', searchQuery);
         if (categoryValue) params.append('category', categoryValue);
         if (manufacturerValue) params.append('manufacturer', manufacturerValue);
         if (vendorValue) params.append('vendor', vendorValue);
+        if (currentParams.get('sort')) params.append('sort', currentParams.get('sort'));
+        if (currentParams.get('order')) params.append('order', currentParams.get('order'));
         
         const url = new URL(window.location);
         url.search = params.toString();
@@ -209,6 +311,22 @@ document.addEventListener('DOMContentLoaded', function() {
     manufacturerSelect.addEventListener('change', updateFilters);
     vendorSelect.addEventListener('change', updateFilters);
 });
+
+function jumpToAdhocPage() {
+    const input = document.getElementById('adhocPageJumpInput');
+    if (!input) return;
+
+    const page = parseInt(input.value, 10);
+    const maxPage = parseInt(input.getAttribute('max'), 10);
+    if (!page || page < 1 || page > maxPage) {
+        alert(`Please enter a page number between 1 and ${maxPage}.`);
+        return;
+    }
+
+    const url = new URL(window.location);
+    url.searchParams.set('page', page);
+    window.location.href = url.toString();
+}
 
 function confirmDeleteAdhoc(adhocId, partNo) {
     // Set the part number in the modal

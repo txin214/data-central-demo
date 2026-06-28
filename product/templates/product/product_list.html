@@ -116,7 +116,7 @@
                 <tr>
                     <td>
                         {% if primary_image %}
-                            <img src="{{ primary_image.image.url }}" alt="{{ product.description }}" class="product-img-thumb">
+                            <img src="{{ primary_image.display_url }}" alt="{{ product.description }}" class="product-img-thumb">
                         {% else %}
                             <img src="{% static 'product/image-not-found.png' %}" alt="No image" class="product-img-thumb">
                         {% endif %}
@@ -133,7 +133,10 @@
                     <td>
                         <a href="{% url 'product:product-detail2' product.uuid %}" class="btn btn-sm btn-outline-primary">View</a>
                         <a href="{% url 'product:product-update2' product.uuid %}" class="btn btn-sm btn-outline-info">Edit</a>
-                        <a href="{% url 'product:product-delete' product.uuid %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                        <form method="post" action="{% url 'product:product-delete' product.uuid %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this product?')">Delete</button>
+                        </form>
                     </td>
                 </tr>
                 {% endfor %}

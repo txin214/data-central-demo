@@ -1,72 +1,73 @@
 
-/* Basic styles for layout and table formatting */
-body {
+/* Scoped to .view-product-page (productform3 Edit/Create) — avoids body/.btn overriding sidebar */
+
+.view-product-page {
   font-family: Arial, sans-serif;
   margin: 0;
   padding: 0;
 }
 
-.ContentBody {
+.view-product-page .ContentBody {
   padding: 20px;
 }
 
-.TabTable {
+.view-product-page .TabTable {
   width: 100%;
   border-collapse: collapse;
   margin-bottom: -1px;
 }
 
-.TabTable td {
+.view-product-page .TabTable td {
   padding: 8px;
   text-align: center;
   border: 1px solid #000;
   cursor: pointer;
 }
 
-.CurrentTab {
-  background-color: #2780e3; /* Background color */
-  color: white; /* Text color */
+.view-product-page .CurrentTab {
+  background-color: #2780e3;
+  color: white;
 }
 
-.ViewTable {
+.view-product-page .ViewTable {
   width: 100%;
   border-collapse: collapse;
 }
 
-.ViewTable td {
+.view-product-page .ViewTable td {
   padding: 8px;
   border: 1px solid #000;
 }
 
-.ViewTable th {
+.view-product-page .ViewTable th {
   background-color: #f2f2f2;
 }
 
-.ViewTable input[type="text"] {
+.view-product-page .ViewTable input[type="text"] {
   width: 100%;
   padding: 5px;
   box-sizing: border-box;
 }
 
-.ViewTable a {
+.view-product-page .ViewTable a {
   color: #2780e3;
   text-decoration: none;
 }
 
-.ViewTable a:hover {
+.view-product-page .ViewTable a:hover {
   text-decoration: underline;
 }
 
-.ViewTable p {
+.view-product-page .ViewTable p {
   margin: 0;
   padding: 0;
 }
 
-.ViewTable small {
+.view-product-page .ViewTable small {
   color: #ff0000;
 }
 
-.btn {
+.view-product-page .btn {
   padding: 10px 20px;
   border: none;
   background-color: #007bff;
@@ -76,32 +77,32 @@ body {
   margin: 5px;
 }
 
-.btn.cancel {
+.view-product-page .btn.cancel {
   background-color: #6c757d;
 }
 
-.btn:hover {
+.view-product-page .btn:hover {
   opacity: 0.8;
 }
 
-.btn.cancel:hover {
+.view-product-page .btn.cancel:hover {
   opacity: 0.8;
 }
 
-.table-title {
+.view-product-page .table-title {
   font-weight: bold;
   font-size: 16px;
   color: navy;
 }
 
-.align-left {
+.view-product-page .align-left {
   text-align: left;
 }
 
-.tab-content {
+.view-product-page .tab-content {
   display: none;
 }
 
-.tab-content.active {
+.view-product-page .tab-content.active {
   display: table;
 }

@@ -13,6 +13,7 @@ urlpatterns = [
     path('company-info/', views.company_info_view, name='company_info'),
     path('company-forms/', views.company_forms_view, name='company_forms'),
     path('product-info-forms/', views.product_info_forms_view, name='product_info_forms'),
+    path('forms/<path:file_key>', views.forms_file_redirect, name='forms_file_redirect'),
     # AJAX endpoints
     path('ajax/job-functions/', views.ajax_job_functions, name='ajax_job_functions'),
     path('ajax/access-levels/', views.ajax_access_levels, name='ajax_access_levels'),

@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
 from .utils import update_page_numbers, format_currency, group_line_items_by_category, group_sitework_by_category, calculate_product_quote_pages, split_categories_for_pagination
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, DetailView, CreateView, UpdateView
 from django.urls import reverse_lazy
 from django.contrib import messages
-from django.db.models import Q
-from django.http import JsonResponse, HttpResponseRedirect
+from django.db.models import Q, Sum, F, Value, DecimalField
+from django.db.models.functions import Coalesce
+from django.http import JsonResponse, HttpResponseRedirect, FileResponse, Http404
 from django.views.decorators.http import require_POST, require_GET
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -20,8 +21,9 @@ from django.urls import reverse
 from django.utils import timezone
 from django.db import transaction
 
+import mimetypes
 from .models import Job, JobType, JobNotes, JobQuoteProductNotes, SiteworkLineProgress, JobAttachment, PurchaseOrder, PurchaseOrderItem, Sale, ChangeOrder
-from .forms import JobForm, JobProductQuoteForm, JobSearchForm, JobProductQuoteCreateForm, VendorForm, PurchaseOrderForm, PurchaseOrderItemForm, PurchaseOrderItemInlineFormSet
+from .forms import JobForm, JobCreateForm, JobProductQuoteForm, JobSearchForm, JobProductQuoteCreateForm, VendorForm, PurchaseOrderForm, PurchaseOrderItemForm, PurchaseOrderItemInlineFormSet
 from product.models import Vendor, ProductQuote, ProductQuoteLine
 from crm.models import Customer, StoreLocation, County, Referral
 from sitework.models import SiteworkQuote, SiteworkQuoteLine, SiteworkCat, SiteworkSubCat
@@ -358,23 +360,12 @@ def job_top_entry(request, job_id):
     try:
         import holidays
         us_holidays = holidays.UnitedStates()
-        allowed_holidays = [
-            "New Year's Day",
-            "Christmas",
-            "Thanksgiving",
-            "Labor Day",
-            "Independence Day",
-            "Memorial Day"
-        ]
-        # Get holidays for the range by iterating through dates
         current_check = holiday_range_start
         while current_check <= holiday_range_end:
             holiday_name = us_holidays.get(current_check)
-            if holiday_name:
-                for allowed in allowed_holidays:
-                    if allowed in holiday_name:
-                        us_holidays_cache[current_check] = allowed
-                        break
+            display_name = Holiday.match_us_federal_holiday(holiday_name)
+            if display_name:
+                us_holidays_cache[current_check] = display_name
             current_check += timedelta(days=1)
     except ImportError:
         pass
@@ -1255,23 +1246,12 @@ def master_scheduler(request):
     try:
         import holidays
         us_holidays = holidays.UnitedStates()
-        allowed_holidays = [
-            "New Year's Day",
-            "Christmas",
-            "Thanksgiving",
-            "Labor Day",
-            "Independence Day",
-            "Memorial Day"
-        ]
-        # Get holidays for the range by iterating through dates
         current_check = holiday_range_start
         while current_check <= holiday_range_end:
             holiday_name = us_holidays.get(current_check)
-            if holiday_name:
-                for allowed in allowed_holidays:
-                    if allowed in holiday_name:
-                        us_holidays_cache[current_check] = allowed
-                        break
+            display_name = Holiday.match_us_federal_holiday(holiday_name)
+            if display_name:
+                us_holidays_cache[current_check] = display_name
             current_check += timedelta(days=1)
     except ImportError:
         pass
@@ -1487,7 +1467,7 @@ def job_sitework_carpenter(request, job_id):
 
     lines = list(
         SiteworkQuoteLine.objects.filter(quote=sitework_quote, quantity__gt=0)
-        .select_related('cat', 'subcat')
+        .select_related('cat')
         .order_by('cat__orderby', 'orderby', 'id')
     )
 
@@ -1576,6 +1556,38 @@ def job_attachments(request, job_id):
         'job': job,
         'attachments': attachments,
     })
+
+
+def _job_attachment_file_response(job_id, attachment_id, as_attachment=False):
+    job = get_object_or_404(Job, id=job_id)
+    att = get_object_or_404(JobAttachment, id=attachment_id, job=job)
+    if not att.file:
+        raise Http404('Attachment file not found.')
+
+    filename = os.path.basename(att.file.name)
+    content_type = mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+    try:
+        att.file.open('rb')
+    except Exception as exc:
+        raise Http404('Attachment file not found.') from exc
+
+    return FileResponse(
+        att.file,
+        as_attachment=as_attachment,
+        filename=filename,
+        content_type=content_type,
+    )
+
+
+@login_required
+def job_attachment_open(request, job_id, attachment_id):
+    return _job_attachment_file_response(job_id, attachment_id, as_attachment=False)
+
+
+@login_required
+def job_attachment_download(request, job_id, attachment_id):
+    return _job_attachment_file_response(job_id, attachment_id, as_attachment=True)
+
 
 @require_POST
 def job_attachment_delete(request, job_id, attachment_id):
@@ -1682,7 +1694,7 @@ class JobQuotesView(DetailView):
 class JobCreateView(LoginRequiredMixin, CreateView):
     """Enhanced view to create a new job with better UX."""
     model = Job
-    form_class = JobForm
+    form_class = JobCreateForm
     template_name = 'job/job_create.html'
     success_url = reverse_lazy('job:job_list')
     
@@ -1745,17 +1757,49 @@ class JobCreateView(LoginRequiredMixin, CreateView):
         
         return form
 
+    def form_invalid(self, form):
+        hints = []
+        for field_name, errors in form.errors.items():
+            if field_name == '__all__':
+                for error in errors:
+                    hints.append(str(error))
+                continue
+            label = form.fields[field_name].label if field_name in form.fields else field_name.replace('_', ' ').title()
+            hints.append(f'{label}: {errors[0]}')
+        if hints:
+            messages.error(
+                self.request,
+                'Could not create job. ' + ' '.join(hints),
+            )
+        return super().form_invalid(form)
+
 
 class JobUpdateView(UpdateView):
     """View to update an existing job."""
     model = Job
-    form_class = JobForm
+    form_class = JobCreateForm
     template_name = 'job/job_create.html'
     success_url = reverse_lazy('job:job_list')
     
     def form_valid(self, form):
         messages.success(self.request, 'Job updated successfully.')
         return super().form_valid(form)
+
+    def form_invalid(self, form):
+        hints = []
+        for field_name, errors in form.errors.items():
+            if field_name == '__all__':
+                for error in errors:
+                    hints.append(str(error))
+                continue
+            label = form.fields[field_name].label if field_name in form.fields else field_name.replace('_', ' ').title()
+            hints.append(f'{label}: {errors[0]}')
+        if hints:
+            messages.error(
+                self.request,
+                'Could not update job. ' + ' '.join(hints),
+            )
+        return super().form_invalid(form)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1764,20 +1808,27 @@ class JobUpdateView(UpdateView):
         
         # Add Google Maps API keys from settings for address autocomplete
         from django.conf import settings
-        context['google_places_api_key'] = getattr(settings, 'GOOGLE_PLACES_API_KEY', '')
+        context.update({
+            'customers': Customer.objects.all().order_by('last_name', 'first_name'),
+            'job_types': JobType.objects.filter(status='A').order_by('name'),
+            'store_locations': StoreLocation.objects.all().order_by('name'),
+            'users': User.objects.filter(is_active=True).order_by('first_name', 'last_name'),
+            'counties': County.objects.all().order_by('name'),
+            'google_places_api_key': getattr(settings, 'GOOGLE_PLACES_API_KEY', ''),
+        })
         
         return context
 
 
-class JobDeleteView(DeleteView):
-    """View to delete a job."""
-    model = Job
-    template_name = 'job/job_confirm_delete.html'
-    success_url = reverse_lazy('job:job_list')
-    
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, 'Job deleted successfully.')
-        return super().delete(request, *args, **kwargs)
+@login_required
+@require_POST
+def job_delete(request, pk):
+    """Delete a job after POST confirmation from the job list."""
+    job = get_object_or_404(Job, pk=pk)
+    job_code = job.job_code or job.pk
+    job.delete()
+    messages.success(request, f'Job "{job_code}" deleted successfully.')
+    return redirect('job:job_list')
 
 
 @require_POST
@@ -2098,20 +2149,37 @@ class JobDetailUpdateView(DetailView):
         context['google_maps_api_key'] = getattr(settings, 'GOOGLE_MAPS_API_KEY', '')
         context['google_places_api_key'] = getattr(settings, 'GOOGLE_PLACES_API_KEY', '')
         
+        # Add JOB_SUFFIX_CHOICES for the job code suffix dropdown
+        context['job_suffix_choices'] = Job.JOB_SUFFIX_CHOICES
+        
         return context
     
     def post(self, request, *args, **kwargs):
         """Handle form submission for updates."""
         self.object = self.get_object()
         form = JobForm(request.POST, instance=self.object)
-        
+
         if form.is_valid():
             job_instance = form.save(commit=False)
-            
-            # Handle job_code update if provided (from the editable letter field)
-            if 'job_code' in request.POST and request.POST['job_code']:
-                job_instance.job_code = request.POST['job_code']
-            
+
+            # Handle job_code update from letter suffix dropdown or hidden full code
+            job_code_suffix = (request.POST.get('job_code_suffix') or '').strip()
+            posted_job_code = (request.POST.get('job_code') or '').strip()
+            if job_code_suffix:
+                if not job_instance.customer.cust_code:
+                    job_instance.customer.save()
+                    job_instance.customer.refresh_from_db()
+
+                cust_code = job_instance.customer.cust_code or "XXXXX"
+                job_instance.job_code = f"{cust_code}-{job_code_suffix}"
+            elif posted_job_code:
+                job_instance.job_code = posted_job_code
+            elif not job_instance.job_code:
+                job_instance.job_code = Job.generate_job_code_for_customer(
+                    job_instance.customer,
+                    exclude_job_id=job_instance.pk,
+                )
+
             job_instance.save()
             messages.success(request, 'Job updated successfully!')
             return redirect('job:job_detail', pk=self.object.pk)
@@ -2382,13 +2450,55 @@ def job_sitework_view(request, job_id):
     """Main sitework view for a job - shows existing sitework quotes."""
     job = get_object_or_404(Job, id=job_id)
     
-    # Fetch all sitework quotes for listing
-    sitework_quotes = SiteworkQuote.objects.filter(job=job).order_by('-quotedate')
+    # Fetch all sitework quotes for listing (line price sums = subtotal for list display)
+    sitework_quotes = (
+        SiteworkQuote.objects.filter(job=job)
+        .annotate(subtotal_sum=Sum('sql_quotes__price'))
+        .order_by('-quotedate')
+    )
     
     return render(request, 'job/job_sitework_manage.html', {
         'job': job,
         'sitework_quotes': sitework_quotes,
     })
+
+
+def _populate_sitework_quote_lines(sitework_quote):
+    """Copy active subcategories into quote line items (bulk insert, ~900 rows)."""
+    subcats = SiteworkSubCat.objects.filter(
+        status="A",
+    ).select_related('siteworkcat').order_by('siteworkcat__orderby', 'orderby')
+
+    line_items = [
+        SiteworkQuoteLine(
+            quote=sitework_quote,
+            cat=subcat.siteworkcat,
+            subcatkey=subcat.calckey,
+            calckey=subcat.calckey,
+            quantity=0,
+            itemcomment='',
+            price=0,
+            workdesc=subcat.workdesc,
+            quantitydesc=subcat.quantitydesc,
+            basecost=subcat.basecost,
+            unitamount=subcat.unitamount,
+            orderby=subcat.orderby,
+            drywall=subcat.drywall,
+            allowance=subcat.allowance,
+            material=subcat.material,
+            labor=subcat.labor,
+            profit=subcat.profit,
+            subfee=subcat.subfee,
+            status=subcat.status,
+            kbflag=subcat.kbflag,
+            group=subcat.group,
+            editallowance=subcat.editallowance,
+        )
+        for subcat in subcats
+    ]
+    if line_items:
+        SiteworkQuoteLine.objects.bulk_create(line_items, batch_size=500)
+    return len(line_items)
 
 
 def job_sitework_create(request, job_id):
@@ -2403,54 +2513,9 @@ def job_sitework_create(request, job_id):
             sitework_quote.job = job
             # quotedby will be auto-set from job.soldby in the save() method
             sitework_quote.save()
-            
-            # Create sitework line items - optimized to reduce database queries
-            # Fetch all active subcategories in one query with their categories (avoids N+1 problem)
-            subcats = SiteworkSubCat.objects.filter(
-                status="A"
-            ).select_related('siteworkcat').order_by('siteworkcat__orderby', 'orderby')
-            
-            # Check for existing line items to avoid duplicates
-            existing_line_items = SiteworkQuoteLine.objects.filter(
-                quote=sitework_quote
-            ).values_list('subcat_id', flat=True)
-            existing_subcat_ids = set(existing_line_items)
-            
-            # Bulk create line items to reduce database round trips
-            line_items_to_create = []
-            for subcat in subcats:
-                # Skip if line item already exists
-                if subcat.id in existing_subcat_ids:
-                    continue
-                    
-                line_items_to_create.append(
-                    SiteworkQuoteLine(
-                        quote=sitework_quote,
-                        subcat=subcat,
-                        cat=subcat.siteworkcat,
-                        quantity=0,
-                        itemcomment='',
-                        price=0,
-                        workdesc=subcat.workdesc,
-                        quantitydesc=subcat.quantitydesc,
-                        basecost=subcat.basecost,
-                        unitamount=subcat.unitamount,
-                        orderby=subcat.orderby,
-                        drywall=subcat.drywall,
-                        allowance=subcat.allowance,
-                        material=subcat.material,
-                        labor=subcat.labor,
-                        profit=subcat.profit,
-                        kbflag=subcat.kbflag,
-                        editallowance=subcat.editallowance,
-                        calckey=subcat.calckey,
-                    )
-                )
-            
-            # Use bulk_create for better performance (much faster than individual creates)
-            if line_items_to_create:
-                SiteworkQuoteLine.objects.bulk_create(line_items_to_create)
-            
+
+            _populate_sitework_quote_lines(sitework_quote)
+
             messages.success(request, 'Sitework quote created successfully.')
             return redirect('job:job_sitework', job_id)
     else:
@@ -3113,6 +3178,18 @@ def _get_job_coordinates(job, api_key):
     location = data['results'][0]['geometry']['location']
     return location['lat'], location['lng'], full_address
 
+WEATHER_FORECAST_DAYS = 7
+
+
+def _forecast_day_label(day_index):
+    """Return a short label for a daily forecast slot (Today, Mon, Tue, ...)."""
+    if day_index == 0:
+        return 'Today'
+    from datetime import datetime, timedelta
+    forecast_date = datetime.now() + timedelta(days=day_index)
+    return forecast_date.strftime('%a')
+
+
 def _get_current_weather(api_key, lat, lng):
     """Get current weather conditions from Google Weather API."""
     url = "https://weather.googleapis.com/v1/currentConditions:lookup"
@@ -3243,7 +3320,7 @@ def _get_daily_forecast(api_key, lat, lng, current_temp, current_condition, curr
         'location.latitude': lat,
         'location.longitude': lng,
         'unitsSystem': 'IMPERIAL',
-        'days': 7
+        'days': WEATHER_FORECAST_DAYS
     }
     
     daily_forecast_data = []
@@ -3253,7 +3330,7 @@ def _get_daily_forecast(api_key, lat, lng, current_temp, current_condition, curr
             data = response.json()
             
             if 'forecastDays' in data:
-                for i, day in enumerate(data['forecastDays'][:7]):
+                for i, day in enumerate(data['forecastDays'][:WEATHER_FORECAST_DAYS]):
                     # Extract temperature data
                     high_temp = day.get('maxTemperature', {}).get('degrees', current_temp + 8)
                     low_temp = day.get('minTemperature', {}).get('degrees', current_temp - 8)
@@ -3304,8 +3381,7 @@ def _get_daily_forecast(api_key, lat, lng, current_temp, current_condition, curr
                     else:
                         icon_url = current_weather_icon_url
                     
-                    # Format date with day names
-                    date_str = "Today" if i == 0 else ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][(i - 1) % 5]
+                    date_str = _forecast_day_label(i)
                     
                     daily_forecast_data.append({
                         'date': date_str,
@@ -3319,8 +3395,8 @@ def _get_daily_forecast(api_key, lat, lng, current_temp, current_condition, curr
     except Exception as e:
         print(f"Daily forecast API exception: {e}")
     
-    # Extend to 5 days if API returned fewer days
-    while len(daily_forecast_data) < 5:
+    # Extend to a full week if API returned fewer days
+    while len(daily_forecast_data) < WEATHER_FORECAST_DAYS:
         i = len(daily_forecast_data)
         
         # Use pattern from last available forecast or current weather
@@ -3345,8 +3421,7 @@ def _get_daily_forecast(api_key, lat, lng, current_temp, current_condition, curr
             condition = current_condition
             icon_url = current_weather_icon_url
         
-        # Format date with day names
-        date_str = "Today" if i == 0 else ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'][(i - 1) % 5]
+        date_str = _forecast_day_label(i)
         
         daily_forecast_data.append({
             'date': date_str,
@@ -3356,7 +3431,7 @@ def _get_daily_forecast(api_key, lat, lng, current_temp, current_condition, curr
             'condition': condition
         })
     
-    return daily_forecast_data
+    return daily_forecast_data[:WEATHER_FORECAST_DAYS]
 
 def get_weather_data(request, job_id):
     """Get weather data for a job location using Google Maps Weather API."""
@@ -3370,8 +3445,10 @@ def get_weather_data(request, job_id):
         if not (job.address and job.city and job.state):
             return JsonResponse({'error': 'Job location not specified'}, status=400)
         
-        # Google Maps API key
-        api_key = "AIzaSyBr98IOFua0xHw23cfZDIyw7P5UsPGroT8"
+        # Weather API key (separate from Maps/Places keys)
+        api_key = settings.GOOGLE_WEATHER_API_KEY
+        if not api_key:
+            return JsonResponse({'error': 'Google Weather API key is not configured'}, status=500)
         
         # Get coordinates
         lat, lng, full_address = _get_job_coordinates(job, api_key)
@@ -3451,12 +3528,8 @@ def ajax_search_jobs(request):
                 Q(customer__first_name__icontains=query) |
                 Q(customer__last_name__icontains=query)
             )
-        elif search_type == 'invoice_number':
-            # Placeholder for future invoice number search
-            jobs = jobs.none()
-        elif search_type == 'po_number':
-            # Placeholder for future PO number search
-            jobs = jobs.none()
+        else:
+            jobs = jobs.filter(Q(job_code__icontains=query))
     
     # Pagination for search results
     paginator = Paginator(jobs, 20)  # 20 items per page
@@ -3521,6 +3594,7 @@ def job_customer_detail(request, job_id):
     expected_cust_code = f"{last_name_part}{first_name_part}"
     
     # Update cust_code if it doesn't match or doesn't exist
+    print(f"Customer: Expected cust_code: {expected_cust_code} vs customer.cust_code {customer.cust_code}")
     if not customer.cust_code or customer.cust_code != expected_cust_code:
         customer.cust_code = expected_cust_code
         customer.save(update_fields=['cust_code'])
@@ -4011,7 +4085,21 @@ def delete_product_from_quote(request, job_id, quote_id, line_item_id):
 def job_purchase_orders(request, job_id):
     """View to list all purchase orders for a job."""
     job = get_object_or_404(Job, id=job_id)
-    purchase_orders = job.purchase_orders.all().select_related('vendor', 'location').order_by('vendor__vendor_name', '-created_at')
+    purchase_orders = (
+        job.purchase_orders.all()
+        .select_related('vendor', 'location')
+        .annotate(
+            subtotal_sum=Sum(
+                F('items__quantity')
+                * Coalesce(
+                    F('items__cost'),
+                    Value(0, output_field=DecimalField(max_digits=10, decimal_places=2)),
+                ),
+                output_field=DecimalField(max_digits=14, decimal_places=2),
+            )
+        )
+        .order_by('vendor__vendor_name', '-created_at')
+    )
     
     context = {
         'job': job,

@@ -24,6 +24,42 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+PRODUCT_IMAGE_PUBLIC_BASE_URL = os.environ.get(
+    'PRODUCT_IMAGE_PUBLIC_BASE_URL',
+    'https://product-imagesfolder.t3.tigrisfiles.io',
+).rstrip('/')
+PRODUCT_IMAGE_PUBLIC_STRIP_PREFIX = os.environ.get(
+    'PRODUCT_IMAGE_PUBLIC_STRIP_PREFIX',
+    'product_images/',
+)
+
+# Shared S3/Tigris connection settings (used by all buckets)
+S3_ENDPOINT_URL = os.environ.get('S3_ENDPOINT_URL', 'https://t3.storage.dev')
+S3_REGION_NAME = os.environ.get('S3_REGION_NAME', 'auto')
+
+# Product images bucket (public)
+PRODUCT_IMAGES_TIGRIS_ACCESS_KEY_ID = os.environ.get('PRODUCT_IMAGES_TIGRIS_ACCESS_KEY_ID', '')
+PRODUCT_IMAGES_TIGRIS_SECRET_ACCESS_KEY = os.environ.get('PRODUCT_IMAGES_TIGRIS_SECRET_ACCESS_KEY', '')
+PRODUCT_IMAGES_TIGRIS_BUCKET_NAME = os.environ.get('PRODUCT_IMAGES_TIGRIS_BUCKET_NAME', 'product-imagesfolder')
+PRODUCT_IMAGES_TIGRIS_DEFAULT_ACL = os.environ.get('PRODUCT_IMAGES_TIGRIS_DEFAULT_ACL', 'public-read')
+PRODUCT_IMAGES_TIGRIS_FILE_OVERWRITE = os.environ.get('PRODUCT_IMAGES_TIGRIS_FILE_OVERWRITE', '').lower() == 'true'
+PRODUCT_IMAGES_TIGRIS_CACHE_CONTROL = os.environ.get('PRODUCT_IMAGES_TIGRIS_CACHE_CONTROL', 'max-age=86400')
+
+JOB_ATTACHMENTS_TIGRIS_ACCESS_KEY_ID = os.environ.get('JOB_ATTACHMENTS_TIGRIS_ACCESS_KEY_ID', '')
+JOB_ATTACHMENTS_TIGRIS_SECRET_ACCESS_KEY = os.environ.get('JOB_ATTACHMENTS_TIGRIS_SECRET_ACCESS_KEY', '')
+JOB_ATTACHMENTS_TIGRIS_BUCKET_NAME = os.environ.get('JOB_ATTACHMENTS_TIGRIS_BUCKET_NAME', '')
+JOB_ATTACHMENTS_TIGRIS_DEFAULT_ACL = os.environ.get('JOB_ATTACHMENTS_TIGRIS_DEFAULT_ACL', 'private')
+JOB_ATTACHMENTS_TIGRIS_FILE_OVERWRITE = os.environ.get('JOB_ATTACHMENTS_TIGRIS_FILE_OVERWRITE', '').lower() == 'true'
+JOB_ATTACHMENTS_TIGRIS_SIGNED_URL_EXPIRES = int(os.environ.get('JOB_ATTACHMENTS_TIGRIS_SIGNED_URL_EXPIRES', '3600'))
+
+FORMS_TIGRIS_ACCESS_KEY_ID = os.environ.get('FORMS_TIGRIS_ACCESS_KEY_ID', '')
+FORMS_TIGRIS_SECRET_ACCESS_KEY = os.environ.get('FORMS_TIGRIS_SECRET_ACCESS_KEY', '')
+FORMS_TIGRIS_BUCKET_NAME = os.environ.get('FORMS_TIGRIS_BUCKET_NAME', 'company-formsfolder')
+FORMS_TIGRIS_PUBLIC_BASE_URL = os.environ.get(
+    'FORMS_TIGRIS_PUBLIC_BASE_URL',
+    f'https://{FORMS_TIGRIS_BUCKET_NAME}.t3.tigrisfiles.io',
+).rstrip('/')
+FORMS_TIGRIS_SIGNED_URL_EXPIRES = int(os.environ.get('FORMS_TIGRIS_SIGNED_URL_EXPIRES', '3600'))
 
 # DigitalOcean Spaces (S3-compatible) Configuration
 # To enable, set the following environment variables in your .env file:
@@ -81,14 +117,10 @@ if USE_SPACES:
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-@h*p5z1^ete&vk23qtr&5terhdxo(4ipz2@mzqa%qtyx60)ai92apqmb'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-insecure-key-change-me')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-# For production, set these:
-# SECRET_KEY = os.environ.get('SECRET_KEY')
-# DEBUG = False
+DEBUG = os.environ.get('DEBUG', 'true').lower() == 'true'
 
 ##ALLOWED_HOSTS = ['64.23.141.122','127.0.0.1','192.168.252.193','testserver','localhost']
 ALLOWED_HOSTS = ['dc.allenkit.com','allenkit-dc.fly.dev','127.0.0.1','localhost']
@@ -96,11 +128,14 @@ ALLOWED_HOSTS = ['dc.allenkit.com','allenkit-dc.fly.dev','127.0.0.1','localhost'
 # for fly.io
 CSRF_TRUSTED_ORIGINS = ['https://dc.allenkit.com','https://allenkit-dc.fly.dev']
 
-# Google Maps API Key for Maps Embed and Weather
-GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY', 'AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8')
+# Google Maps API Key for Maps Embed
+GOOGLE_MAPS_API_KEY = os.environ.get('GOOGLE_MAPS_API_KEY')
+
+# Google Weather API Key (weather.googleapis.com — separate key with Weather API enabled)
+GOOGLE_WEATHER_API_KEY = os.environ.get('GOOGLE_WEATHER_API_KEY', os.environ.get('GOOGLE_MAPS_API_KEY', ''))
 
 # Google Maps API Key for Places Autocomplete (separate key)
-GOOGLE_PLACES_API_KEY = os.environ.get('GOOGLE_PLACES_API_KEY', 'AIzaSyBZMz7yaYiDf39ZRhWj3MjHPJtxwh70dts')
+GOOGLE_PLACES_API_KEY = os.environ.get('GOOGLE_PLACES_API_KEY')
 
 
 # Application definition
@@ -111,6 +146,7 @@ INSTALLED_APPS = [
     'product.apps.ProductConfig',
     'job.apps.JobConfig',
     'accounts.apps.AccountsConfig',
+    'dashboard.apps.DashboardConfig',
     'import_export',
     'django.contrib.admin',
     'django.contrib.auth',
@@ -152,6 +188,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'dynamic_breadcrumbs.context_processors.breadcrumbs',
                 'sitework.context_processors.sw',
+                'accounts.context_processors.forms_bucket',
             ],
         },
     },
@@ -167,11 +204,7 @@ CELERY_TASK_TIME_LIMIT = 30 * 60
 
 
 
-# current LOCAL versionm run "redis-server" in a terminal
-CELERY_BROKER_URL = 'redis://localhost:6379/0'
-# current with upstash
-#CELERY_BROKER_URL = 'redis://default:12f880528ed2419f9951f9ee4c922fc8@fly-falling-wind-1391.upstash.io:6379/0'
-#CELERY_BROKER_URL ='redis://default:41da53354d064f858c4351214738c197@fly-allenkit-dc-redis.upstash.io:6379'
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
 
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
@@ -196,7 +229,7 @@ LOGGING = {
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
 DATABASES = {
-    'default': dj_database_url.config(default='postgres://allenkit:Barcelona2026@localhost:5432/allenkit_db',
+    'default': dj_database_url.config(default='postgres://localhost:5432/allenkit_db',
     conn_max_age=600,
     conn_health_checks=True,)
 }

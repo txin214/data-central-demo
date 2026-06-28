@@ -57,9 +57,9 @@
                     </td>
                     <td>
                         {% if primary_image %}
-                            <img src="{{ primary_image.image.url }}" alt="{{ product.description }}" class="product-img-thumb" style="width: 32px; height: 32px;">
+                            <img src="{{ primary_image.display_url }}" alt="{{ product.description }}" class="product-img-thumb">
                         {% else %}
-                            <img src="{% static 'product/images.png' %}" alt="No image" class="product-img-thumb" style="width: 32px; height: 32px;">
+                            <img src="{% static 'product/image-not-found.png' %}" alt="No image" class="product-img-thumb">
                         {% endif %}
                     </td>
                     <td>{{ product.part_no }}</td>
@@ -201,9 +201,5 @@
     </nav>
     {% endif %}
     </div>
-</div>
-{% else %}
-<div>
-    <h5>No search performed.</h5>
 </div>
 {% endif %}

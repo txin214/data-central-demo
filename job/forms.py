@@ -95,6 +95,9 @@ class JobForm(forms.ModelForm):
             'completDate',
             'initalcontactdate',
             'initialmeasuredate',
+            'present1',
+            'present2',
+            'present3',
             'actualstart',
             'actualend',
             'saleamount',
@@ -102,8 +105,6 @@ class JobForm(forms.ModelForm):
             'terms',
             'cabneededdate',
             'topinstalldate',
-            'promised',
-            'estinstall',
             # note: sitework_quote is intentionally excluded from the form to avoid accidental unlinking
         ]
         widgets = {
@@ -129,6 +130,9 @@ class JobForm(forms.ModelForm):
             'completDate': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
             'initalcontactdate': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
             'initialmeasuredate': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
+            'present1': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
+            'present2': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
+            'present3': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
             'actualstart': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
             'actualend': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
             'saleamount': forms.NumberInput(attrs={'class': 'form-control form-control-sm'}),
@@ -136,8 +140,6 @@ class JobForm(forms.ModelForm):
             'terms': forms.Select(attrs={'class': 'form-select form-select-sm'}),
             'cabneededdate': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
             'topinstalldate': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
-            'promised': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
-            'estinstall': forms.DateTimeInput(attrs={'class': 'form-control form-control-sm', 'type': 'datetime-local'}),
         }
     
     def __init__(self, *args, **kwargs):
@@ -147,6 +149,21 @@ class JobForm(forms.ModelForm):
         for field_name, field in self.fields.items():
             if field_name != 'customer':
                 field.required = False
+
+        self.fields['customer'].error_messages = {
+            'required': 'Please select a customer.',
+        }
+        self.fields['county'].required = True
+        self.fields['county'].error_messages = {
+            'required': 'Please select a county.',
+        }
+
+        if self.errors:
+            for name in self.errors:
+                if name in self.fields:
+                    css = self.fields[name].widget.attrs.get('class', '')
+                    if 'is-invalid' not in css:
+                        self.fields[name].widget.attrs['class'] = f'{css} is-invalid'.strip()
         
         # Set querysets for foreign key fields filtered by roles
         # Designer (soldby): filter by role type 'DES'
@@ -165,14 +182,6 @@ class JobForm(forms.ModelForm):
         ).distinct().order_by('first_name', 'last_name')
         self.fields['coordinator'].queryset = coordinator_users
         
-        # Lead Carpenter (carpenter): filter by role type 'CAR' OR 'CARP2'
-        carpenter_users = User.objects.filter(
-            is_active=True,
-            user_roles__role__type__in=['CAR', 'CARP2'],
-            user_roles__is_active=True
-        ).distinct().order_by('first_name', 'last_name')
-        self.fields['carpenter'].queryset = carpenter_users
-        
         # Customize user field labels to show first_name + last_name
         def format_user_label(user):
             """Format user label as first_name + last_name"""
@@ -183,7 +192,14 @@ class JobForm(forms.ModelForm):
         # Override label_from_instance for user fields
         self.fields['soldby'].label_from_instance = format_user_label
         self.fields['coordinator'].label_from_instance = format_user_label
-        self.fields['carpenter'].label_from_instance = format_user_label
+        if 'carpenter' in self.fields:
+            carpenter_users = User.objects.filter(
+                is_active=True,
+                user_roles__role__type__in=['CAR', 'CARP2'],
+                user_roles__is_active=True
+            ).distinct().order_by('first_name', 'last_name')
+            self.fields['carpenter'].queryset = carpenter_users
+            self.fields['carpenter'].label_from_instance = format_user_label
         
         # Ensure the required job types exist and are active, then filter to only show specific job types
         required_job_types = ['Handyman Job', 'Warranty', 'Remodel']
@@ -202,6 +218,7 @@ class JobForm(forms.ModelForm):
             status='A',
             name__in=required_job_types
         ).order_by('name')
+        self.fields['customer'].queryset = Customer.objects.all().order_by('last_name', 'first_name')
         self.fields['storelocation'].queryset = StoreLocation.objects.all().order_by('name')
         self.fields['county'].queryset = County.objects.all().order_by('name')
         
@@ -211,12 +228,33 @@ class JobForm(forms.ModelForm):
             state_value = self.initial.get('state') or (self.instance.state if self.instance.pk else None)
             if state_value:
                 self.fields['state'].initial = state_value
+        else:
+            self.fields['state'].initial = 'WI'
         
         # Do not expose sitework_quote on the job edit form to prevent accidental clearing
     
+    def clean_customer(self):
+        customer = self.cleaned_data.get('customer')
+        if not customer:
+            raise forms.ValidationError('Please select a customer.')
+        return customer
+
+    def clean_county(self):
+        county = self.cleaned_data.get('county')
+        if not county:
+            raise forms.ValidationError('Please select a county.')
+        return county
+
     def clean(self):
         cleaned_data = super().clean()
         return cleaned_data
+
+
+class JobCreateForm(JobForm):
+    """Job create/edit form without lead carpenter (assigned on job detail)."""
+
+    class Meta(JobForm.Meta):
+        fields = [f for f in JobForm.Meta.fields if f != 'carpenter']
 
 
 class JobProductQuoteForm(forms.ModelForm):

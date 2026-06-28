@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extrahead %}
+<link rel="stylesheet" href="{% static 'product/css/form-table.css' %}">
+{% endblock %}
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <div>
+            <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
+            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Ad-Hoc Products</h2>
+        </div>
+    </div>
+
+    <div class="form-container">
+        <form method="POST">
+            {% csrf_token %}
+            <table class="costpool-form-table table table-bordered table-hover">
+                <tr>
+                    <th colspan="2">
+                        {% if adhoc.id %}
+                            {% if is_view_mode %}
+                                View Ad-Hoc: {{ adhoc.part_no }}
+                            {% else %}
+                                Edit Ad-Hoc: {{ adhoc.part_no }}
+                            {% endif %}
+                        {% else %}
+                            Please enter your Ad-Hoc product information:
+                        {% endif %}
+                    </th>
+                </tr>
+
+                <tr>
+                    <td>Part Number:</td>
+                    <td>
+                        {{ form.part_no }}
+                        {% if form.part_no.errors %}
+                            <div class="error-message">{{ form.part_no.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Description:</td>
+                    <td>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="error-message">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Category:</td>
+                    <td>
+                        {{ form.category }}
+                        {% if form.category.errors %}
+                            <div class="error-message">{{ form.category.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Manufacturer:</td>
+                    <td>
+                        {{ form.manufacturer }}
+                        {% if form.manufacturer.errors %}
+                            <div class="error-message">{{ form.manufacturer.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Vendor:</td>
+                    <td>
+                        {{ form.vendor }}
+                        {% if form.vendor.errors %}
+                            <div class="error-message">{{ form.vendor.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Cost:</td>
+                    <td>
+                        {{ form.cost }}
+                        {% if form.cost.errors %}
+                            <div class="error-message">{{ form.cost.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Retail Price:</td>
+                    <td>
+                        {{ form.retail_price }}
+                        {% if form.retail_price.errors %}
+                            <div class="error-message">{{ form.retail_price.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>Status:</td>
+                    <td>
+                        {{ form.status }}
+                        {% if form.status.errors %}
+                            <div class="error-message">{{ form.status.errors.0 }}</div>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                {% if adhoc.id %}
+                <tr>
+                    <td>Date Entered:</td>
+                    <td>{{ adhoc.date_entered|date:"m/d/Y"|default:"-" }}</td>
+                </tr>
+                <tr>
+                    <td>Date Updated:</td>
+                    <td>{{ adhoc.date_updated|date:"m/d/Y"|default:"-" }}</td>
+                </tr>
+                {% endif %}
+
+                <tr>
+                    <td>&nbsp;</td>
+                    <td class="btn-container">
+                        {% if not is_view_mode %}
+                        <button type="submit" class="btn btn-primary">
+                            {% if adhoc.id %}
+                                Save Changes
+                            {% else %}
+                                Create Ad-Hoc Product
+                            {% endif %}
+                        </button>
+                        {% else %}
+                        <a href="{% url 'product:edit-adhoc' adhoc.id %}" class="btn btn-primary">
+                            Edit Ad-Hoc
+                        </a>
+                        {% endif %}
+                        <a href="{% url 'product:adhoc-list' %}" class="btn btn-light">
+                            Cancel
+                        </a>
+                    </td>
+                </tr>
+            </table>
+        </form>
+    </div>
+</div>
+
+<script type="text/javascript">
+    var isViewMode = {% if is_view_mode %}true{% else %}false{% endif %};
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (isViewMode) {
+            const formFields = document.querySelectorAll('input, select, textarea');
+            formFields.forEach(function(field) {
+                field.disabled = true;
+                field.style.backgroundColor = '#f8f9fa';
+                field.style.cursor = 'not-allowed';
+                field.style.opacity = '0.8';
+                field.style.borderColor = '#dee2e6';
+            });
+
+            const form = document.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    return false;
+                });
+            }
+        }
+    });
+</script>
+{% endblock %}
