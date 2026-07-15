@@ -8,11 +8,11 @@
 <div class="card mb-3 mt-3">
     <div class="card-header">
         <h6 class="card-title mb-0">
-            {% if action == 'create' %}Create{% elif action == 'update' %}Update{% else %}View{% endif %} Sitework Quote
+            {% if action == 'create' %}Create{% else %}Update{% endif %} Sitework Quote
         </h6>
     </div>
     <div class="card-body">
-        <form method="POST" {% if action != 'view' %}{% if action == 'update' %}action="{% url 'job:job_sitework_update_specific' job.id sitework_quote.id %}"{% else %}action="{% url 'job:job_sitework_create' job.id %}"{% endif %}{% endif %}>
+        <form method="POST" {% if action == 'update' %}action="{% url 'job:job_sitework_update_specific' job.id sitework_quote.id %}"{% else %}action="{% url 'job:job_sitework_create' job.id %}"{% endif %}>
             {% csrf_token %}
             <!-- Ensure customer is included for ModelForm validation, though view will set it from job -->
             {% if action == 'create' or action == 'update' %}
@@ -27,12 +27,8 @@
                 <!-- Quote Description -->
                 <div class="col-md-4 mb-2">
                     <label class="form-label small" for="id_quotedesc">Quote Description</label>
-                    {% if action == 'view' %}
-                        <div class="form-control form-control-sm bg-light">{{ form.quotedesc.value|default:"-" }}</div>
-                    {% else %}
-                        {{ form.quotedesc }}
-                        {{ form.quotedesc.errors }}
-                    {% endif %}
+                    {{ form.quotedesc }}
+                    {{ form.quotedesc.errors }}
                 </div>
 
                 <!-- Customer (Fixed display) -->
@@ -44,12 +40,8 @@
                 <!-- Market -->
                 <div class="col-md-4 mb-2">
                     <label class="form-label small" for="id_market">Market</label>
-                    {% if action == 'view' %}
-                        <div class="form-control form-control-sm bg-light">{{ form.market.value|default:"-" }}</div>
-                    {% else %}
-                        {{ form.market }}
-                        {{ form.market.errors }}
-                    {% endif %}
+                    {{ form.market }}
+                    {{ form.market.errors }}
                 </div>
             </div>
 
@@ -57,44 +49,22 @@
                 <!-- Quote Date -->
                 <div class="col-md-4 mb-2">
                     <label class="form-label small" for="id_quotedate">Date</label>
-                    {% if action == 'view' %}
-                        <div class="form-control form-control-sm bg-light">{{ form.quotedate.value|date:"Y-m-d"|default:"-" }}</div>
-                    {% else %}
-                        {{ form.quotedate }}
-                        {{ form.quotedate.errors }}
-                    {% endif %}
+                    {{ form.quotedate }}
+                    {{ form.quotedate.errors }}
                 </div>
 
                 <!-- Overhead Percent -->
                 <div class="col-md-4 mb-2">
                     <label class="form-label small" for="id_overheadpercent">Overhead %</label>
-                    {% if action == 'view' %}
-                        <div class="form-control form-control-sm bg-light">{{ form.overheadpercent.value|default:"-" }}</div>
-                    {% else %}
-                        {{ form.overheadpercent }}
-                        {{ form.overheadpercent.errors }}
-                    {% endif %}
+                    {{ form.overheadpercent }}
+                    {{ form.overheadpercent.errors }}
                 </div>
 
                 <!-- Quoted By -->
                 <div class="col-md-4 mb-2">
                     <label class="form-label small" for="id_quotedby">Quoted By</label>
-                    {% if action == 'view' %}
-                        <div class="form-control form-control-sm bg-light">
-                            {% if form.instance.quotedby %}
-                                {% if form.instance.quotedby.first_name or form.instance.quotedby.last_name %}
-                                    {{ form.instance.quotedby.first_name }} {{ form.instance.quotedby.last_name }}
-                                {% else %}
-                                    {{ form.instance.quotedby.username }}
-                                {% endif %}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </div>
-                    {% else %}
-                        {{ form.quotedby }}
-                        {{ form.quotedby.errors }}
-                    {% endif %}
+                    {{ form.quotedby }}
+                    {{ form.quotedby.errors }}
                 </div>
             </div>
 
@@ -102,60 +72,38 @@
                 <!-- Status -->
                 <div class="col-md-4 mb-2">
                     <label class="form-label small" for="id_status">Status</label>
-                    {% if action == 'view' %}
-                        <div class="form-control form-control-sm bg-light">{{ form.status.value|default:"-" }}</div>
-                    {% else %}
-                        {{ form.status }}
-                        {{ form.status.errors }}
-                    {% endif %}
+                    {{ form.status }}
+                    {{ form.status.errors }}
                 </div>
 
                 <!-- KB Flag -->
                 <div class="col-md-4 mb-2">
-                    {% if action == 'view' %}
-                        <label class="form-label small" for="id_kbflag">Kit/Bath Flag</label>
-                        <div class="form-control form-control-sm bg-light">{{ form.instance.get_kbflag_display|default:"-" }}</div>
-                    {% else %}
-                        <label class="form-label small" for="id_kbflag">Type</label>
-                        <div class="d-flex align-items-center gap-3">
-                            {% for choice in form.kbflag %}
-                                <div class="form-check">
-                                    <input type="radio" name="{{ form.kbflag.html_name }}" value="{{ choice.data.value }}" id="{{ choice.id_for_label }}" class="form-check-input" {% if choice.data.selected %}checked{% endif %}>
-                                    <label class="form-check-label" for="{{ choice.id_for_label }}">
-                                        {{ choice.choice_label }}
-                                    </label>
-                                </div>
-                            {% endfor %}
-                        </div>
-                        {{ form.kbflag.errors }}
-                    {% endif %}
+                    <label class="form-label small" for="id_kbflag">Type</label>
+                    <div class="d-flex align-items-center gap-3">
+                        {% for choice in form.kbflag %}
+                            <div class="form-check">
+                                <input type="radio" name="{{ form.kbflag.html_name }}" value="{{ choice.data.value }}" id="{{ choice.id_for_label }}" class="form-check-input" {% if choice.data.selected %}checked{% endif %}>
+                                <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                    {{ choice.choice_label }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {{ form.kbflag.errors }}
                 </div>
             </div>
             
             <!-- Action Buttons -->
-            {% if action != 'view' %}
             <div class="row mt-3">
                 <div class="col-12">
-                    <button type="submit" class="btn btn-primary btn-sm">
-                        <i class="fas fa-{% if action == 'update' %}save{% else %}plus{% endif %} me-1"></i>
-                        {% if action == 'update' %}Update{% else %}Create{% endif %} Sitework Quote
+                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                        {% if action == 'update' %}Save{% else %}Create Sitework Quote{% endif %}
                     </button>
-                    <a href="{% url 'job:job_sitework' job.id %}" class="btn btn-secondary btn-sm">
-                        <i class="fas fa-times me-1"></i>
+                    <a href="{% url 'job:job_sitework' job.id %}" class="btn btn-outline-secondary btn-sm">
                         Cancel
                     </a>
                 </div>
             </div>
-            {% else %}
-            <div class="row mt-3">
-                <div class="col-12">
-                    <a href="{% url 'job:job_sitework' job.id %}" class="btn btn-secondary btn-sm">
-                        <i class="fas fa-arrow-left me-1"></i>
-                        Back to Sitework Quotes
-                    </a>
-                </div>
-            </div>
-            {% endif %}
         </form>
     </div>
 </div>

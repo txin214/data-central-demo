@@ -96,15 +96,10 @@ urlpatterns = [
     # AJAX quote operations
     path('ajax/product-quotes/', views.ajax_product_quotes, name='ajax_product_quotes'),  # Get product quotes via AJAX
     
-    # ===== AD-HOC PRODUCT URLs =====
-    path('ajax/create-adhoc/', views.ajax_create_adhoc, name='ajax-create-adhoc'),  # Create adhoc line item via AJAX (AJAX)
-    path('quotes/<int:quote_id>/add-adhoc/', views.ajax_add_adhoc_to_quote, name='ajax-add-adhoc-to-quote'),  # Add adhoc item to quote
-    path('quotes/<int:quote_id>/delete-adhoc/<int:line_item_id>/', views.ajax_delete_adhoc_from_quote, name='ajax-delete-adhoc-from-quote'),  # Delete adhoc item from quote
-    path('quotes/edit-adhoc-quantity/<int:line_item_id>/', views.ajax_update_adhoc_quantity, name='ajax-update-adhoc-quantity'),  # Update adhoc item quantity
-    path('adhoc/', views.adhoc_list, name='adhoc-list'),  # List all adhoc items
-    path('adhoc/create/', views.create_adhoc, name='create-adhoc'),  # Create adhoc item
-    path('adhoc/<int:adhoc_id>/', views.edit_adhoc, name='edit-adhoc'),  # View/edit adhoc item
-    path('adhoc/delete/<int:adhoc_id>/', views.delete_adhoc, name='delete-adhoc'),  # Delete adhoc item
+    # ===== AD-HOC (one-time quote items from Search and Add only) =====
+    path('quotes/<int:quote_id>/create-adhoc/', views.ajax_create_adhoc_for_quote, name='ajax-create-adhoc-for-quote'),
+    path('quotes/<int:quote_id>/delete-adhoc/<int:line_item_id>/', views.ajax_delete_adhoc_from_quote, name='ajax-delete-adhoc-from-quote'),
+    path('quotes/edit-adhoc-quantity/<int:line_item_id>/', views.ajax_update_adhoc_quantity, name='ajax-update-adhoc-quantity'),
 ]
 
 # Serve media files in development

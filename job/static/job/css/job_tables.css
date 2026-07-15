@@ -56,8 +56,41 @@
 .job-payments-table th,
 .job-payments-table td,
 .job-notes-table th,
-.job-notes-table td {
+.job-notes-table td,
+.job-po-detail-items-table th,
+.job-po-detail-items-table td {
     font-size: 0.875rem !important;
+}
+
+/* Job → Accounting tab: section headings */
+.job-accounting-section-title {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #6c757d;
+    margin: 1rem 0 0.35rem;
+}
+a.job-accounting-section-title {
+    display: inline-block;
+    text-decoration: none;
+    cursor: pointer;
+}
+a.job-accounting-section-title:hover {
+    color: #495057;
+    text-decoration: underline;
+}
+.job-accounting-layout > .job-accounting-section-title:first-child {
+    margin-top: 0;
+}
+
+/* Job → Accounting tab: vertical alignment like other job tab tables */
+.job-accounting-table thead th,
+.job-accounting-table tbody td,
+.job-accounting-table tfoot td,
+.job-accounting-payments-table thead th,
+.job-accounting-payments-table tbody td,
+.job-accounting-payments-table tfoot td {
+    vertical-align: middle !important;
 }
 
 /* Job → Quotes tab: override global .table td { vertical-align: top } so text sits mid-row next to action buttons */
@@ -122,6 +155,25 @@
 
 .job-po-table thead th:nth-child(7),
 .job-po-table tbody td:nth-child(7) {
+    text-align: left !important;
+}
+
+/* PO detail — items table: same sizing/alignment as quotes list */
+.job-po-detail-items-table thead th,
+.job-po-detail-items-table tbody td {
+    vertical-align: middle !important;
+}
+
+.job-po-detail-items-table thead th {
+    text-align: left !important;
+}
+
+.job-po-detail-items-table thead th.text-center {
+    text-align: center !important;
+}
+
+.job-po-detail-items-table tbody td:nth-child(10),
+.job-po-detail-items-table tbody td:nth-child(11) {
     text-align: right;
 }
 

@@ -1461,24 +1461,21 @@ def job_sitework_carpenter(request, job_id):
     # Prefer primary sitework quote; fallback to latest
     primary = job.sitework_quotes.filter(is_primary=True).first()
     sitework_quote = primary or job.sitework_quotes.order_by('-id').first()
-    if not sitework_quote:
-        messages.error(request, 'No sitework quote found for this job.')
-        return redirect('job:job_sitework', job_id)
 
-    lines = list(
-        SiteworkQuoteLine.objects.filter(quote=sitework_quote, quantity__gt=0)
-        .select_related('cat')
-        .order_by('cat__orderby', 'orderby', 'id')
-    )
-
-    # Fetch progress in bulk
-    line_ids = [l.id for l in lines]
-    progress_map = {p.line_id: p for p in SiteworkLineProgress.objects.filter(line_id__in=line_ids)}
-
-    # Group lines by category
-    grouped = {}
-    for l in lines:
-        grouped.setdefault(l.cat, []).append(l)
+    if sitework_quote:
+        lines = list(
+            SiteworkQuoteLine.objects.filter(quote=sitework_quote, quantity__gt=0)
+            .select_related('cat')
+            .order_by('cat__orderby', 'orderby', 'id')
+        )
+        line_ids = [l.id for l in lines]
+        progress_map = {p.line_id: p for p in SiteworkLineProgress.objects.filter(line_id__in=line_ids)}
+        grouped = {}
+        for l in lines:
+            grouped.setdefault(l.cat, []).append(l)
+    else:
+        progress_map = {}
+        grouped = {}
 
     context = {
         'job': job,
@@ -1613,8 +1610,19 @@ class JobListView(LoginRequiredMixin, ListView):
     context_object_name = 'jobs'
     paginate_by = 20
     
+    def get_status_filter(self):
+        status = self.request.GET.get('status', 'active')
+        if status in ('active', 'inactive', 'all'):
+            return status
+        return 'active'
+
     def get_queryset(self):
         queryset = Job.objects.select_related('customer').prefetch_related('product_quotes', 'sitework_quotes')
+        status = self.get_status_filter()
+        if status == 'active':
+            queryset = queryset.filter(active=True)
+        elif status == 'inactive':
+            queryset = queryset.filter(active=False)
         return queryset.order_by('-id')
     
     def get_context_data(self, **kwargs):
@@ -1629,6 +1637,7 @@ class JobListView(LoginRequiredMixin, ListView):
         context['active_jobs'] = counts['active_jobs']
         context['sold_jobs'] = counts['sold_jobs']
         context['total_jobs'] = counts['total_jobs']
+        context['status_filter'] = self.get_status_filter()
         return context
 
 
@@ -1706,6 +1715,10 @@ class JobCreateView(LoginRequiredMixin, CreateView):
             
             # Save the job
             job = form.save()
+
+            if job.sold:
+                from .sales_from_quote import sync_sales_when_job_sold
+                sync_sales_when_job_sold(job, self.request.user)
             
             # Generate job code if not provided
             if not job.job_code:
@@ -1782,8 +1795,13 @@ class JobUpdateView(UpdateView):
     success_url = reverse_lazy('job:job_list')
     
     def form_valid(self, form):
+        was_sold = self.object.sold if self.object.pk else False
+        response = super().form_valid(form)
+        if self.object.sold and not was_sold:
+            from .sales_from_quote import sync_sales_when_job_sold
+            sync_sales_when_job_sold(self.object, self.request.user)
         messages.success(self.request, 'Job updated successfully.')
-        return super().form_valid(form)
+        return response
 
     def form_invalid(self, form):
         hints = []
@@ -1923,21 +1941,6 @@ def job_product_quote_update(request, job_id, quote_id=None):
         'form': form,
         'product_quote': product_quote,
         'action': 'update'
-    })
-
-
-def job_product_quote_view(request, job_id, quote_id):
-    """View a specific product quote for a job."""
-    job = get_object_or_404(Job, id=job_id)
-    product_quote = get_object_or_404(ProductQuote, id=quote_id, job=job)
-    
-    form = JobProductQuoteForm(instance=product_quote, job=job)
-    
-    return render(request, 'job/job_product_quote_form.html', {
-        'job': job,
-        'form': form,
-        'product_quote': product_quote,
-        'action': 'view'
     })
 
 
@@ -2160,6 +2163,7 @@ class JobDetailUpdateView(DetailView):
         form = JobForm(request.POST, instance=self.object)
 
         if form.is_valid():
+            was_sold = self.object.sold
             job_instance = form.save(commit=False)
 
             # Handle job_code update from letter suffix dropdown or hidden full code
@@ -2181,6 +2185,9 @@ class JobDetailUpdateView(DetailView):
                 )
 
             job_instance.save()
+            if job_instance.sold and not was_sold:
+                from .sales_from_quote import sync_sales_when_job_sold
+                sync_sales_when_job_sold(job_instance, request.user)
             messages.success(request, 'Job updated successfully!')
             return redirect('job:job_detail', pk=self.object.pk)
         else:
@@ -2398,47 +2405,40 @@ def add_multiple_products_to_job_quote(request, job_id, quote_id):
     quote = get_object_or_404(ProductQuote, id=quote_id, job=job)
 
     if request.method == "POST":
-        products = request.POST.getlist('products[]')
         quantities = {}
         price_types = {}
-        
+
         for key, value in request.POST.items():
-            # Use regex to match quantities with the format 'quantities[product_id]'
             match = re.match(r'quantities\[(\d+)\]', key)
             if match:
-                product_id = int(match.group(1))  # Extract the product ID
-                quantities[product_id] = int(value)  # Assign the quantity
-            
-            # Use regex to match price types with the format 'price_types[product_id]'
+                try:
+                    quantities[int(match.group(1))] = int(value or 0)
+                except (TypeError, ValueError):
+                    quantities[int(match.group(1))] = 0
+
             match = re.match(r'price_types\[(\d+)\]', key)
             if match:
-                product_id = int(match.group(1))  # Extract the product ID
-                price_types[product_id] = value  # Assign the price type
+                price_types[int(match.group(1))] = value
 
-        for product_id in products:
-            if product_id:
-                product = get_object_or_404(Product, id=product_id)
-                quantity = quantities.get(product.id, 0)  # Default to 0 if no quantity is provided
-                price_type = price_types.get(product.id, 'retail_sell')  # Default to retail_sell
-                
-                # Only add products with quantity >= 1
-                if quantity >= 1:
-                    # Add product to the quote using the specified price type
-                    line_item, created = ProductQuoteLine.objects.get_or_create(
-                        quote=quote,
-                        product=product,
-                        defaults={
-                            'quantity': quantity,
-                            'price_type': price_type,
-                            'product_description': product.description,
-                        }
-                    )
-                    if not created:
-                        # Update the quantity if the product already exists
-                        line_item.quantity += quantity
-                        line_item.save()
-        
-        # Recalculate the quote subtotal
+        # Add only products with quantity > 0 (no checkbox selection required)
+        for product_id, quantity in quantities.items():
+            if quantity <= 0:
+                continue
+            product = get_object_or_404(Product, id=product_id)
+            price_type = price_types.get(product.id, 'retail_sell')
+            line_item, created = ProductQuoteLine.objects.get_or_create(
+                quote=quote,
+                product=product,
+                defaults={
+                    'quantity': quantity,
+                    'price_type': price_type,
+                    'product_description': product.description,
+                }
+            )
+            if not created:
+                line_item.quantity += quantity
+                line_item.save()
+
         quote.calculate_subtotal()
 
     # Redirect back to the job quote products page
@@ -2449,7 +2449,11 @@ def add_multiple_products_to_job_quote(request, job_id, quote_id):
 def job_sitework_view(request, job_id):
     """Main sitework view for a job - shows existing sitework quotes."""
     job = get_object_or_404(Job, id=job_id)
-    
+
+    # Refresh stored line prices so Subtotal reflects entered quantities.
+    for quote_id in SiteworkQuote.objects.filter(job=job).values_list('id', flat=True):
+        SiteworkQuoteLine.objects.calc_price(quote_id)
+
     # Fetch all sitework quotes for listing (line price sums = subtotal for list display)
     sitework_quotes = (
         SiteworkQuote.objects.filter(job=job)
@@ -2604,21 +2608,6 @@ def job_sitework_update(request, job_id, quote_id=None):
         'form': form,
         'sitework_quote': sitework_quote,
         'action': 'update'
-    })
-
-
-def job_sitework_view_quote(request, job_id, quote_id):
-    """View a specific sitework quote for a job."""
-    job = get_object_or_404(Job, id=job_id)
-    sitework_quote = get_object_or_404(SiteworkQuote, id=quote_id, job=job)
-    
-    form = SiteworkQuoteForm(instance=sitework_quote)
-    
-    return render(request, 'job/job_sitework_form.html', {
-        'job': job,
-        'form': form,
-        'sitework_quote': sitework_quote,
-        'action': 'view'
     })
 
 
@@ -5195,56 +5184,58 @@ def job_payment_lien_waiver_pdf(request, job_id, payment_id):
 
 def job_accounting(request, job_id):
     """Display combined sales and change orders for accounting view"""
-    from collections import defaultdict, OrderedDict
+    from collections import OrderedDict
     from decimal import Decimal
     from datetime import date
     
     job = get_object_or_404(Job, pk=job_id)
+
+    # Backfill sales + SLW milestones if job was sold before sync ran.
+    if job.sold:
+        from .sales_from_quote import sync_sales_when_job_sold
+        sync_sales_when_job_sold(
+            job,
+            request.user if request.user.is_authenticated else None,
+        )
     
-    # Get sales data (same logic as job_sales view)
-    sales = job.sales.all().select_related('product_code', 'created_by').order_by('-sale_date', '-created_at')
-    
-    # Group sales by product_code
-    grouped_sales = defaultdict(lambda: {'sales': [], 'total': Decimal('0.00'), 'product_code': None, 'tax': None, 'sale_date': None})
+    # Individual sales/change orders for accounting tables (chronological)
+    sales = job.sales.all().select_related('product_code', 'created_by').order_by('sale_date', 'created_at')
+    change_orders = job.change_orders.all().select_related('product_code', 'created_by').order_by('order_date', 'created_at')
+
+    total_sales_amount = sum((s.sale_amount or Decimal('0.00')) for s in sales)
+    total_sales_tax = sum((s.tax_amount or Decimal('0.00')) for s in sales)
+
+    billing_lines = []
     for sale in sales:
-        product_code_id = sale.product_code_id if sale.product_code else None
-        product_code_key = product_code_id if product_code_id else 'no_code'
-        
-        if grouped_sales[product_code_key]['product_code'] is None:
-            grouped_sales[product_code_key]['product_code'] = sale.product_code
-            grouped_sales[product_code_key]['tax'] = sale.tax
-            grouped_sales[product_code_key]['sale_date'] = sale.sale_date
-        
-        grouped_sales[product_code_key]['sales'].append(sale)
-        grouped_sales[product_code_key]['total'] += sale.sale_amount
-    
-    # Convert to list sorted by product code
-    grouped_sales_list = []
-    for key, group_data in grouped_sales.items():
-        grouped_sales_list.append({
-            'product_code': group_data['product_code'],
-            'product_code_id': key if key != 'no_code' else None,
-            'tax': group_data['tax'],
-            'sale_date': group_data['sale_date'],
-            'total': group_data['total'],
-            'sales': group_data['sales'],
-            'count': len(group_data['sales'])
+        billing_lines.append({
+            'date': sale.sale_date,
+            'product_code': sale.product_code.code if sale.product_code else '',
+            'tax': sale.get_tax_display() if sale.tax else '',
+            'comment': sale.comment or (sale.product_code.description if sale.product_code else ''),
+            'by': sale.created_by,
+            'amount': sale.sale_amount,
+            'edit_url_name': 'job:job_sale_edit',
+            'edit_id': sale.id,
         })
-    
-    # Sort by product code (None/empty last)
-    grouped_sales_list.sort(key=lambda x: (x['product_code'].code if x['product_code'] else 'zzz', x['sale_date'] or date.min), reverse=True)
-    
-    # Calculate total sales amount
-    total_sales_amount = sum(group['total'] for group in grouped_sales_list)
-    
-    # Get change orders data
-    change_orders = job.change_orders.all().select_related('product_code', 'created_by').order_by('-order_date', '-created_at')
+    for change_order in change_orders:
+        billing_lines.append({
+            'date': change_order.order_date,
+            'product_code': change_order.product_code.code if change_order.product_code else '',
+            'tax': change_order.get_tax_display() if change_order.tax else '',
+            'comment': change_order.description,
+            'by': change_order.created_by,
+            'amount': change_order.amount,
+            'edit_url_name': 'job:job_change_order_edit',
+            'edit_id': change_order.id,
+        })
+    billing_lines.sort(key=lambda row: (row['date'] or date.min, row['product_code'] or ''))
+    total_billing_tax = total_sales_tax
     
     # Calculate total change order amount (only include change orders with amounts)
     total_change_amount = sum(co.amount for co in change_orders if co.amount is not None) if change_orders else Decimal('0.00')
     
     # Get payments data
-    payments = job.payments.all().select_related('account_category', 'by').order_by('-date', '-created_at')
+    payments = job.payments.all().select_related('account_category', 'by').order_by('date', 'created_at')
     
     # Calculate payment totals
     total_payment_amount = sum(p.amount for p in payments) if payments else Decimal('0.00')
@@ -5305,10 +5296,13 @@ def job_accounting(request, job_id):
     
     context = {
         'job': job,
-        'grouped_sales': grouped_sales_list,
+        'sales': sales,
         'total_sales_amount': total_sales_amount,
+        'total_sales_tax': total_sales_tax,
         'change_orders': change_orders,
         'total_change_amount': total_change_amount,
+        'billing_lines': billing_lines,
+        'total_billing_tax': total_billing_tax,
         'grand_total': grand_total,
         'payments': payments,
         'total_payment_amount': total_payment_amount,
@@ -5336,6 +5330,14 @@ def job_sales(request, job_id):
     from datetime import date
     
     job = get_object_or_404(Job, pk=job_id)
+
+    if job.sold:
+        from .sales_from_quote import sync_sales_when_job_sold
+        sync_sales_when_job_sold(
+            job,
+            request.user if request.user.is_authenticated else None,
+        )
+
     sales = job.sales.all().select_related('product_code', 'created_by').order_by('-sale_date', '-created_at')
     
     # Group sales by product_code
@@ -5395,6 +5397,9 @@ def job_sales(request, job_id):
     quote_tax = Decimal('0')
     quote_total = Decimal('0')
     sitework_total = Decimal('0')
+    sitework_subtotal = Decimal('0')
+    sitework_tax = Decimal('0')
+    sl_product_code = None
     product_codes = []
     
     if job.sold:
@@ -5470,12 +5475,19 @@ def job_sales(request, job_id):
                 "job_sales: failed to attach tax/mapped product codes to grouped quote categories"
             )
 
-        # Calculate sitework total
+        # Calculate sitework total (primary quote, else latest — same as sitework detail)
         try:
-            primary_sitework = job.sitework_quotes.filter(is_primary=True).prefetch_related(
-                'siteworkquoteline_set__cat',
-                'siteworkquoteline_set__subcat'
-            ).first()
+            primary_sitework = (
+                job.sitework_quotes.filter(is_primary=True)
+                .prefetch_related('sql_quotes__cat')
+                .first()
+            )
+            if not primary_sitework:
+                primary_sitework = (
+                    job.sitework_quotes.order_by('-id')
+                    .prefetch_related('sql_quotes__cat')
+                    .first()
+                )
             if primary_sitework:
                 from .utils import group_sitework_by_category
                 categories_data = group_sitework_by_category(primary_sitework)
@@ -5487,20 +5499,25 @@ def job_sales(request, job_id):
                         sitework_subtotal += Decimal(subtotal_str)
                     except (ValueError, TypeError):
                         pass
-                
+
                 # Add contingency and overhead
                 contingency_pct = Decimal('0.05')
                 overhead_pct = Decimal('0.28')
                 contingency = sitework_subtotal * contingency_pct
                 overhead = sitework_subtotal * overhead_pct
+                # Sitework is not taxed for accounting/sales.
                 sitework_total = sitework_subtotal + contingency + overhead
+                sitework_tax = Decimal('0.00')
         except Exception:
-            pass
+            logging.getLogger(__name__).exception(
+                "job_sales: failed to calculate sitework total"
+            )
         
         # Get product codes for dropdown - only specific codes
         from product.models import ProductCode
         allowed_codes = ['CK', 'PSD', 'FL', 'CR', 'LV', 'PFX', 'WP', 'MX', 'AP', 'SL', 'SLW', 'CTS', 'SS', 'PFF', 'DEL', 'DS', 'BA', 'HD', 'DIS', 'CTQ']
         product_codes = ProductCode.objects.filter(code__in=allowed_codes).order_by('code')
+        sl_product_code = product_codes.filter(code='SL').first()
     
     # Track which category totals have already been saved as sales
     # Create a list of saved sale amounts (rounded to 2 decimals for comparison)
@@ -5519,7 +5536,11 @@ def job_sales(request, job_id):
         'quote_total': quote_total,
         'tax_rate': tax_rate,
         'sitework_total': sitework_total,
+        'sitework_subtotal': sitework_subtotal,
+        'sitework_tax': sitework_tax,
+        'sitework_sale_total': sitework_total + sitework_tax,
         'product_codes': product_codes,
+        'sl_product_code': sl_product_code,
         'saved_totals': saved_totals,
         'total_sales_cost': total_sales_cost,
         'total_sales_tax': total_sales_tax,
@@ -5635,6 +5656,8 @@ def job_sales_bulk_create(request, job_id):
     
     try:
         from decimal import Decimal as D
+        from product.models import ProductCode
+        from .sales_from_quote import sale_line_comment
 
         data = json.loads(request.body)
         sales_data = data.get('sales', [])
@@ -5663,17 +5686,26 @@ def job_sales_bulk_create(request, job_id):
             if sale_amt is None:
                 sale_amt = D('0')
 
+            pc_id = sale_info.get('product_code_id')
+            product_code = ProductCode.objects.filter(pk=pc_id).first() if pc_id else None
+            comment = sale_line_comment(product_code, sale_info.get('category') or '')
+
             sale = Sale.objects.create(
                 job=job,
-                product_code_id=sale_info.get('product_code_id') if sale_info.get('product_code_id') else None,
+                product_code_id=pc_id if pc_id else None,
                 cost_amount=_opt_decimal(sale_info.get('cost_amount')),
                 tax_amount=_opt_decimal(sale_info.get('tax_amount')),
                 sale_amount=sale_amt,
                 sale_date=sale_date,
                 tax=sale_info.get('tax', 'UT'),
+                comment=comment,
                 created_by=request.user if request.user.is_authenticated else None
             )
             created_sales.append(sale.id)
+
+        if job.sold:
+            from .billing_schedule import sync_billing_schedule_sales
+            sync_billing_schedule_sales(job, created_by=request.user)
         
         return JsonResponse({
             'success': True,

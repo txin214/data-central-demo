@@ -188,6 +188,7 @@ class QuoteLineManager(models.Manager):
         obj.quantity = qty
         obj.save()
         print("debug: updated which=", subid, ",", quoteid, ", qty=", qty)
+        self.calc_price(int(quoteid))
         return obj
 
     def update_comment(self, comment, subid, quoteid,):
@@ -240,6 +241,49 @@ class QuoteLineManager(models.Manager):
         )
         #print("debug: create_flag= ", created, "calckey= ", obj.calckey, "group= ", obj.group)
         return obj
+
+    def compute_line_price(self, line):
+        """Line total in dollars; same rules as sitework report_show and PDF."""
+        if line.quantity <= 0:
+            return 0.0
+        if line.editallowance == '1':
+            if line.profit > 0:
+                return float(line.allowance / line.profit)
+            return 0.0
+        price = float((line.quantity * line.unitamount) + line.basecost)
+        if line.calckey == 558:
+            return 100.0
+        return price
+
+    def _apply_category_setup_fees(self, quoteid):
+        for xcat in SiteworkCat.objects.order_by('orderby'):
+            setup_line = (
+                self.filter(cat=xcat, quote=quoteid, workdesc__icontains='setup fee')
+                .first()
+            )
+            if setup_line and setup_line.calckey != 558:
+                if setup_line.quantity != 0:
+                    setup_line.quantity = 0
+                    setup_line.save(update_fields=['quantity'])
+
+            catcount = 0
+            for lin in self.filter(cat=xcat, quote=quoteid):
+                if lin.quantity > 0:
+                    catcount += 1
+
+            if setup_line and catcount > 0 and setup_line.quantity != 1:
+                setup_line.quantity = 1
+                setup_line.save(update_fields=['quantity'])
+
+    def _update_line_prices(self, quoteid):
+        to_update = []
+        for item in self.filter(quote=quoteid):
+            new_price = self.compute_line_price(item)
+            if item.price != new_price:
+                item.price = new_price
+                to_update.append(item)
+        if to_update:
+            self.bulk_update(to_update, ['price'])
 
     def calc_price(self,quoteid):
         # Future work from old notes:
@@ -426,11 +470,10 @@ class QuoteLineManager(models.Manager):
 
                 
         # Once the qty's are calculated then another pass thru to calc the prices of everything.
-        # initial labor calcs will use the global labor rates, but eventually we will use 
-        # new minute-based calcs instead of dollar-based. Resuts are still in dollars.
         if my_verbose>0: print("END calcprice-----------------------")
 
-        pass
+        self._apply_category_setup_fees(quoteid)
+        self._update_line_prices(quoteid)
     
         
 

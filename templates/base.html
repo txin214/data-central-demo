@@ -289,7 +289,6 @@
             <a class="nav-link submenu-parent" href="#" onclick="toggleProductSubmenu(this)"><i class="fa fa-box-open me-2"></i> Product</a>
             <div class="submenu" id="product-submenu">
                 <a class="nav-link" href="{% url 'product:product-list' %}" onclick="expandProductSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); return true;">View Products</a>
-                <a class="nav-link" href="{% url 'product:adhoc-list' %}" onclick="expandProductSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); return true;">Ad-Hoc Products</a>
                 <a class="nav-link" href="{% url 'product:product_quote_list' %}" onclick="expandProductSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); return true;">Product Quotes</a>
                 <a class="nav-link" href="{% url 'product:manufacturers' %}" onclick="expandProductSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); return true;">Manufacturers</a>
                 <a class="nav-link" href="{% url 'product:vendors' %}" onclick="expandProductSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); return true;">Vendors</a>

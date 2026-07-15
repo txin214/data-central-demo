@@ -94,11 +94,6 @@
 .quote-products-card .quote-products-table td:last-child {
     border-right: none;
 }
-.adhoc-frozen-select {
-    background-color: #e9ecef !important;
-    cursor: not-allowed;
-    opacity: 0.85;
-}
 </style>
 <script src="{% static 'product/js/quote_products.js' %}"></script>
 
@@ -149,7 +144,7 @@
             <div class="border-top pt-3"></div>
             <form id="adhocForm" class="action-bar adhoc-bar flex-wrap">
                 {% csrf_token %}
-                <span class="small fw-semibold text-muted" title="Create and add a custom product line">Ad-Hoc</span>
+                <span class="small fw-semibold text-muted" title="One-time custom line for this quote only">Ad-Hoc</span>
                 <input type="text" class="form-control form-control-sm" id="adhoc_part_no" name="part_no" placeholder="Part Number" required>
                 <input type="text" class="form-control form-control-sm" id="adhoc_description" name="description" placeholder="Description" required>
                 <select class="form-select form-select-sm" id="adhoc_category" name="category">
@@ -274,11 +269,7 @@
                             {% endfor %}
                             {% for adhoc_line_item in adhoc_line_items %}
                             <tr id="adhoc-row-{{ adhoc_line_item.id }}" data-adhoc-row="1">
-                                <td>
-                                    <a href="{% url 'product:edit-adhoc' adhoc_line_item.adhoc.id %}?mode=view" target="_blank">
-                                        {{ adhoc_line_item.adhoc.part_no }}
-                                    </a>
-                                </td>
+                                <td>{{ adhoc_line_item.adhoc.part_no }}</td>
                                 <td>{{ adhoc_line_item.adhoc_description }}</td>
                                 <td>
                                     <img src="{% static 'product/image-not-found.png' %}" alt="Ad-Hoc" class="product-img-thumb">
@@ -327,12 +318,6 @@
                     </table>
             {% endif %}
             </div>
-</div>
-
-<div class="mt-2 mb-3 text-start">
-    <a href="{% url 'job:job_product_quote_update_specific' job.id product_quote.id %}" class="btn btn-sm btn-outline-secondary">
-        <i class="fas fa-arrow-left me-1"></i>Back to Quote Details
-    </a>
 </div>
 
 <script>
@@ -579,8 +564,7 @@ function validateQuantities() {
     return true;
 }
 
-// Ad-Hoc functionality — freeze category/manufacturer/vendor after a successful add (until page refresh)
-const ADHOC_FROZEN_FIELD_IDS = ['adhoc_category', 'adhoc_manufacturer', 'adhoc_vendor'];
+// Ad-Hoc functionality
 const ADHOC_RETAIL_MARKUP = 1.4;
 let adhocRetailManual = false;
 
@@ -601,48 +585,21 @@ function syncAdhocRetailFromCost() {
     }
 }
 
-function setAdhocFieldsFrozen(frozen) {
-    ADHOC_FROZEN_FIELD_IDS.forEach((id) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.disabled = frozen;
-        el.classList.toggle('adhoc-frozen-select', frozen);
-    });
-}
-
-function enableAdhocFieldsForSubmit() {
-    ADHOC_FROZEN_FIELD_IDS.forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) el.disabled = false;
-    });
-}
-
-function getFrozenAdhocFieldValues() {
-    return {
-        category: document.getElementById('adhoc_category')?.value || '',
-        manufacturer: document.getElementById('adhoc_manufacturer')?.value || '',
-        vendor: document.getElementById('adhoc_vendor')?.value || '',
-    };
-}
-
-function restoreFrozenAdhocFields(values) {
-    const category = document.getElementById('adhoc_category');
-    const manufacturer = document.getElementById('adhoc_manufacturer');
-    const vendor = document.getElementById('adhoc_vendor');
-    if (category) category.value = values.category;
-    if (manufacturer) manufacturer.value = values.manufacturer;
-    if (vendor) vendor.value = values.vendor;
-    setAdhocFieldsFrozen(true);
-}
-
-function resetAdhocEntryFields(keepFrozenValues) {
-    const form = document.getElementById('adhocForm');
-    if (!form) return;
-    form.reset();
+function clearAdhocEntryFields() {
+    // Clear only the one-off fields. Leave category/manufacturer/vendor as the
+    // previous selection (still editable). A full page refresh resets them.
+    const partNo = document.getElementById('adhoc_part_no');
+    const description = document.getElementById('adhoc_description');
+    const cost = document.getElementById('adhoc_cost');
+    const retail = document.getElementById('adhoc_retail_price');
+    const quantity = document.getElementById('adhoc_quantity');
+    if (partNo) partNo.value = '';
+    if (description) description.value = '';
+    if (cost) cost.value = '';
+    if (retail) retail.value = '';
+    if (quantity) quantity.value = '1';
     adhocRetailManual = false;
-    document.getElementById('adhoc_quantity').value = '1';
-    restoreFrozenAdhocFields(keepFrozenValues);
-    document.getElementById('adhoc_part_no')?.focus();
+    partNo?.focus();
 }
 
 function createAndAddAdhoc() {
@@ -650,16 +607,15 @@ function createAndAddAdhoc() {
     const createBtn = document.getElementById('adhocCreateBtn');
     const spinner = document.getElementById('adhocCreateBtnSpinner');
 
-    // Disabled fields are omitted from FormData — enable briefly for submit
-    enableAdhocFieldsForSubmit();
     const formData = new FormData(form);
+    formData.set('quantity', document.getElementById('adhoc_quantity').value || '1');
     
     // Disable button and show spinner
     createBtn.disabled = true;
     spinner.style.display = 'inline-block';
     
-    // First create the Ad-Hoc item
-    fetch('{% url "product:ajax-create-adhoc" %}', {
+    // Create one-time Ad-Hoc and add it to this quote in one step
+    fetch('{% url "product:ajax-create-adhoc-for-quote" product_quote.id %}', {
         method: 'POST',
         body: formData,
         headers: {
@@ -669,40 +625,18 @@ function createAndAddAdhoc() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            // Now add it to the quote
-            const quantity = document.getElementById('adhoc_quantity').value;
-            const addFormData = new FormData();
-            addFormData.append('adhoc_id', data.id);
-            addFormData.append('quantity', quantity);
-            
-            return fetch('{% url "product:ajax-add-adhoc-to-quote" product_quote.id %}', {
-        method: 'POST',
-                body: addFormData,
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken')
-                }
-            });
-        } else {
-            throw new Error(data.errors ? Object.values(data.errors).flat().join(', ') : 'Failed to create Ad-Hoc item');
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
             addAdhocItemToTable(data);
-            const frozenValues = getFrozenAdhocFieldValues();
-            resetAdhocEntryFields(frozenValues);
+            clearAdhocEntryFields();
         } else {
-            throw new Error(data.error || 'Failed to add Ad-Hoc item to quote');
+            const errMsg = data.errors
+                ? Object.values(data.errors).flat().join(', ')
+                : (data.error || 'Failed to create Ad-Hoc item');
+            throw new Error(errMsg);
         }
     })
     .catch(error => {
         console.error('Error:', error);
         showNotification('Error: ' + error.message, 'error');
-        // Re-apply freeze if fields had been frozen before a failed submit
-        if (document.getElementById('adhoc_category')?.classList.contains('adhoc-frozen-select')) {
-            setAdhocFieldsFrozen(true);
-        }
     })
     .finally(() => {
         createBtn.disabled = false;
@@ -720,7 +654,6 @@ function addAdhocItemToTable(data) {
     const container = document.getElementById('adhocProductsContainer');
     let tableBody = document.getElementById('quoteProductsTableBody');
     const placeholderImage = '{% static "product/image-not-found.png" %}';
-    const adhocEditUrlBase = '{% url "product:edit-adhoc" 0 %}?mode=view'.replace('/0/', `/${data.adhoc_id}/`);
 
     // If no table exists, create a unified quote table skeleton
     if (!tableBody) {
@@ -756,15 +689,11 @@ function addAdhocItemToTable(data) {
         tableBody = document.getElementById('quoteProductsTableBody');
     }
 
-    const partNoLink = data.adhoc_id
-        ? `<a href="${adhocEditUrlBase}" target="_blank">${escapeHtml(data.part_no)}</a>`
-        : escapeHtml(data.part_no);
-
     const newRow = document.createElement('tr');
     newRow.id = `adhoc-row-${data.line_item_id}`;
     newRow.dataset.adhocRow = '1';
     newRow.innerHTML = `
-        <td>${partNoLink}</td>
+        <td>${escapeHtml(data.part_no)}</td>
         <td>${escapeHtml(data.description)}</td>
         <td><img src="${placeholderImage}" alt="Ad-Hoc" class="product-img-thumb"></td>
         <td>

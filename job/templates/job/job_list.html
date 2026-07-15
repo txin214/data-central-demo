@@ -46,15 +46,15 @@
         </div>
         <div class="job-list-status-row" role="group" aria-label="Job status">
             <div class="form-check form-check-inline mb-0">
-                <input class="form-check-input" type="radio" name="statusFilter" id="filterActive" value="active" checked>
+                <input class="form-check-input" type="radio" name="statusFilter" id="filterActive" value="active"{% if status_filter == 'active' %} checked{% endif %}>
                 <label class="form-check-label" for="filterActive">Active Only</label>
             </div>
             <div class="form-check form-check-inline mb-0">
-                <input class="form-check-input" type="radio" name="statusFilter" id="filterInactive" value="inactive">
+                <input class="form-check-input" type="radio" name="statusFilter" id="filterInactive" value="inactive"{% if status_filter == 'inactive' %} checked{% endif %}>
                 <label class="form-check-label" for="filterInactive">Inactive Only</label>
             </div>
             <div class="form-check form-check-inline mb-0">
-                <input class="form-check-input" type="radio" name="statusFilter" id="filterAll" value="all">
+                <input class="form-check-input" type="radio" name="statusFilter" id="filterAll" value="all"{% if status_filter == 'all' %} checked{% endif %}>
                 <label class="form-check-label" for="filterAll">All Jobs</label>
             </div>
         </div>
@@ -129,10 +129,10 @@
                 <ul class="pagination pagination-sm justify-content-center">
                     {% if page_obj.has_previous %}
                         <li class="page-item">
-                            <a class="page-link" href="?page=1">&laquo; First</a>
+                            <a class="page-link" href="?status={{ status_filter }}&page=1">&laquo; First</a>
                         </li>
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                            <a class="page-link" href="?status={{ status_filter }}&page={{ page_obj.previous_page_number }}">Previous</a>
                         </li>
                     {% endif %}
 
@@ -144,10 +144,10 @@
 
                     {% if page_obj.has_next %}
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                            <a class="page-link" href="?status={{ status_filter }}&page={{ page_obj.next_page_number }}">Next</a>
                         </li>
                         <li class="page-item">
-                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+                            <a class="page-link" href="?status={{ status_filter }}&page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
                         </li>
                     {% endif %}
                 </ul>
@@ -206,9 +206,14 @@ document.addEventListener('DOMContentLoaded', function() {
     statusFilterRadios.forEach(radio => {
         radio.addEventListener('change', function() {
             currentStatusFilter = this.value;
-            console.log('Status filter changed to:', currentStatusFilter);
-            if (searchBar.value.trim()) {
+            const query = searchBar.value.trim();
+            if (query) {
                 performSearch();
+            } else {
+                const url = new URL(window.location.href);
+                url.searchParams.set('status', currentStatusFilter);
+                url.searchParams.delete('page');
+                window.location.href = url.pathname + '?' + url.searchParams.toString();
             }
         });
     });
@@ -425,17 +430,11 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function clearSearch() {
-        // Clear search pagination
-        document.getElementById('search-pagination').innerHTML = '';
-        
-        // Show regular pagination
-        const regularPagination = document.querySelector('nav[aria-label="Job pagination"]');
-        if (regularPagination) {
-            regularPagination.style.display = '';
-        }
-        
-        // Reload the page to restore original table
-        window.location.reload();
+        // Restore the job list for the current status filter (no search query)
+        const url = new URL(window.location.href);
+        url.searchParams.set('status', currentStatusFilter);
+        url.searchParams.delete('page');
+        window.location.href = url.pathname + '?' + url.searchParams.toString();
     }
 });
 </script>

@@ -809,8 +809,11 @@ class ProductQuoteLine(models.Model):
         return f"{self.product.part_no} - Qty: {self.quantity} - Total: ${self.total_price:.2f}"
 
 class AdHoc(models.Model):
-    """Model for Ad-Hoc products that are similar to regular products but are different objects."""
-    part_no = models.CharField(max_length=20, unique=True, help_text="Part number for the Ad-Hoc item")
+    """
+    One-time product snapshot for a quote line.
+    Created only from Search and Add Products on a quote — not a reusable catalog item.
+    """
+    part_no = models.CharField(max_length=20, help_text="Part number for this one-time quote item")
     description = models.CharField(max_length=80, help_text="Description of the Ad-Hoc item")
     category = models.ForeignKey(ProductCategory, on_delete=models.CASCADE, null=True, blank=True, help_text="Category for the Ad-Hoc item")
     retail_price = models.DecimalField(max_digits=19, decimal_places=2, null=True, blank=True, help_text="Retail price of the Ad-Hoc item")

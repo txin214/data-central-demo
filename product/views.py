@@ -1384,46 +1384,40 @@ def add_multiple_products(request, quote_id):
     quote = get_object_or_404(ProductQuote, id=quote_id)
 
     if request.method == "POST":
-        products = request.POST.getlist('products[]')
         quantities = {}
         price_types = {}
-        
+
         for key, value in request.POST.items():
-            # Use regex to match quantities with the format 'quantities[product_id]'
             match = re.match(r'quantities\[(\d+)\]', key)
             if match:
-                product_id = int(match.group(1))  # Extract the product ID
-                quantities[product_id] = int(value)  # Assign the quantity
-            
-            # Use regex to match price types with the format 'price_types[product_id]'
+                try:
+                    quantities[int(match.group(1))] = int(value or 0)
+                except (TypeError, ValueError):
+                    quantities[int(match.group(1))] = 0
+
             match = re.match(r'price_types\[(\d+)\]', key)
             if match:
-                product_id = int(match.group(1))  # Extract the product ID
-                price_types[product_id] = value  # Assign the price type
+                price_types[int(match.group(1))] = value
 
-        for product_id in products:
-            if product_id:
-                product = get_object_or_404(Product, id=product_id)
-                quantity = quantities.get(product.id, 0)  # Default to 0 if no quantity is provided
-                price_type = price_types.get(product.id, 'retail_sell')  # Default to retail_sell
-                
-                # Only add products with quantity >= 1
-                if quantity >= 1:
-                    # Add product to the quote using the specified price type
-                    line_item, created = ProductQuoteLine.objects.get_or_create(
-                        quote=quote,
-                        product=product,
-                        defaults={
-                            'quantity': quantity,
-                            'price_type': price_type,
-                            'product_description': product.description,
-                        }
-                    )
-                    if not created:
-                        # Update the quantity if the product already exists
-                        line_item.quantity += quantity
-                        line_item.save()
-        # Recalculate the quote subtotal
+        # Add only products with quantity > 0 (no checkbox selection required)
+        for product_id, quantity in quantities.items():
+            if quantity <= 0:
+                continue
+            product = get_object_or_404(Product, id=product_id)
+            price_type = price_types.get(product.id, 'retail_sell')
+            line_item, created = ProductQuoteLine.objects.get_or_create(
+                quote=quote,
+                product=product,
+                defaults={
+                    'quantity': quantity,
+                    'price_type': price_type,
+                    'product_description': product.description,
+                }
+            )
+            if not created:
+                line_item.quantity += quantity
+                line_item.save()
+
         quote.calculate_subtotal()
 
     return redirect('product:quote_products', quote_id=quote.id)
@@ -1766,107 +1760,72 @@ def optimized_product_list(request):
 
 @login_required
 @require_POST
-def ajax_create_adhoc(request):
-    """AJAX view to create a new Ad-Hoc item."""
-    if request.method == 'POST':
-        form = AdHocForm(request.POST)
-        if form.is_valid():
-            adhoc = form.save()
-            return JsonResponse({
-                'success': True,
-                'id': adhoc.id,
-                'part_no': adhoc.part_no,
-                'description': adhoc.description,
-                'cost': str(adhoc.cost) if adhoc.cost else '0.00',
-                'retail_price': str(adhoc.get_quote_unit_price()),
-                'category': adhoc.category.product_category if adhoc.category else '',
-                'manufacturer': adhoc.manufacturer.manufacturer_name if adhoc.manufacturer else '',
-                'vendor': adhoc.vendor.vendor_name if adhoc.vendor else '',
-            })
-        else:
-            return JsonResponse({
-                'success': False,
-                'errors': form.errors
-            }, status=400)
-    return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=405)
+def ajax_create_adhoc_for_quote(request, quote_id):
+    """
+    Create a one-time Ad-Hoc item and add it to this quote only.
+    Ad-hoc items are not reusable catalog products.
+    """
+    from django.db import transaction
 
+    quote = get_object_or_404(ProductQuote, id=quote_id)
+    form = AdHocForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
-@login_required
-@require_POST
-def ajax_add_adhoc_to_quote(request, quote_id):
-    """AJAX view to add an Ad-Hoc item to a quote."""
     try:
-        quote = get_object_or_404(ProductQuote, id=quote_id)
-        adhoc_id = request.POST.get('adhoc_id')
         quantity = int(request.POST.get('quantity', 1))
-        
-        if quantity <= 0:
-            return JsonResponse({
-                'success': False,
-                'error': 'Quantity must be greater than 0'
-            }, status=400)
-        
-        adhoc = get_object_or_404(AdHoc, id=adhoc_id)
-        
-        # Check if this adhoc is already in the quote
-        existing_line = AdHocQuoteLine.objects.filter(quote=quote, adhoc=adhoc).first()
-        if existing_line:
-            # Update quantity
-            existing_line.quantity += quantity
-            existing_line.save()
-            line_item = existing_line
-        else:
-            # Create new line item
-            line_item = AdHocQuoteLine.objects.create(
-                quote=quote,
-                adhoc=adhoc,
-                quantity=quantity,
-                unit_price=adhoc.get_quote_unit_price(),
-                adhoc_description=adhoc.description
-            )
-        
-        return JsonResponse({
-            'success': True,
-            'message': f'Added {quantity} of {adhoc.part_no} to quote',
-            'line_item_id': line_item.id,
-            'adhoc_id': adhoc.id,
-            'part_no': adhoc.part_no,
-            'description': adhoc.description,
-            'quantity': quantity,
-            'unit_price': str(line_item.unit_price),
-            'total_price': str(line_item.total_price),
-            'quote_subtotal': str(quote.subtotal)
-        })
-        
-    except (ValueError, TypeError):
-        return JsonResponse({
-            'success': False,
-            'error': 'Invalid quantity value'
-        }, status=400)
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': 'Invalid quantity value'}, status=400)
+
+    if quantity <= 0:
+        return JsonResponse({'success': False, 'error': 'Quantity must be greater than 0'}, status=400)
+
+    with transaction.atomic():
+        adhoc = form.save(commit=False)
+        adhoc.status = True
+        adhoc.save()
+        line_item = AdHocQuoteLine.objects.create(
+            quote=quote,
+            adhoc=adhoc,
+            quantity=quantity,
+            unit_price=adhoc.get_quote_unit_price(),
+            adhoc_description=adhoc.description,
+        )
+
+    return JsonResponse({
+        'success': True,
+        'message': f'Added {quantity} of {adhoc.part_no} to quote',
+        'line_item_id': line_item.id,
+        'adhoc_id': adhoc.id,
+        'part_no': adhoc.part_no,
+        'description': adhoc.description,
+        'quantity': quantity,
+        'unit_price': str(line_item.unit_price),
+        'total_price': str(line_item.total_price),
+        'quote_subtotal': str(quote.subtotal),
+    })
 
 
 @login_required
 @require_POST
 def ajax_delete_adhoc_from_quote(request, quote_id, line_item_id):
-    """AJAX view to delete an Ad-Hoc line item from a quote."""
+    """Delete an Ad-Hoc line item from a quote and remove the one-time AdHoc row."""
     try:
         quote = get_object_or_404(ProductQuote, id=quote_id)
         line_item = get_object_or_404(AdHocQuoteLine, id=line_item_id, quote=quote)
-        
-        adhoc_part_no = line_item.adhoc.part_no
+
+        adhoc = line_item.adhoc
+        adhoc_part_no = adhoc.part_no
         line_item.delete()
-        
+        if not AdHocQuoteLine.objects.filter(adhoc=adhoc).exists():
+            adhoc.delete()
+
         return JsonResponse({
             'success': True,
             'message': f'Removed {adhoc_part_no} from quote',
-            'quote_subtotal': str(quote.subtotal)
+            'quote_subtotal': str(quote.subtotal),
         })
-        
+
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -1881,23 +1840,23 @@ def ajax_update_adhoc_quantity(request, line_item_id):
     try:
         data = json.loads(request.body)
         quantity = int(data.get('quantity', 1))
-        
+
         if quantity <= 0:
             return JsonResponse({
                 'success': False,
                 'error': 'Quantity must be greater than 0'
             }, status=400)
-        
+
         line_item = get_object_or_404(AdHocQuoteLine, id=line_item_id)
         line_item.quantity = quantity
         line_item.save()
-        
+
         return JsonResponse({
             'success': True,
             'total_price': str(line_item.total_price),
             'quote_subtotal': str(line_item.quote.subtotal)
         })
-        
+
     except (ValueError, TypeError):
         return JsonResponse({
             'success': False,
@@ -1909,169 +1868,6 @@ def ajax_update_adhoc_quantity(request, line_item_id):
             'error': str(e)
         }, status=500)
 
-
-@login_required
-def adhoc_list(request):
-    """View for listing all Ad-Hoc products."""
-    # Get all active Ad-Hoc items with related data
-    adhoc_items = AdHoc.objects.select_related(
-        'category', 'manufacturer', 'vendor'
-    ).filter(status=True)
-    
-    # Add search functionality
-    search_query = request.GET.get('search', '')
-    if search_query:
-        adhoc_items = adhoc_items.filter(
-            Q(part_no__icontains=search_query) |
-            Q(description__icontains=search_query) |
-            Q(category__product_category__icontains=search_query) |
-            Q(manufacturer__manufacturer_name__icontains=search_query) |
-            Q(vendor__vendor_name__icontains=search_query)
-        )
-    
-    # Add filtering by category
-    category_filter = request.GET.get('category', '')
-    if category_filter:
-        adhoc_items = adhoc_items.filter(category_id=category_filter)
-    
-    # Add filtering by manufacturer
-    manufacturer_filter = request.GET.get('manufacturer', '')
-    if manufacturer_filter:
-        adhoc_items = adhoc_items.filter(manufacturer_id=manufacturer_filter)
-    
-    # Add filtering by vendor
-    vendor_filter = request.GET.get('vendor', '')
-    if vendor_filter:
-        adhoc_items = adhoc_items.filter(vendor_id=vendor_filter)
-
-    sort_fields = {
-        'vendor': 'vendor__vendor_name',
-        'manufacturer': 'manufacturer__manufacturer_name',
-        'description': 'description',
-        'part_no': 'part_no',
-    }
-    default_sort = ['vendor', 'manufacturer', 'description', 'part_no']
-    sort = request.GET.get('sort', 'vendor')
-    order = request.GET.get('order', 'asc')
-    if sort not in sort_fields:
-        sort = 'vendor'
-    if order not in ['asc', 'desc']:
-        order = 'asc'
-
-    primary_order = Lower(sort_fields[sort])
-    if order == 'desc':
-        primary_order = primary_order.desc()
-
-    order_by_fields = [primary_order]
-    for fallback_sort in default_sort:
-        if fallback_sort != sort:
-            order_by_fields.append(Lower(sort_fields[fallback_sort]))
-    adhoc_items = adhoc_items.order_by(*order_by_fields)
-
-    sort_links = {}
-    for field in sort_fields:
-        params = request.GET.copy()
-        params['sort'] = field
-        params['order'] = 'desc' if sort == field and order == 'asc' else 'asc'
-        params.pop('page', None)
-        sort_links[field] = params.urlencode()
-
-    total_count = adhoc_items.count()
-    paginator = Paginator(adhoc_items, 16)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    page_query_params = request.GET.copy()
-    page_query_params.pop('page', None)
-    page_query = page_query_params.urlencode()
-    page_url_prefix = f'?{page_query}&' if page_query else '?'
-    
-    # Get filter options for the template
-    categories = ProductCategory.objects.all().order_by('product_category')
-    manufacturers = Manufacturer.objects.all().order_by('manufacturer_name')
-    vendors = Vendor.objects.all().order_by('vendor_name')
-    
-    context = {
-        'adhoc_items': page_obj,
-        'page_obj': page_obj,
-        'total_count': total_count,
-        'categories': categories,
-        'manufacturers': manufacturers,
-        'vendors': vendors,
-        'search_query': search_query,
-        'category_filter': category_filter,
-        'manufacturer_filter': manufacturer_filter,
-        'vendor_filter': vendor_filter,
-        'sort': sort,
-        'order': order,
-        'sort_links': sort_links,
-        'page_url_prefix': page_url_prefix,
-    }
-    
-    return render(request, 'product/adhoc_list.html', context)
-
-
-@login_required
-def create_adhoc(request):
-    """Create a new Ad-Hoc product."""
-    if request.method == 'POST':
-        form = AdHocForm(request.POST)
-        if form.is_valid():
-            adhoc = form.save()
-            messages.success(request, f'Ad-Hoc item "{adhoc.part_no}" created successfully.')
-            return redirect('product:adhoc-list')
-    else:
-        form = AdHocForm()
-
-    dummy_adhoc = type('DummyAdHoc', (), {'id': None, 'part_no': '', 'date_entered': None, 'date_updated': None})()
-
-    return render(request, 'product/edit_adhoc.html', {
-        'form': form,
-        'adhoc': dummy_adhoc,
-        'is_view_mode': False,
-    })
-
-
-@login_required
-def edit_adhoc(request, adhoc_id):
-    """View or edit an Ad-Hoc product."""
-    adhoc = get_object_or_404(
-        AdHoc.objects.select_related('category', 'manufacturer', 'vendor'),
-        id=adhoc_id,
-    )
-    is_view_mode = request.GET.get('mode') == 'view'
-
-    if request.method == 'POST' and not is_view_mode:
-        form = AdHocForm(request.POST, instance=adhoc)
-        if form.is_valid():
-            form.save()
-            messages.success(request, f'Ad-Hoc item "{adhoc.part_no}" updated successfully.')
-            return redirect('product:adhoc-list')
-    else:
-        form = AdHocForm(instance=adhoc)
-
-    return render(request, 'product/edit_adhoc.html', {
-        'form': form,
-        'adhoc': adhoc,
-        'is_view_mode': is_view_mode,
-    })
-
-
-@login_required
-@require_POST
-def delete_adhoc(request, adhoc_id):
-    """View to delete an Ad-Hoc item."""
-    try:
-        adhoc = get_object_or_404(AdHoc, id=adhoc_id)
-        part_no = adhoc.part_no
-        adhoc.delete()
-        
-        messages.success(request, f'Ad-Hoc item "{part_no}" deleted successfully.')
-        return redirect('product:adhoc-list')
-        
-    except Exception as e:
-        messages.error(request, f'Error deleting Ad-Hoc item: {str(e)}')
-        return redirect('product:adhoc-list')
 
 def update_line_item_price_type(request, line_item_id):
     """View to update the price type of a specific line item."""

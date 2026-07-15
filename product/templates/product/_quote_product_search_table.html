@@ -6,7 +6,7 @@
     </div>
     <div class="card-body">
         <div class="alert alert-info mb-3">
-            <small><i class="fa fa-info-circle"></i> Set quantity to 1 or more for products you want to add to the quote. Select the price type for each product.</small>
+            <small><i class="fa fa-info-circle"></i> Set quantity greater than 0 for products you want to add. Only those products are added to the quote.</small>
         </div>
 <form method="post" action="{% url 'product:add_multiple_products' quote.id %}">
     {% csrf_token %}
@@ -14,7 +14,6 @@
         <table class="table table-bordered table-hover align-middle mb-0" style="font-size:13px;">
             <thead class="sticky-header">
                 <tr style="background-color: #f2f2f2;">
-                    <th>Select</th>
                     <th>Image</th>
                     <th>
                         {% if sort == 'name' and order == 'asc' %}
@@ -52,9 +51,6 @@
             <tbody>
                 {% for product, primary_image in products_with_images %}
                 <tr>
-                    <td style="text-align: center; padding: 5px;">
-                        <input type="checkbox" name="products[]" value="{{ product.id }}" style="margin: 0;">
-                    </td>
                     <td>
                         {% if primary_image %}
                             <img src="{{ primary_image.display_url }}" alt="{{ product.description }}" class="product-img-thumb" style="width: 32px; height: 32px;">
@@ -100,7 +96,7 @@
             </tbody>
             <tfoot>
                 <tr>
-                    <td colspan="9" class="p-0">
+                    <td colspan="8" class="p-0">
                         <div class="d-flex justify-content-end align-items-center gap-2 p-2">
                             <a href="{% url 'product:product_quote_list' %}" class="btn btn-outline-secondary btn-sm">Back</a>
                             <button type="submit" class="btn btn-primary btn-sm ms-2" onclick="return validateQuantities()">+Add</button>

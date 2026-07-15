@@ -2,7 +2,7 @@
 {% load static %}
 
 {% block job_content %}
-<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.1">
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=2.3">
 <link rel="stylesheet" type="text/css" href="{% static 'job/css/job_forms.css' %}?v=1.0">
 
 <div class="card mb-3 mt-3">
@@ -62,10 +62,10 @@
         <!-- PO Items -->
         <div class="row">
             <div class="col-12">
-                <h6 class="fw-bold mb-3">Purchase Order Items</h6>
+                <p class="small fw-semibold mb-2">Purchase Order Items</p>
                 {% if items %}
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover align-middle mb-0">
+                        <table class="table table-bordered table-hover align-middle mb-0 job-po-detail-items-table">
                             <thead class="sticky-header">
                                 <tr>
                                     <th>Part Number</th>
@@ -167,7 +167,7 @@
                     </div>
                 {% else %}
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover align-middle mb-0">
+                        <table class="table table-bordered table-hover align-middle mb-0 job-po-detail-items-table">
                             <thead class="sticky-header">
                                 <tr>
                                     <th>Part Number</th>

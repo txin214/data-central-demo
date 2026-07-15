@@ -1,361 +1,293 @@
 {% extends 'job/base_job.html' %}
-{% load static %}
+{% load static job_utils %}
 
 {% block job_content %}
-<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.5">
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=2.0">
 
 <style>
-.clickable-edit-row {
+.job-accounting-layout {
+    width: 100%;
+}
+.job-accounting-layout table {
+    table-layout: fixed;
+    width: 100%;
+    margin-bottom: 0;
+}
+.job-accounting-layout col.col-num { width: 4%; }
+.job-accounting-layout col.col-date { width: 9.5%; }
+.job-accounting-layout col.col-code { width: 6.5%; }
+.job-accounting-layout col.col-tax { width: 6.5%; }
+.job-accounting-layout col.col-comment { width: 39%; }
+.job-accounting-layout col.col-by { width: 10.5%; }
+.job-accounting-layout col.col-amount { width: 11.5%; }
+.job-accounting-layout col.col-last { width: 12.5%; }
+.job-accounting-layout th,
+.job-accounting-layout td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: middle;
+}
+.job-accounting-layout td.col-amount,
+.job-accounting-layout th.col-amount {
+    text-align: right;
+    white-space: nowrap;
+}
+.job-accounting-layout td.col-num,
+.job-accounting-layout th.col-num {
+    text-align: center;
+}
+.job-accounting-layout .summary-label {
+    text-align: right;
+    font-weight: 600;
+}
+.job-accounting-layout .clickable-edit-row {
     cursor: pointer;
 }
-
 .accounting-chart-wrap {
     position: relative;
     height: 320px;
 }
 </style>
 
-    <div class="d-flex justify-content-end align-items-center flex-wrap gap-2 mt-3">
-        <a href="{% url 'job:job_sales' job.id %}" class="btn btn-sm btn-outline-secondary" title="Sales">
-            Sales
-        </a>
-        <a href="{% url 'job:job_change_orders' job.id %}" class="btn btn-sm btn-outline-secondary" title="Change Orders">
-            Change Orders
-        </a>
-        <a href="{% url 'job:job_payments' job.id %}" class="btn btn-sm btn-outline-secondary" title="Payments">
-            Payments
-        </a>
-    </div>
+<div class="job-accounting-layout mt-3">
 
-    <!-- Combined Sales and Change Orders Table -->
-    <div class="table-responsive mt-2">
+    <!-- Sales -->
+    <a href="{% url 'job:job_sales' job.id %}" class="job-accounting-section-title">Sales</a>
+    <div class="table-responsive">
         <table class="table table-bordered table-hover align-middle mb-0 job-accounting-table">
+            {% include 'job/_accounting_colgroup.html' %}
             <thead class="sticky-header">
                 <tr>
-                    <th>Type</th>
+                    <th class="col-num"></th>
                     <th>Date</th>
-                    <th>Product Code</th>
-                    <th>Tax</th>
-                    <th>Description</th>
-                    <th>Sold By</th>
-                    <th>Amount</th>
+                    <th>Product</th>
+                    <th>Tax Rate</th>
+                    <th>Comment</th>
+                    <th>By</th>
+                    <th class="col-amount">Amount</th>
+                    <th>Invoice</th>
                 </tr>
             </thead>
             <tbody>
-                <!-- Sales Rows -->
-                {% for group in grouped_sales %}
-                {% if group.count > 1 %}
-                <!-- Grouped row with expand/collapse -->
-                <tr class="group-header clickable-edit-row" data-group-id="group-{{ forloop.counter }}" {% if group.sales %}{% with first_sale=group.sales|first %}data-edit-url="{% url 'job:job_sale_edit' job.id first_sale.id %}"{% endwith %}{% endif %}>
+                {% for sale in sales %}
+                <tr class="clickable-edit-row" data-edit-url="{% url 'job:job_sale_edit' job.id sale.id %}">
+                    <td class="col-num">{{ forloop.counter }}</td>
+                    <td>{{ sale.sale_date|date:"m/d/Y"|default:"" }}</td>
+                    <td>{% if sale.product_code %}{{ sale.product_code.code }}{% endif %}</td>
+                    <td>{{ sale.get_tax_display|default:"" }}</td>
                     <td>
-                        Sale
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none expand-btn" data-target="group-{{ forloop.counter }}">
-                            <i class="fas fa-chevron-right me-1"></i>
-                        </button>
-                        {{ group.sale_date|date:"M d, Y"|default:"-" }}
-                    </td>
-                    <td>
-                        {% if group.product_code %}
-                        {{ group.product_code.code }}
-                        {% else %}
-                        <span class="text-muted">-</span>
+                        {% if sale.comment %}{{ sale.comment }}
+                        {% elif sale.product_code %}{{ sale.product_code.description|default:"" }}
                         {% endif %}
                     </td>
-                    <td>
-                        {{ group.tax|default:"-" }}
-                    </td>
-                    <td>
-                        {% if group.sales %}
-                            {% with first_sale=group.sales|first %}
-                                {% if first_sale.comment %}
-                                    {{ first_sale.comment }}
-                                {% elif group.product_code %}
-                                    {{ group.product_code.description|default:"-" }}
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            {% endwith %}
-                        {% elif group.product_code %}
-                            {{ group.product_code.description|default:"-" }}
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if group.sales %}
-                            {% with first_sale=group.sales|first %}
-                                {% if first_sale.created_by %}
-                                    {{ first_sale.created_by.first_name }} {{ first_sale.created_by.last_name }}
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            {% endwith %}
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {{ group.total|floatformat:2 }}
-                        <small class="text-muted d-block">({{ group.count }} items)</small>
-                    </td>
+                    <td>{{ sale.created_by|accounting_user_label }}</td>
+                    <td class="col-amount">{{ sale.sale_amount|format_accounting_amount }}</td>
+                    <td></td>
                 </tr>
-                <!-- Individual sales rows (collapsed by default) -->
-                {% for sale in group.sales %}
-                <tr class="group-item group-{{ forloop.parentloop.counter }} clickable-edit-row" style="display: none;" data-edit-url="{% url 'job:job_sale_edit' job.id sale.id %}">
-                    <td class="ps-4">
-                        <small class="text-muted">Sale</small>
-                    </td>
-                    <td class="ps-4">
-                        <small class="text-muted">{{ sale.sale_date|date:"M d, Y"|default:"-" }}</small>
-                    </td>
-                    <td class="ps-4">
-                        <small class="text-muted">-</small>
-                    </td>
-                    <td class="ps-4">
-                        <small>{{ sale.get_tax_display|default:"-" }}</small>
-                    </td>
-                    <td class="ps-4">
-                        {% if sale.comment %}
-                            <small>{{ sale.comment }}</small>
-                        {% elif sale.product_code %}
-                            <small>{{ sale.product_code.description|default:"-" }}</small>
-                        {% else %}
-                            <small>-</small>
-                        {% endif %}
-                    </td>
-                    <td class="ps-4">
-                        <small>
-                            {% if sale.created_by %}
-                                {{ sale.created_by.first_name }} {{ sale.created_by.last_name }}
-                            {% else %}
-                                <span class="text-muted">-</span>
-                            {% endif %}
-                        </small>
-                    </td>
-                    <td class="ps-4">
-                        <small>{{ sale.sale_amount|floatformat:2 }}</small>
-                    </td>
-                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-muted py-2">&nbsp;</td></tr>
                 {% endfor %}
-                {% else %}
-                <!-- Single sale row (no grouping needed) -->
-                <tr class="clickable-edit-row" {% if group.sales %}{% with first_sale=group.sales|first %}data-edit-url="{% url 'job:job_sale_edit' job.id first_sale.id %}"{% endwith %}{% endif %}>
-                    <td>
-                        Sale
-                    </td>
-                    <td>{{ group.sale_date|date:"M d, Y"|default:"-" }}</td>
-                    <td>
-                        {% if group.product_code %}
-                        {{ group.product_code.code }}
-                        {% else %}
-                        <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {{ group.tax|default:"-" }}
-                    </td>
-                    <td>
-                        {% if group.sales %}
-                            {% with first_sale=group.sales|first %}
-                                {% if first_sale.comment %}
-                                    {{ first_sale.comment }}
-                                {% elif group.product_code %}
-                                    {{ group.product_code.description|default:"-" }}
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            {% endwith %}
-                        {% elif group.product_code %}
-                            {{ group.product_code.description|default:"-" }}
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if group.sales %}
-                            {% with first_sale=group.sales|first %}
-                                {% if first_sale.created_by %}
-                                    {{ first_sale.created_by.first_name }} {{ first_sale.created_by.last_name }}
-                                {% else %}
-                                    <span class="text-muted">-</span>
-                                {% endif %}
-                            {% endwith %}
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {{ group.total|floatformat:2 }}
-                    </td>
-                </tr>
-                {% endif %}
-                {% endfor %}
-                
-                <!-- Change Orders Rows -->
-                {% for change_order in change_orders %}
-                <tr class="clickable-edit-row" data-edit-url="{% url 'job:job_change_order_edit' job.id change_order.id %}">
-                    <td>
-                        Change Order
-                    </td>
-                    <td>{{ change_order.order_date|date:"M d, Y" }}</td>
-                    <td>
-                        {% if change_order.product_code %}
-                        {{ change_order.product_code.code }}
-                        {% else %}
-                        <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if change_order.tax %}
-                            {{ change_order.get_tax_display }}
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {{ change_order.description|truncatewords:15 }}
-                        {% if change_order.notes %}
-                        <br><small class="text-muted">{{ change_order.notes|truncatewords:10 }}</small>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if change_order.created_by %}
-                            {{ change_order.created_by.first_name }} {{ change_order.created_by.last_name }}
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if change_order.amount is not None %}
-                            {% if change_order.amount >= 0 %}
-                            +{{ change_order.amount|floatformat:2 }}
-                            {% else %}
-                            {{ change_order.amount|floatformat:2 }}
-                            {% endif %}
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-                
-                {% if not grouped_sales and not change_orders %}
-                <tr>
-                    <td colspan="7" class="text-center text-muted py-3">
-                        &nbsp;
-                    </td>
-                </tr>
-                {% endif %}
             </tbody>
-            {% if grouped_sales or change_orders %}
+            {% if sales %}
             <tfoot>
                 <tr>
-                    <td colspan="6" class="text-end"><strong>Total Sales:</strong></td>
-                    <td>{{ total_sales_amount|floatformat:2 }}</td>
+                    <td colspan="6" class="summary-label">Sales Tax:</td>
+                    <td class="col-amount">{{ total_sales_tax|format_accounting_amount }}</td>
+                    <td></td>
                 </tr>
                 <tr>
-                    <td colspan="6" class="text-end"><strong>Total Change Orders:</strong></td>
-                    <td>{{ total_change_amount|floatformat:2 }}</td>
-                </tr>
-                <tr>
-                    <td colspan="6" class="text-end"><strong>Grand Total:</strong></td>
-                    <td>{{ grand_total|floatformat:2 }}</td>
+                    <td colspan="6" class="summary-label">Total:</td>
+                    <td class="col-amount">{{ total_sales_amount|format_accounting_amount }}</td>
+                    <td></td>
                 </tr>
             </tfoot>
             {% endif %}
         </table>
     </div>
-    
-    <!-- Payments Table -->
-    <div class="table-responsive mt-4">
-        <table class="table table-bordered table-hover align-middle mb-0 job-accounting-payments-table">
+
+    <!-- Change Orders -->
+    <a href="{% url 'job:job_change_orders' job.id %}" class="job-accounting-section-title">Change Orders</a>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle mb-0 job-accounting-table">
+            {% include 'job/_accounting_colgroup.html' %}
             <thead class="sticky-header">
                 <tr>
+                    <th class="col-num"></th>
+                    <th>Date</th>
+                    <th>Product</th>
+                    <th>Tax Rate</th>
+                    <th>Comment</th>
+                    <th>By</th>
+                    <th class="col-amount">Amount</th>
+                    <th>Invoice</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for change_order in change_orders %}
+                <tr class="clickable-edit-row" data-edit-url="{% url 'job:job_change_order_edit' job.id change_order.id %}">
+                    <td class="col-num">{{ forloop.counter }}</td>
+                    <td>{{ change_order.order_date|date:"m/d/Y" }}</td>
+                    <td>{% if change_order.product_code %}{{ change_order.product_code.code }}{% endif %}</td>
+                    <td>{% if change_order.tax %}{{ change_order.get_tax_display }}{% endif %}</td>
+                    <td>{{ change_order.description }}</td>
+                    <td>{{ change_order.created_by|accounting_user_label }}</td>
+                    <td class="col-amount">
+                        {% if change_order.amount is not None %}{{ change_order.amount|format_accounting_amount }}{% endif %}
+                    </td>
+                    <td></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-muted py-2">&nbsp;</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if change_orders %}
+            <tfoot>
+                <tr>
+                    <td colspan="6" class="summary-label">Sales Tax:</td>
+                    <td class="col-amount">$0.00</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="6" class="summary-label">Total:</td>
+                    <td class="col-amount">{{ total_change_amount|format_accounting_amount }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+
+    <!-- Billings (combined) -->
+    <h6 class="job-accounting-section-title">Billings</h6>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle mb-0 job-accounting-table">
+            {% include 'job/_accounting_colgroup.html' %}
+            <thead class="sticky-header">
+                <tr>
+                    <th class="col-num"></th>
+                    <th>Date</th>
+                    <th>Product</th>
+                    <th>Tax Rate</th>
+                    <th>Comment</th>
+                    <th>By</th>
+                    <th class="col-amount">Amount</th>
+                    <th>Invoice</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for line in billing_lines %}
+                <tr class="clickable-edit-row" data-edit-url="{% url line.edit_url_name job.id line.edit_id %}">
+                    <td class="col-num">{{ forloop.counter }}</td>
+                    <td>{{ line.date|date:"m/d/Y"|default:"" }}</td>
+                    <td>{{ line.product_code }}</td>
+                    <td>{{ line.tax }}</td>
+                    <td>{{ line.comment }}</td>
+                    <td>{{ line.by|accounting_user_label }}</td>
+                    <td class="col-amount">
+                        {% if line.amount is not None %}{{ line.amount|format_accounting_amount }}{% endif %}
+                    </td>
+                    <td></td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-muted py-2">&nbsp;</td></tr>
+                {% endfor %}
+            </tbody>
+            {% if billing_lines %}
+            <tfoot>
+                <tr>
+                    <td colspan="6" class="summary-label">Sales Tax:</td>
+                    <td class="col-amount">{{ total_billing_tax|format_accounting_amount }}</td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td colspan="6" class="summary-label">Total:</td>
+                    <td class="col-amount">{{ grand_total|format_accounting_amount }}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+            {% endif %}
+        </table>
+    </div>
+
+    <!-- Payments (same column grid; headers match legacy layout) -->
+    <a href="{% url 'job:job_payments' job.id %}" class="job-accounting-section-title">Payments</a>
+    <div class="table-responsive">
+        <table class="table table-bordered table-hover align-middle mb-0 job-accounting-payments-table">
+            {% include 'job/_accounting_colgroup.html' %}
+            <thead class="sticky-header">
+                <tr>
+                    <th class="col-num"></th>
                     <th>Date</th>
                     <th>Account</th>
                     <th>Discount</th>
                     <th>Comment</th>
-                    <th>Created By</th>
-                    <th>Amount</th>
+                    <th>By</th>
+                    <th class="col-amount">Amount</th>
+                    <th>Lien Waiver</th>
                 </tr>
             </thead>
             <tbody>
                 {% for payment in payments %}
                 <tr>
-                    <td>{{ payment.date|date:"M d, Y" }}</td>
-                    <td>
-                        {% if payment.account_category %}
-                        {{ payment.account_category.description }}
-                        {% else %}
-                        <span class="text-muted">-</span>
-                        {% endif %}
+                    <td class="col-num">{{ forloop.counter }}</td>
+                    <td>{{ payment.date|date:"m/d/Y" }}</td>
+                    <td>{% if payment.account_category %}{{ payment.account_category.description }}{% endif %}</td>
+                    <td>{{ payment.discount|format_accounting_amount }}</td>
+                    <td>{{ payment.comment|default:"" }}</td>
+                    <td>{{ payment.by|accounting_user_label }}</td>
+                    <td class="col-amount">{{ payment.amount|format_accounting_amount }}</td>
+                    <td class="text-center">
+                        <a href="{% url 'job:job_payment_lien_waiver_pdf' job.id payment.id %}" target="_blank" title="Lien waiver">
+                            <i class="far fa-file-alt"></i>
+                        </a>
                     </td>
-                    <td>
-                        {% if payment.discount %}
-                        {{ payment.discount|floatformat:2 }}
-                        {% else %}
-                        <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {{ payment.comment|truncatewords:15|default:"-" }}
-                    </td>
-                    <td>
-                        {% if payment.by %}
-                            {{ payment.by.first_name }} {{ payment.by.last_name }}
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ payment.amount|floatformat:2 }}</td>
                 </tr>
                 {% empty %}
-                <tr>
-                    <td colspan="6" class="text-center text-muted py-3">
-                        &nbsp;
-                    </td>
-                </tr>
+                <tr><td colspan="8" class="text-muted py-2">&nbsp;</td></tr>
                 {% endfor %}
             </tbody>
             {% if payments %}
             <tfoot>
                 <tr>
-                    <td colspan="5" class="text-end"><strong>Total Paid:</strong></td>
-                    <td><strong>{{ total_payment_amount|floatformat:2 }}</strong></td>
+                    <td colspan="6" class="summary-label">Total Paid:</td>
+                    <td class="col-amount">{{ total_payment_amount|format_accounting_amount }}</td>
+                    <td></td>
                 </tr>
                 <tr>
-                    <td colspan="5" class="text-end"><strong>Discounts:</strong></td>
-                    <td><strong>{{ total_discount|floatformat:2 }}</strong></td>
+                    <td colspan="6" class="summary-label">Discounts:</td>
+                    <td class="col-amount">{{ total_discount|format_accounting_amount }}</td>
+                    <td></td>
                 </tr>
                 <tr>
-                    <td colspan="5" class="text-end"><strong>Total:</strong></td>
-                    <td><strong>{{ payment_total|floatformat:2 }}</strong></td>
+                    <td colspan="6" class="summary-label">Total:</td>
+                    <td class="col-amount">{{ payment_total|format_accounting_amount }}</td>
+                    <td></td>
                 </tr>
                 <tr>
-                    <td colspan="5" class="text-end"><strong>Due Now:</strong></td>
-                    <td><strong>{{ due_now|floatformat:2 }}</strong></td>
+                    <td colspan="6" class="summary-label">Due Now:</td>
+                    <td class="col-amount">{{ due_now|format_accounting_amount }}</td>
+                    <td></td>
                 </tr>
             </tfoot>
             {% endif %}
         </table>
     </div>
+</div>
 
-    <div class="card mt-4">
-        <div class="card-header py-2">
-            <strong class="small">Accounting Breakdown</strong>
-        </div>
-        <div class="card-body">
-            {% if has_chart_data %}
-            <div class="accounting-chart-wrap">
-                <canvas id="accountingTrendChart"></canvas>
-            </div>
-            {% else %}
-            <div class="text-muted small">No accounting activity yet to chart.</div>
-            {% endif %}
-        </div>
+<div class="card mt-4">
+    <div class="card-header py-2">
+        <strong class="small">Accounting Breakdown</strong>
     </div>
+    <div class="card-body">
+        {% if has_chart_data %}
+        <div class="accounting-chart-wrap">
+            <canvas id="accountingTrendChart"></canvas>
+        </div>
+        {% else %}
+        <div class="text-muted small">No accounting activity yet to chart.</div>
+        {% endif %}
+    </div>
+</div>
 
 {% endblock %}
 
@@ -368,18 +300,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const totalPaid = Number('{{ payment_total|floatformat:2 }}');
     const chartCanvas = document.getElementById('accountingTrendChart');
     if (chartCanvas) {
-        const pieLabels = ['Sales', 'Change Orders', 'Payments'];
-        const pieData = [
-            Math.abs(totalSales),
-            Math.abs(totalChangeOrders),
-            Math.abs(totalPaid),
-        ];
         new Chart(chartCanvas, {
             type: 'doughnut',
             data: {
-                labels: pieLabels,
+                labels: ['Sales', 'Change Orders', 'Payments'],
                 datasets: [{
-                    data: pieData,
+                    data: [
+                        Math.abs(totalSales),
+                        Math.abs(totalChangeOrders),
+                        Math.abs(totalPaid),
+                    ],
                     backgroundColor: [
                         'rgba(37, 99, 235, 0.70)',
                         'rgba(147, 51, 234, 0.70)',
@@ -397,58 +327,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const v = Number(context.parsed.y || 0);
-                                const raw = Number(context.raw || 0);
-                                return `${context.label}: $${raw.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-                            }
-                        }
-                    },
-                    legend: {
-                        position: 'bottom'
-                    }
+                    legend: { position: 'bottom' }
                 }
             }
         });
     }
 
-    // Handle expand/collapse for grouped sales
-    const tableBody = document.querySelector('table tbody');
-    if (tableBody) {
-        tableBody.addEventListener('click', function(e) {
-            const expandBtn = e.target.closest('.expand-btn');
-            if (expandBtn) {
-                const targetId = expandBtn.dataset.target;
-                const icon = expandBtn.querySelector('i');
-                const groupItems = document.querySelectorAll(`.group-item.${targetId}`);
-                
-                groupItems.forEach(item => {
-                    if (item.style.display === 'none') {
-                        item.style.display = '';
-                        icon.classList.remove('fa-chevron-right');
-                        icon.classList.add('fa-chevron-down');
-                    } else {
-                        item.style.display = 'none';
-                        icon.classList.remove('fa-chevron-down');
-                        icon.classList.add('fa-chevron-right');
-                    }
-                });
-                return;
-            }
-
-            const editableRow = e.target.closest('tr.clickable-edit-row');
-            if (!editableRow || !editableRow.dataset.editUrl) {
-                return;
-            }
-            if (e.target.closest('a, button, input, select, textarea, label, form')) {
-                return;
-            }
-            window.location.href = editableRow.dataset.editUrl;
+    document.querySelectorAll('.job-accounting-layout').forEach(function(layout) {
+        layout.addEventListener('click', function(e) {
+            const row = e.target.closest('tr.clickable-edit-row');
+            if (!row || !row.dataset.editUrl) return;
+            if (e.target.closest('a, button, input, select, textarea, label, form')) return;
+            window.location.href = row.dataset.editUrl;
         });
-    }
+    });
 });
 </script>
 {% endblock %}
-

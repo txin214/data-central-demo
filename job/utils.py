@@ -82,11 +82,10 @@ def group_sitework_by_category(sitework_quote):
     category_groups = defaultdict(list)
     
     # Use prefetched siteworkquoteline_set if available, otherwise fall back to sql_quotes
-    if hasattr(sitework_quote, '_prefetched_objects_cache') and 'siteworkquoteline_set' in sitework_quote._prefetched_objects_cache:
-        line_items = sitework_quote._prefetched_objects_cache['siteworkquoteline_set']
+    if hasattr(sitework_quote, '_prefetched_objects_cache') and 'sql_quotes' in sitework_quote._prefetched_objects_cache:
+        line_items = sitework_quote._prefetched_objects_cache['sql_quotes']
     else:
-        # Fallback: prefetch if not already prefetched
-        line_items = sitework_quote.sql_quotes.select_related('cat', 'subcat').all()
+        line_items = sitework_quote.sql_quotes.select_related('cat').all()
     
     for line_item in line_items:
         # Only include items with quantity greater than 0
@@ -100,17 +99,9 @@ def group_sitework_by_category(sitework_quote):
         formatted_items = []
         
         for item in items:
-            # Calculate price using same logic as PDF
-            if item.editallowance == '1':
-                price = (item.allowance / item.profit) if item.profit > 0 else 0.0
-            else:
-                price = (item.quantity * item.unitamount) + item.basecost
-            
-            # BILLCODE override
-            if item.quantity > 0 and item.calckey == 558:
-                price = 100.0
-            
-            category_subtotal += float(price)
+            price = float(SiteworkQuoteLine.objects.compute_line_price(item))
+
+            category_subtotal += price
             
             unit_amount_str = format_currency(item.unitamount)
             price_str = format_currency(price)

@@ -8,11 +8,11 @@
 <div class="card mb-3 mt-3">
     <div class="card-header">
         <h6 class="card-title mb-0">
-            {% if action == 'create' %}Create{% elif action == 'update' %}Update{% else %}View{% endif %} Product Quote
+            {% if action == 'create' %}Create{% else %}Update{% endif %} Product Quote
         </h6>
     </div>
     <div class="card-body">
-        <form method="POST" {% if action != 'view' %}{% if action == 'update' %}action="{% url 'job:job_product_quote_update_specific' job.id product_quote.id %}"{% else %}action="{% url 'job:job_product_quote_create' job.id %}"{% endif %}{% endif %}>
+        <form method="POST" {% if action == 'update' %}action="{% url 'job:job_product_quote_update_specific' job.id product_quote.id %}"{% else %}action="{% url 'job:job_product_quote_create' job.id %}"{% endif %}>
             {% csrf_token %}
             <!-- Ensure customer is included for ModelForm validation, though view will set it from job -->
             {% if action == 'create' %}
@@ -27,12 +27,8 @@
                 <!-- Quote Name -->
                 <div class="col-md-4 mb-2">
                     <label class="form-label small" for="id_name">Quote Name</label>
-                    {% if action == 'view' %}
-                        <div class="form-control form-control-sm bg-light">{{ form.name.value|default:"-" }}</div>
-                    {% else %}
-                        {{ form.name }}
-                        {{ form.name.errors }}
-                    {% endif %}
+                    {{ form.name }}
+                    {{ form.name.errors }}
                 </div>
 
                 <!-- Customer (Fixed display) -->
@@ -44,12 +40,8 @@
                 <!-- Status -->
                 <div class="col-md-4 mb-2">
                     <label class="form-label small" for="id_status">Status</label>
-                    {% if action == 'view' %}
-                        <div class="form-control form-control-sm bg-light">{{ form.status.value|yesno:"Active,Inactive"|default:"-" }}</div>
-                    {% else %}
-                        {{ form.status }}
-                        {{ form.status.errors }}
-                    {% endif %}
+                    {{ form.status }}
+                    {{ form.status.errors }}
                 </div>
             </div>
 
@@ -57,46 +49,28 @@
                 <!-- Comments -->
                 <div class="col-md-12 mb-2">
                     <label class="form-label small" for="id_comments">Comments</label>
-                    {% if action == 'view' %}
-                        <div class="form-control form-control-sm bg-light" style="min-height: 80px;">{{ form.comments.value|default:"-" }}</div>
-                    {% else %}
-                        {{ form.comments }}
-                        {{ form.comments.errors }}
-                    {% endif %}
+                    {{ form.comments }}
+                    {{ form.comments.errors }}
                 </div>
             </div>
             
             <!-- Action Buttons -->
-            {% if action != 'view' %}
             <div class="row mt-3">
                 <div class="col-12">
                     {% if action == 'create' %}
                     <button type="submit" class="btn btn-outline-primary btn-sm">
                         Create Product Quote
                     </button>
-                    {% endif %}
-                    {% if product_quote %}
-                    <a href="{% url 'job:job_quote_products' job.id product_quote.id %}" class="btn btn-sm btn-outline-info" title="Products in quote">
-                        Products
-                    </a>
+                    {% else %}
+                    <button type="submit" class="btn btn-outline-primary btn-sm">
+                        Save
+                    </button>
                     {% endif %}
                     <a href="{% url 'job:job_quotes' job.id %}" class="btn btn-outline-secondary btn-sm">
                         Cancel
                     </a>
                 </div>
             </div>
-            {% else %}
-            <div class="row mt-3">
-                <div class="col-12">
-                    <a href="{% url 'job:job_quote_products' job.id product_quote.id %}" class="btn btn-sm btn-outline-info" title="Products in quote">
-                        Products
-                    </a>
-                    <a href="{% url 'job:job_quotes' job.id %}" class="btn btn-outline-secondary btn-sm">
-                        Back to Product Quotes
-                    </a>
-                </div>
-            </div>
-            {% endif %}
         </form>
     </div>
 </div>

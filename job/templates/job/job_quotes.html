@@ -42,9 +42,6 @@
                     <td>{{ product_quote.quoted_date|date:"M d, Y" }}</td>
                     <td class="text-center">
                         <div class="d-flex gap-2">
-                            <a href="{% url 'job:job_product_quote_view' job.id product_quote.id %}" class="btn btn-sm btn-outline-secondary" title="View quote">
-                                View
-                            </a>
                             <a href="{% url 'job:job_product_quote_update_specific' job.id product_quote.id %}" class="btn btn-sm btn-outline-primary" title="Edit quote">
                                 Edit
                             </a>
@@ -74,7 +71,7 @@
                 {% empty %}
                 <tr>
                     <td colspan="6" class="text-center text-muted py-3">
-                        &nbsp;
+                        <p class="text-muted small mb-0">No product quotes found.</p>
                     </td>
                 </tr>
                 {% endfor %}

@@ -10,6 +10,30 @@ def format_currency(value):
         return "$0.00"
     return f"${value:.2f}"
 
+
+@register.filter
+def format_accounting_amount(value):
+    """Currency with thousands separators; negatives in parentheses."""
+    if value is None:
+        return "$0.00"
+    try:
+        amount = float(value)
+    except (TypeError, ValueError):
+        return "$0.00"
+    if amount < 0:
+        return f"(${abs(amount):,.2f})"
+    return f"${amount:,.2f}"
+
+
+@register.filter
+def accounting_user_label(user):
+    """Short label for accounting By column (username preferred)."""
+    if not user:
+        return ""
+    if getattr(user, "username", None):
+        return user.username
+    return user.get_full_name() or ""
+
 @register.filter
 def format_date(value, format_string="m/d/Y"):
     """Format a date with fallback to empty string"""

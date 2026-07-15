@@ -53,7 +53,6 @@ urlpatterns = [
     path('<int:job_id>/product-quote/create/', views.job_product_quote_create, name='job_product_quote_create'),
     path('<int:job_id>/product-quote/update/', views.job_product_quote_update, name='job_product_quote_update'),
     path('<int:job_id>/product-quote/update/<int:quote_id>/', views.job_product_quote_update, name='job_product_quote_update_specific'),
-    path('<int:job_id>/product-quote/view/<int:quote_id>/', views.job_product_quote_view, name='job_product_quote_view'),
     path('<int:job_id>/remove-product-quote/<int:quote_id>/', views.remove_product_quote_from_job, name='remove_product_quote'),
     path('<int:job_id>/quote/<int:quote_id>/products/', views.job_quote_products, name='job_quote_products'),
     path('<int:job_id>/quote/<int:quote_id>/add-multiple-products/', views.add_multiple_products_to_job_quote, name='add_multiple_products_to_job_quote'),
@@ -69,7 +68,6 @@ urlpatterns = [
     path('<int:job_id>/sitework/create/', views.job_sitework_create, name='job_sitework_create'),
     path('<int:job_id>/sitework/update/', views.job_sitework_update, name='job_sitework_update'),
     path('<int:job_id>/sitework/update/<int:quote_id>/', views.job_sitework_update, name='job_sitework_update_specific'),
-    path('<int:job_id>/sitework/view/<int:quote_id>/', views.job_sitework_view_quote, name='job_sitework_view_quote'),
     path('<int:job_id>/sitework/delete/', views.job_sitework_delete, name='job_sitework_delete'),
     path('<int:job_id>/sitework/<int:quote_id>/pdf-preview/', views.job_sitework_quote_pdf_preview, name='job_sitework_quote_pdf_preview'),
     # Carpenter progress

@@ -2,26 +2,10 @@
 {% load static %}
 
 {% block job_content %}
-<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=1.5">
+<link rel="stylesheet" type="text/css" href="{% static 'job/css/job_tables.css' %}?v=2.1">
 <link rel="stylesheet" type="text/css" href="{% static 'job/css/job_forms.css' %}?v=1.0">
 
-    <div class="d-flex justify-content-between align-items-center mt-3">
-        <div>
-            <a href="{% url 'job:job_purchase_order_create' job.id %}" class="btn btn-sm btn-success">
-                <i class="fas fa-plus me-1"></i>
-                Add Purchase Order
-            </a>
-        </div>
-        <div>
-            <form method="post" action="{% url 'job:job_po_sync_from_primary_quote' job.id %}" onsubmit="return confirm('Sync items from the primary product quote into POs?');" class="d-inline">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-sm btn-outline-secondary">Sync from Primary Quote</button>
-            </form>
-            <a href="{% url 'job:job_purchase_orders_export_confirmed' job.id %}" class="btn btn-sm btn-outline-primary ms-1">Export Confirmed Items</a>
-        </div>
-    </div>
-
-    <div class="table-responsive mt-2">
+    <div class="table-responsive mt-3">
         <table class="table table-bordered table-hover align-middle mb-0 job-po-table">
             <thead class="sticky-header">
                 <tr>
@@ -36,6 +20,21 @@
                 </tr>
             </thead>
             <tbody>
+                <tr class="border-top-0 border-bottom-0">
+                    <td colspan="5" class="border-top-0 border-bottom-0 border-end-0 py-2">
+                        <a href="{% url 'job:job_purchase_order_create' job.id %}" class="btn btn-sm btn-success">
+                            <i class="fas fa-plus me-1"></i>
+                            Add Purchase Order
+                        </a>
+                    </td>
+                    <td colspan="3" class="border-top-0 border-bottom-0 border-start-0 py-2 text-end">
+                        <form method="post" action="{% url 'job:job_po_sync_from_primary_quote' job.id %}" onsubmit="return confirm('Sync items from the primary product quote into POs?');" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-primary" title="Copy products from the primary product quote into draft POs, grouped by each product's preferred vendor.">Sync Quote</button>
+                        </form>
+                        <a href="{% url 'job:job_purchase_orders_export_confirmed' job.id %}" class="btn btn-sm btn-primary ms-1" title="View all confirmed PO line items across this job's purchase orders.">Confirmed Items</a>
+                    </td>
+                </tr>
                 {% regroup purchase_orders by vendor as pos_by_vendor %}
 
                 {% if pos_by_vendor %}
@@ -78,7 +77,7 @@
                 {% else %}
                     <tr>
                         <td colspan="8" class="text-center text-muted py-3">
-                            &nbsp;
+                            <p class="text-muted small mb-0">No purchase orders found.</p>
                         </td>
                     </tr>
                 {% endif %}

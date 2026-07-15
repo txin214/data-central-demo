@@ -72,6 +72,16 @@ def infer_product_code_from_category_label(category_label: str | None) -> Produc
     return ProductCode.objects.filter(code=code_str).first()
 
 
+def sale_line_comment(product_code, fallback: str = "") -> str:
+    """Uppercase product description for sales/accounting comment column."""
+    base = ""
+    if product_code and getattr(product_code, "description", None):
+        base = product_code.description
+    elif fallback:
+        base = fallback
+    return base.strip().upper()
+
+
 def aggregate_primary_quote_cost_by_category(quote) -> dict[int | None, Decimal]:
     """
     Sum extended cost (unit cost × qty) by ProductCategory id for catalog and ad-hoc lines.
@@ -178,7 +188,7 @@ def generate_sales_from_primary_quote(job, user) -> dict:
     }
     mx = _default_misc_code()
     created = 0
-    today = date.today()
+    today = job.datesold.date() if job.datesold else date.today()
     tax_rate = quote.get_tax_rate()
     cost_totals = aggregate_primary_quote_cost_by_category(quote)
 
@@ -210,13 +220,7 @@ def generate_sales_from_primary_quote(job, user) -> dict:
             if product_code is None:
                 product_code = mx
 
-            if tax_rate > 0:
-                comment = (
-                    f"Generated from primary quote #{quote.id} — {label} "
-                    f"(incl. tax at {tax_rate * 100:.2f}% on ${subtotal:.2f} pretax)"
-                )
-            else:
-                comment = f"Generated from primary quote #{quote.id} — {label}"
+            comment = sale_line_comment(product_code, label)
 
             Sale.objects.create(
                 job=job,
@@ -233,3 +237,122 @@ def generate_sales_from_primary_quote(job, user) -> dict:
             created += 1
 
     return {"success": True, "created": created}
+
+
+def _primary_product_quote(job):
+    return job.product_quotes.filter(is_primary=True).first()
+
+
+def _primary_sitework_quote(job):
+    sw = job.sitework_quotes.filter(is_primary=True).first()
+    if not sw:
+        sw = job.sitework_quotes.order_by("-id").first()
+    return sw
+
+
+def _job_tax_rate(job) -> Decimal:
+    quote = _primary_product_quote(job)
+    if quote:
+        return quote.get_tax_rate()
+    if job.county_id and job.county.taxrate is not None:
+        return Decimal(str(job.county.taxrate))
+    return Decimal("0")
+
+
+def compute_sitework_sale_amounts(job, tax_rate: Decimal | None = None) -> dict | None:
+    """
+    Sitework SL sale basis: category subtotals + 5% contingency + 28% overhead.
+    Sitework is not taxed for accounting/sales.
+    Returns None when there is no priced sitework.
+    """
+    from .utils import group_sitework_by_category
+
+    primary_sw = _primary_sitework_quote(job)
+    if not primary_sw:
+        return None
+
+    categories_data = group_sitework_by_category(primary_sw)
+    sitework_subtotal = Decimal("0")
+    for category in categories_data:
+        subtotal_str = category["subtotal"].replace("$", "").replace(",", "")
+        try:
+            sitework_subtotal += Decimal(subtotal_str)
+        except (ValueError, TypeError):
+            pass
+
+    if sitework_subtotal <= 0:
+        return None
+
+    contingency_pct = Decimal("0.05")
+    overhead_pct = Decimal("0.28")
+    contingency = sitework_subtotal * contingency_pct
+    overhead = sitework_subtotal * overhead_pct
+    sitework_total = (sitework_subtotal + contingency + overhead).quantize(Decimal("0.01"))
+
+    return {
+        "subtotal": sitework_subtotal.quantize(Decimal("0.01")),
+        "total": sitework_total,
+        "tax": Decimal("0.00"),
+        "sale_total": sitework_total,
+        "tax_rate": Decimal("0"),
+    }
+
+
+def generate_sitework_sale_from_primary_quote(job, user) -> dict:
+    """Create or refresh the SL sale row from the primary sitework quote."""
+    from product.models import ProductCode
+
+    from .models import Sale
+
+    amounts = compute_sitework_sale_amounts(job)
+    if not amounts:
+        return {"success": False, "error": "No priced sitework for this job."}
+
+    sl = ProductCode.objects.filter(code="SL").first()
+    if not sl:
+        return {"success": False, "error": "Product code SL is not configured."}
+
+    sale_date = job.datesold.date() if job.datesold else date.today()
+    comment = sale_line_comment(sl, "Site Work")
+
+    with transaction.atomic():
+        Sale.objects.filter(job=job, product_code=sl).delete()
+        Sale.objects.create(
+            job=job,
+            product_code=sl,
+            cost_amount=amounts["subtotal"],
+            tax_amount=Decimal("0.00"),
+            sale_amount=amounts["sale_total"],
+            sale_date=sale_date,
+            tax="EX",
+            comment=comment,
+            created_by=user if user and getattr(user, "is_authenticated", False) else None,
+        )
+
+    return {"success": True, "created": 1}
+
+
+def sync_sales_when_job_sold(job, user) -> dict:
+    """
+    When a job is sold, populate Sales from the primary product quote and sitework,
+    then create SLW billing milestones. Skips quote/sitework generation if non-SLW
+    sales already exist (manual Save Sales). Billing schedule sync is always attempted.
+    """
+    from django.db.models import Q
+
+    from .billing_schedule import SLW_CODE, ensure_reverse_wip_amount, sync_billing_schedule_sales
+
+    if not job.sold:
+        return {"skipped": "not_sold"}
+
+    result: dict = {}
+    has_product_sales = job.sales.filter(~Q(product_code__code=SLW_CODE)).exists()
+
+    if not has_product_sales:
+        result["quote"] = generate_sales_from_primary_quote(job, user)
+        result["sitework"] = generate_sitework_sale_from_primary_quote(job, user)
+
+    result["billing"] = sync_billing_schedule_sales(job, created_by=user)
+    if ensure_reverse_wip_amount(job):
+        result["reverse_wip_corrected"] = True
+    return result
