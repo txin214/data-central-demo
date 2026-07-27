@@ -1,7 +1,7 @@
 """
 PDF Generator for Job Contracts using ReportLab
 """
-from decimal import Decimal
+from decimal import *
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse, HttpResponseRedirect
 from django.urls import reverse
@@ -629,7 +629,7 @@ def job_pdf_generate(request, job_id):
             if co.amount is not None:
                 change_orders_total += co.amount
         total_contract_amount += change_orders_total
-        
+        print(f"total_contract_amount {total_contract_amount}")
         # Project Description Section
         # Use consistent first column width across all sections to align with "Total Attachments"
         available_width = 170*mm
@@ -759,14 +759,70 @@ def job_pdf_generate(request, job_id):
         story.append(title_table)
         story.append(Spacer(1, 2*mm))
         
-        payment_data = [
-            ['Deposit Payment:', ''],
-            ['Start Payment:', ''],
-            ['Progress Payment 1 ADJ:', ''],
-            ['Progress Payment 2:', ''],
-            ['Progress Payment 3:', ''],
-        ]
-        
+        # Calculate payment schedule based on job details
+        print("Payment Calcs begin")
+        with localcontext() as ctx:
+            ctx.prec=6
+            ctx.rounding = ROUND_FLOOR
+            p1 = p2 = p3 = p4 = p5 = Decimal('0.00')
+            print(f"total_contract_amount {total_contract_amount}")
+            total=ctx.create_decimal_from_float(float(total_contract_amount))
+            print(f"total: {total, format_currency(total)}")
+            joblimit = ctx.create_decimal_from_float(10000.00)
+            print(f"joblimit={joblimit} vs total={total}")
+            # bigger jobs have 5 payments
+            if (total > joblimit):
+                # all the payments, rounded down to even dollar
+                p1 = total * ctx.create_decimal_from_float(0.40)
+                p1 = p1.quantize(Decimal("0"), rounding=ROUND_HALF_DOWN)
+                print(f"p1={p1} {format_currency(p1)}")
+               
+                p2 = total * ctx.create_decimal_from_float(0.20)
+                p2 = p2.quantize(Decimal("0"), rounding=ROUND_HALF_DOWN)               
+                print(f"p2={p2} {format_currency(p2)}")
+                
+                p3 = total * ctx.create_decimal_from_float(0.20)
+                p3 = p3.quantize(Decimal("0"), rounding=ROUND_HALF_DOWN)               
+                print(f"p3={p3,format_currency(p3)}")
+                
+                p4 = total * ctx.create_decimal_from_float(0.15)
+                p4 = p4.quantize(Decimal("0"), rounding=ROUND_HALF_DOWN)               
+                print(f"p4={p4,format_currency(p4)}")
+                
+                p5 = total * ctx.create_decimal_from_float(0.05)
+                p5 = p5.quantize(Decimal("0"), rounding=ROUND_HALF_DOWN)               
+                print(f"p5={p5,format_currency(p5)}")
+
+                print(f"total {format_currency(total_contract_amount)}")
+                rsum = p1+p2+p3+p4+p5
+                print(f"rsum: {format_currency(rsum)}")            
+                remainder = ctx.subtract(total_contract_amount, rsum)
+                print(f"remainder: {format_currency(remainder)}")
+                p4 = ctx.add(p4,remainder)
+                print(f"p4: {format_currency(p4)}")
+
+                payment_data = [
+                    ['Deposit Payment:', format_currency(p1)],
+                    ['Start Payment:', format_currency(p2)],
+                    ['Rough-In Payment:', format_currency(p3)],
+                    ['Substantial Completion Payment:', format_currency(p4)],
+                    ['Punch Completion Payment:', format_currency(p5)],
+                ]
+            else:
+                # just two payments, no rounding
+                p1=total * ctx.create_decimal_from_float(0.75)
+                print(f"p1={p1} {format_currency(p1)}")
+
+                p5=total * ctx.create_decimal_from_float(0.25)
+                print(f"p5={p5,format_currency(p5)}")
+                payment_data = [
+                    ['Deposit Payment:', format_currency(p1)],
+                    ['Punch Completion Payment:', format_currency(p5)],
+                ]
+            
+            
+        print(f"payment_data: {payment_data}")
+          
         payment_table = Table(payment_data, colWidths=[first_col_width, second_col_width])
         payment_table.setStyle(TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
