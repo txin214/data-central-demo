@@ -2123,12 +2123,9 @@ class JobDetailUpdateView(DetailView):
         # self.object is already set by the parent class's get_context_data
         job = self.object
         
-        # Add form for editing if in edit mode
-        if self.request.GET.get('edit') == 'true':
-            context['form'] = JobForm(instance=job)
-            context['is_edit_mode'] = True
-        else:
-            context['is_edit_mode'] = False
+        # Job tab is always editable — no separate view/edit switch.
+        context['form'] = JobForm(instance=job)
+        context['is_edit_mode'] = True
         
         # Add related data for dropdowns
         context['users'] = User.objects.filter(is_active=True).order_by('first_name', 'last_name')

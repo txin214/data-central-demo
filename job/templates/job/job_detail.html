@@ -94,15 +94,6 @@ gmp-place-autocomplete::part(input) {
                                 Job Information
                             </h6>
                             <div class="d-flex align-items-center gap-2">
-                                {% if is_edit_mode %}
-                                    <a href="{% url 'job:job_detail' job.pk %}" class="btn btn-sm btn-outline-secondary" title="View">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                {% else %}
-                                    <a href="{% url 'job:job_detail' job.pk %}?edit=true" class="btn btn-sm btn-outline-primary" title="Edit">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                {% endif %}
                                 <a href="{% url 'job:job_print_preview' job.id %}" class="btn btn-sm btn-outline-secondary" title="Print Preview">
                                     <i class="fas fa-print"></i>
                                 </a>
@@ -116,43 +107,23 @@ gmp-place-autocomplete::part(input) {
                             <!-- 5 fields in one row -->
                             <div class="col-md-2 mb-2">
                                 <label class="form-label small">Designer</label>
-                                {% if is_edit_mode %}
                                     {{ form.soldby }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.soldby.get_full_name|default:job.soldby|default:'Not assigned' }}" readonly>
-                                {% endif %}
                             </div>
                             <div class="col-md-2 mb-2">
                                 <label class="form-label small">Lead Carpenter</label>
-                                {% if is_edit_mode %}
                                     {{ form.carpenter }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.carpenter.get_full_name|default:job.carpenter|default:'Not assigned' }}" readonly>
-                                {% endif %}
                             </div>
                             <div class="col-md-2 mb-2">
                                 <label class="form-label small">Job Type</label>
-                                {% if is_edit_mode %}
                                     {{ form.jobtype }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.jobtype.name|default:'Not specified' }}" readonly>
-                                {% endif %}
                             </div>
                             <div class="col-md-2 mb-2">
                                 <label class="form-label small">Coordinator</label>
-                                {% if is_edit_mode %}
                                     {{ form.coordinator }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.coordinator.get_full_name|default:job.coordinator|default:'Not assigned' }}" readonly>
-                                {% endif %}
                             </div>
                             <div class="col-md-2 mb-2">
                                 <label class="form-label small">Terms</label>
-                                {% if is_edit_mode %}
                                     {{ form.terms }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.get_terms_display|default:'Not specified' }}" readonly>
-                                {% endif %}
                             </div>
                         </div>
                         <!-- Status on separate row -->
@@ -161,22 +132,12 @@ gmp-place-autocomplete::part(input) {
                                 <label class="form-label small">Status</label>
                                 <div class="d-flex gap-3">
                                     <div class="form-check form-check-inline">
-                                        {% if is_edit_mode %}
                                             {{ form.active }}
                                             <label for="{{ form.active.id_for_label }}" class="form-check-label small">Active</label>
-                                        {% else %}
-                                            <input type="checkbox" class="form-check-input" {% if job.active %}checked{% endif %} disabled>
-                                            <label class="form-check-label small">Active</label>
-                                        {% endif %}
                                     </div>
                                     <div class="form-check form-check-inline">
-                                        {% if is_edit_mode %}
                                             {{ form.sold }}
                                             <label for="{{ form.sold.id_for_label }}" class="form-check-label small">Sold</label>
-                                        {% else %}
-                                            <input type="checkbox" class="form-check-input" {% if job.sold %}checked{% endif %} disabled>
-                                            <label class="form-check-label small">Sold</label>
-                                        {% endif %}
                                     </div>
                                 </div>
                             </div>
@@ -190,11 +151,7 @@ gmp-place-autocomplete::part(input) {
                             <!-- 4 fields in one row -->
                             <div class="col-md-3 mb-2">
                                 <label class="form-label small">Customer</label>
-                                {% if is_edit_mode %}
                                     {{ form.customer }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.customer.first_name }} {{ job.customer.last_name }}" readonly>
-                                {% endif %}
                             </div>
                             <div class="col-md-3 mb-2">
                                 <label class="form-label small">Phone</label>
@@ -206,7 +163,6 @@ gmp-place-autocomplete::part(input) {
                             </div>
                             <div class="col-md-3 mb-2">
                                 <label class="form-label small">Job Code</label>
-                                {% if is_edit_mode %}
                                     {% with cust_code=job.customer.cust_code|default:'XXXXX' %}
                                         <div class="d-flex align-items-center" id="job_code_container">
                                             <span class="form-control form-control-sm border-0 bg-transparent p-0 me-1" style="width: auto; min-width: fit-content;" id="job_code_prefix">{{ cust_code }}-</span>
@@ -223,9 +179,6 @@ gmp-place-autocomplete::part(input) {
                                             <input type="hidden" id="job_code_full" name="job_code" value="{{ job.job_code|default:'' }}">
                                         </div>
                                     {% endwith %}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.job_code|default:'Not set' }}" readonly>
-                                {% endif %}
                             </div>
                         </div>
                         
@@ -236,7 +189,6 @@ gmp-place-autocomplete::part(input) {
                         <div class="row">
                             <div class="col-md-12 mb-2">
                                 <label class="form-label small">Address</label>
-                                {% if is_edit_mode %}
                                     {# Hidden input that stores the actual address value for form submission #}
                                     {{ form.address }}
                                     
@@ -255,9 +207,9 @@ gmp-place-autocomplete::part(input) {
                                     
                                     {# Autocomplete search (hidden by default) #}
                                     <div id="address-search-container" style="display: none;">
-                                        <div id="address-autocomplete-wrapper"></div>
-                                        <div class="mt-1">
-                                            <button type="button" id="cancel-address-change-btn" class="btn btn-sm btn-secondary">
+                                        <div class="d-flex gap-1 align-items-center">
+                                            <div id="address-autocomplete-wrapper" class="flex-grow-1"></div>
+                                            <button type="button" id="cancel-address-change-btn" class="btn btn-sm btn-secondary flex-shrink-0">
                                                 Cancel
                                             </button>
                                         </div>
@@ -267,42 +219,23 @@ gmp-place-autocomplete::part(input) {
                                     <script>
                                         var jobAddress = '{{ job.address|default:""|escapejs }}';
                                     </script>
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.address|default:'Not specified' }}" readonly>
-                                {% endif %}
                             </div>
                             <div class="col-md-4 mb-2">
                                 <label class="form-label small">City</label>
-                                {% if is_edit_mode %}
                                     {{ form.city }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.city|default:'Not specified' }}" readonly>
-                                {% endif %}
                             </div>
 
                             <div class="col-md-2 mb-2">
                                 <label class="form-label small">State</label>
-                                {% if is_edit_mode %}
                                     {{ form.state }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.state|default:'Not specified' }}" readonly>
-                                {% endif %}
                             </div>
                             <div class="col-md-2 mb-2">
                                 <label class="form-label small">Zip</label>
-                                {% if is_edit_mode %}
                                     {{ form.zip }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.zip|default:'Not specified' }}" readonly>
-                                {% endif %}
                             </div>
                             <div class="col-md-4 mb-2">
                                 <label class="form-label small">County</label>
-                                {% if is_edit_mode %}
                                     {{ form.county }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.county.name|default:'Not specified' }}" readonly>
-                                {% endif %}
                             </div>
                                                     </div>
                         
@@ -311,11 +244,7 @@ gmp-place-autocomplete::part(input) {
                         <!-- Job Description Section -->
                         <h6 class="small text-muted mb-2" style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase;">Job Description</h6>
                         <div class="mb-2">
-                            {% if is_edit_mode %}
                                 {{ form.job_description }}
-                            {% else %}
-                                <textarea class="form-control form-control-sm" rows="3" readonly>{{ job.job_description|default:'No description provided' }}</textarea>
-                            {% endif %}
                         </div>
                         
                         <hr class="my-3">
@@ -325,96 +254,43 @@ gmp-place-autocomplete::part(input) {
                         <div class="row g-2">
                             <div class="col-md-4">
                                 <label class="form-label small">Initial Contact</label>
-                                {% if is_edit_mode %}
                                     {{ form.initalcontactdate }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.initalcontactdate|date:'Y-m-d'|default:'Not set' }}" readonly>
-                                {% endif %}
                                 <label class="form-label small mt-2">Initial Measure</label>
-                                {% if is_edit_mode %}
                                     {{ form.initialmeasuredate }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.initialmeasuredate|date:'Y-m-d'|default:'Not set' }}" readonly>
-                                {% endif %}
                                 <label class="form-label small mt-2">Present #1</label>
-                                {% if is_edit_mode %}
                                     {{ form.present1 }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.present1|date:'Y-m-d'|default:'Not set' }}" readonly>
-                                {% endif %}
                                 <label class="form-label small mt-2">Present #2</label>
-                                {% if is_edit_mode %}
                                     {{ form.present2 }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.present2|date:'Y-m-d'|default:'Not set' }}" readonly>
-                                {% endif %}
                                 <label class="form-label small mt-2">Present #3</label>
-                                {% if is_edit_mode %}
                                     {{ form.present3 }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.present3|date:'Y-m-d'|default:'Not set' }}" readonly>
-                                {% endif %}
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label small">Date Sold</label>
-                                {% if is_edit_mode %}
                                     {{ form.datesold }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.datesold|date:'Y-m-d'|default:'Not set' }}" readonly>
-                                {% endif %}
                                 <label class="form-label small mt-2">Start Date</label>
-                                {% if is_edit_mode %}
                                     {{ form.startdate }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.startdate|date:'Y-m-d'|default:'Not set' }}" readonly>
-                                {% endif %}
                                 <label class="form-label small mt-2">Completion</label>
-                                {% if is_edit_mode %}
                                     {{ form.completDate }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.completDate|date:'Y-m-d'|default:'Not set' }}" readonly>
-                                {% endif %}
                                 <label class="form-label small mt-2">Cabinet Needed</label>
-                                {% if is_edit_mode %}
                                     {{ form.cabneededdate }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.cabneededdate|date:'Y-m-d'|default:'Not set' }}" readonly>
-                                {% endif %}
                                 <label class="form-label small mt-2">Top Install</label>
-                                {% if is_edit_mode %}
                                     {{ form.topinstalldate }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.topinstalldate|date:'Y-m-d'|default:'Not set' }}" readonly>
-                                {% endif %}
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label small">Actual Start Date</label>
-                                {% if is_edit_mode %}
                                     {{ form.actualstart }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.actualstart|date:'Y-m-d'|default:'Not set' }}" readonly>
-                                {% endif %}
                                 <label class="form-label small mt-2">Actual End Date</label>
-                                {% if is_edit_mode %}
                                     {{ form.actualend }}
-                                {% else %}
-                                    <input type="text" class="form-control form-control-sm" value="{{ job.actualend|date:'Y-m-d'|default:'Not set' }}" readonly>
-                                {% endif %}
                             </div>
                         </div>
                         
-                        <!-- Form Actions for Edit Mode -->
-                        {% if is_edit_mode %}
+                        <!-- Form Actions -->
                         <hr class="my-3">
-                        <div class="d-flex justify-content-between">
-                            <a href="{% url 'job:job_detail' job.pk %}" class="btn btn-secondary btn-sm">
-                                Cancel
-                            </a>
-                            <button type="submit" class="btn btn-primary btn-sm">
-                                Save Changes
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-outline-primary btn-sm">
+                                Update
                             </button>
                         </div>
-                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -808,13 +684,6 @@ function waitForJQuery(callback) {
 
 waitForJQuery(function() {
     $(document).ready(function() {
-    // Debug: Log when edit button is clicked
-    $('a[href*="edit=true"]').click(function(e) {
-        console.log('Edit button clicked!');
-        console.log('Href:', $(this).attr('href'));
-    });
-    
-    // Handle form submission
     // Update job code by combining prefix and suffix
     function updateJobCode() {
         var prefix = $('#job_code_prefix').text().trim();
@@ -823,79 +692,75 @@ waitForJQuery(function() {
             $('#job_code_full').val(prefix + suffix);
         }
     }
-    
-    // Extract suffix from existing job code on page load
-    {% if is_edit_mode %}
-    $(document).ready(function() {
-        var existingJobCode = $('#job_code_full').val();
-        var prefix = $('#job_code_prefix').text().trim(); // This includes the dash
-        
-        function setJobCodeSuffix(suffix) {
-            if (!suffix) {
-                return;
-            }
-            var $select = $('#job_code_suffix');
-            var upperSuffix = suffix.toUpperCase();
-            if (!$select.find('option[value="' + upperSuffix + '"]').length) {
-                $select.append($('<option>', { value: upperSuffix, text: upperSuffix }));
-            }
-            $select.val(upperSuffix);
-        }
+    // Expose for the suffix <select onchange="updateJobCode();">
+    window.updateJobCode = updateJobCode;
 
-        if (existingJobCode && existingJobCode.startsWith(prefix)) {
-            setJobCodeSuffix(existingJobCode.substring(prefix.length));
-        } else if (existingJobCode && existingJobCode.includes('-')) {
-            var parts = existingJobCode.split('-');
-            if (parts.length > 1 && parts[1].length > 0) {
-                setJobCodeSuffix(parts[1]);
-            }
+    // Extract suffix from existing job code on page load
+    var existingJobCode = $('#job_code_full').val();
+    var prefix = $('#job_code_prefix').text().trim(); // This includes the dash
+
+    function setJobCodeSuffix(suffix) {
+        if (!suffix) {
+            return;
         }
-        
-        // Hide the original address input (it will be used for form submission only)
-        var addressInput = document.getElementById('id_address');
-        if (addressInput) {
-            addressInput.type = 'hidden';
-            // Ensure it has the initial value
-            if (typeof jobAddress !== 'undefined' && jobAddress) {
-                addressInput.value = jobAddress;
-            }
+        var $select = $('#job_code_suffix');
+        var upperSuffix = suffix.toUpperCase();
+        if (!$select.find('option[value="' + upperSuffix + '"]').length) {
+            $select.append($('<option>', { value: upperSuffix, text: upperSuffix }));
         }
-        
-        // Handle "Change Address" button
-        var changeAddressBtn = document.getElementById('change-address-btn');
-        var cancelAddressBtn = document.getElementById('cancel-address-change-btn');
-        var displayContainer = document.getElementById('address-display-container');
-        var searchContainer = document.getElementById('address-search-container');
-        
-        if (changeAddressBtn && searchContainer && displayContainer) {
-            changeAddressBtn.addEventListener('click', function() {
-                displayContainer.style.display = 'none';
-                searchContainer.style.display = 'block';
-                
-                // Initialize autocomplete if not already done
-                if (!window.addressAutocompleteInitialized) {
-                    initAddressAutocomplete();
-                    window.addressAutocompleteInitialized = true;
-                }
+        $select.val(upperSuffix);
+    }
+
+    if (existingJobCode && existingJobCode.startsWith(prefix)) {
+        setJobCodeSuffix(existingJobCode.substring(prefix.length));
+    } else if (existingJobCode && existingJobCode.includes('-')) {
+        var parts = existingJobCode.split('-');
+        if (parts.length > 1 && parts[1].length > 0) {
+            setJobCodeSuffix(parts[1]);
+        }
+    }
+
+    // Hide the original address input (it will be used for form submission only).
+    // Map/weather always use the saved job address from the server — they are NOT
+    // refreshed while typing or when picking a place from autocomplete.
+    var addressInput = document.getElementById('id_address');
+    if (addressInput) {
+        addressInput.type = 'hidden';
+        if (typeof jobAddress !== 'undefined' && jobAddress) {
+            addressInput.value = jobAddress;
+        }
+    }
+
+    // Handle "Change Address" button — only updates form fields, not map/weather
+    var changeAddressBtn = document.getElementById('change-address-btn');
+    var cancelAddressBtn = document.getElementById('cancel-address-change-btn');
+    var displayContainer = document.getElementById('address-display-container');
+    var searchContainer = document.getElementById('address-search-container');
+
+    if (changeAddressBtn && searchContainer && displayContainer) {
+        changeAddressBtn.addEventListener('click', function() {
+            displayContainer.style.display = 'none';
+            searchContainer.style.display = 'block';
+
+            if (!window.addressAutocompleteInitialized) {
+                initAddressAutocomplete();
+                window.addressAutocompleteInitialized = true;
+            }
+        });
+
+        if (cancelAddressBtn) {
+            cancelAddressBtn.addEventListener('click', function() {
+                searchContainer.style.display = 'none';
+                displayContainer.style.display = 'block';
             });
-            
-            if (cancelAddressBtn) {
-                cancelAddressBtn.addEventListener('click', function() {
-                    searchContainer.style.display = 'none';
-                    displayContainer.style.display = 'block';
-                });
-            }
         }
-    });
-    {% endif %}
-    
+    }
+
     $('#jobForm').submit(function(e) {
-        // Update job code before submission
         if ($('#job_code_suffix').length) {
             updateJobCode();
         }
-        
-        // Basic validation
+
         var customer = $('#id_customer').val();
         if (!customer) {
             alert('Please select a customer.');
@@ -904,18 +769,8 @@ waitForJQuery(function() {
         }
         return true;
     });
-    
-    // Map updates only on form save - no AJAX updates while typing
-    // Map will be updated server-side after form submission
-    
-    // Add some interactivity for edit mode
-    {% if is_edit_mode %}
-    // Focus on first editable field when in edit mode
-    setTimeout(function() {
-        $('input:not([readonly]), select:not([disabled]), textarea:not([readonly])').first().focus();
-    }, 100);
-    
-    // Initialize Google Places Autocomplete for address search
+
+    // Initialize Google Places Autocomplete for address search (form fields only)
     function initAddressAutocomplete() {
         var addressWrapper = document.getElementById('address-autocomplete-wrapper');
         if (!addressWrapper) return;
@@ -942,6 +797,7 @@ waitForJQuery(function() {
         searchInput.className = 'form-control form-control-sm';
         searchInput.placeholder = 'Search for an address...';
         searchInput.id = 'address-search-input';
+        searchInput.style.width = '100%';
         
         addressWrapper.appendChild(searchInput);
         
@@ -1002,7 +858,8 @@ waitForJQuery(function() {
                 addressDisplayField.value = fullAddress;
             }
             
-            // Update other form fields
+            // Update other form fields only — do NOT refresh map/weather here.
+            // Map and weather stay on the saved job address until Update is clicked.
             if (city && document.getElementById('id_city')) {
                 document.getElementById('id_city').value = city;
             }
@@ -1012,7 +869,7 @@ waitForJQuery(function() {
             if (zip && document.getElementById('id_zip')) {
                 document.getElementById('id_zip').value = zip;
             }
-            
+
             // Hide search container, show display container
             if (searchContainer && displayContainer) {
                 searchContainer.style.display = 'none';
@@ -1020,7 +877,6 @@ waitForJQuery(function() {
             }
         });
     }
-    {% endif %}
     });
 });
 </script>
