@@ -1,7 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
 {% block extrahead %}
-<link rel="stylesheet" href="{% static 'css/pagination.css' %}">
 <link rel="stylesheet" href="{% static 'css/table_styles.css' %}">
 {% endblock %}
 {% block content %}
@@ -23,29 +22,32 @@
         justify-content: flex-end;
         margin-left: auto;
         padding-right: 0;
-        min-width: 400px;
+        min-width: 280px;
     }
     .action-bar .search-container input {
         flex: 1;
-        min-width: 350px;
+        min-width: 220px;
     }
 </style>
 <div class="container-fluid mt-4">
     <div class="d-flex justify-content-between align-items-center mb-2">
         <div>
             <span class="fw-bold text-primary" style="font-size: 1.1rem; letter-spacing: 1px;">ALLEN KITCHEN & BATH</span>
-            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Sales List</h2>
+            <h2 class="fw-bold mb-0" style="font-size: 2rem;">Sales order</h2>
+        </div>
+        <div>
+            <a id="salesOrdersPrintBtn"
+               href="{% url 'job:sales_orders_pdf' %}?user={{ user_filter }}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}"
+               target="_blank"
+               class="btn btn-sm btn-outline-primary">
+                Print
+            </a>
         </div>
     </div>
     <div class="action-bar">
-        <form method="get" action="{% url 'job:sales_list' %}" class="d-flex align-items-center gap-2 w-100" id="filterForm">
-            <select name="type" id="typeFilter" class="form-select form-select-sm" onchange="document.getElementById('filterForm').submit()">
-                <option value="all" {% if type_filter == 'all' %}selected{% endif %}>All</option>
-                <option value="sale" {% if type_filter == 'sale' %}selected{% endif %}>Sales Only</option>
-                <option value="change_order" {% if type_filter == 'change_order' %}selected{% endif %}>Change Orders Only</option>
-            </select>
-            <select name="user" id="userFilter" class="form-select form-select-sm" onchange="document.getElementById('filterForm').submit()">
-                <option value="all" {% if user_filter == 'all' %}selected{% endif %}>All Users</option>
+        <form method="get" action="{% url 'job:sales_list' %}" class="d-flex align-items-center gap-2 w-100 flex-wrap">
+            <select name="user" id="userFilter" class="form-select form-select-sm">
+                <option value="" {% if not user_filter %}selected{% endif %}>Sales Person</option>
                 {% for user in users %}
                     <option value="{{ user.id }}" {% if user_filter == user.id|stringformat:"s" %}selected{% endif %}>
                         {% if user.first_name or user.last_name %}
@@ -56,304 +58,71 @@
                     </option>
                 {% endfor %}
             </select>
-            <input type="date" name="start_date" id="startDate" class="form-control form-control-sm" value="{{ start_date }}" placeholder="Start Date" style="width: 180px;" onchange="document.getElementById('filterForm').submit()">
-            <input type="date" name="end_date" id="endDate" class="form-control form-control-sm" value="{{ end_date }}" placeholder="End Date" style="width: 180px;" onchange="document.getElementById('filterForm').submit()">
+            <input type="date" name="start_date" id="startDate" class="form-control form-control-sm" value="{{ start_date }}" style="width: 180px;" placeholder="Start Date">
+            <input type="date" name="end_date" id="endDate" class="form-control form-control-sm" value="{{ end_date }}" style="width: 180px;" placeholder="End Date">
             <div class="search-container">
-                <input type="text" id="jobCodeSearch" class="form-control form-control-sm" placeholder="Search by Job Code..." value="{{ search_query }}">
-                <button type="button" id="clearSearch" class="btn btn-sm btn-outline-secondary ms-2" style="display: {% if search_query %}inline-block{% else %}none{% endif %};">Clear</button>
+                <input type="text" name="search" id="jobCodeSearch" class="form-control form-control-sm" placeholder="Search by Job Code..." value="{{ search_query }}">
             </div>
-            {% if request.GET.page %}
-                <input type="hidden" name="page" value="{{ request.GET.page }}">
-            {% endif %}
+            <button type="submit" class="btn btn-sm btn-outline-primary">Apply</button>
+            <a href="{% url 'job:sales_list' %}" class="btn btn-sm btn-outline-secondary">Clear</a>
         </form>
     </div>
     <div class="table-responsive">
         <table class="table table-bordered table-hover align-middle mb-0">
             <thead class="sticky-header">
                 <tr>
-                    <th>Type</th>
-                    <th>Job Code</th>
+                    <th>Job</th>
+                    <th>Last Paid</th>
                     <th>Customer</th>
-                    <th>Sold By</th>
-                    <th>Date</th>
-                    <th>Amount</th>
-                    <th>Product Code</th>
-                    <th>Description</th>
+                    <th>Sales Person</th>
+                    <th class="text-end">Sold</th>
                     <th>Actions</th>
                 </tr>
             </thead>
-            <tbody id="sales-table-body">
-                {% for item in items %}
+            <tbody>
+                {% for group in grouped_by_user %}
+                {% for row in group.jobs %}
                 <tr>
+                    <td>{{ row.job.job_code|default:'-' }}</td>
+                    <td>{% if row.last_paid %}{{ row.last_paid|date:"n/j/Y" }}{% else %}<span class="text-muted">-</span>{% endif %}</td>
+                    <td>{{ row.customer_name|upper }}</td>
                     <td>
-                        {{ item.type }}
-                    </td>
-                    <td>{{ item.job.job_code|default:'-' }}</td>
-                    <td>{{ item.customer.first_name }} {{ item.customer.last_name }}</td>
-                    <td>
-                        {% if item.sales_person %}
-                            {{ item.sales_person.first_name }} {{ item.sales_person.last_name }}
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>{{ item.date|date:"m/d/Y"|default:'-' }}</td>
-                    <td>
-                        {% if item.type == 'Change Order' and item.amount >= 0 %}
-                            +${{ item.amount|floatformat:2|default:"0.00" }}
-                        {% else %}
-                            ${{ item.amount|floatformat:2|default:"0.00" }}
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if item.product_code %}
-                            {{ item.product_code.code }}
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if item.description %}
-                            {{ item.description|truncatewords:10 }}
-                        {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <div class="d-flex gap-1 flex-wrap">
-                            <a href="{% url 'job:job_detail' item.job.id %}" class="btn btn-sm btn-outline-primary">View Job</a>
-                            {% if item.type == 'Sale' %}
-                                <a href="{% url 'job:job_sale_view' item.job.id item.obj.id %}" class="btn btn-sm btn-outline-secondary">View Detail</a>
-                            {% elif item.type == 'Change Order' %}
-                                <a href="{% url 'job:job_change_order_edit' item.job.id item.obj.id %}" class="btn btn-sm btn-outline-secondary">View Detail</a>
+                        {% if group.user %}
+                            {% if group.user.first_name or group.user.last_name %}
+                                {{ group.user.first_name }} {{ group.user.last_name }}
+                            {% else %}
+                                {{ group.user.username }}
                             {% endif %}
-                        </div>
+                        {% else %}
+                            Unassigned
+                        {% endif %}
+                    </td>
+                    <td class="text-end">{{ row.sold_amount|floatformat:2 }}</td>
+                    <td>
+                        <a href="{% url 'job:job_detail' row.job.id %}" class="btn btn-sm btn-outline-primary">View Job</a>
                     </td>
                 </tr>
+                {% endfor %}
                 {% empty %}
                 <tr>
-                    <td colspan="9" class="text-center text-muted py-4">No sales or change orders found</td>
+                    <td colspan="6" class="text-center text-muted py-4">No sold jobs found</td>
                 </tr>
                 {% endfor %}
             </tbody>
+            {% if grouped_by_user %}
+            <tfoot>
+                <tr>
+                    <td colspan="3"></td>
+                    <td><strong>Grand Total:</strong></td>
+                    <td class="text-end"><strong>${{ grand_total|floatformat:2 }}</strong></td>
+                    <td></td>
+                </tr>
+            </tfoot>
+            {% endif %}
         </table>
     </div>
-    
     <div class="mt-2 text-end text-muted small" style="margin-right: 0; padding-right: 0;">
-        Total Items: {{ total_items }}
+        Total Jobs: {{ total_jobs }}
     </div>
-    
-    <!-- Pagination Navigation -->
-    {% if paginator.num_pages > 1 %}
-    <nav aria-label="Sales pagination" id="salesRegularPagination" class="mt-2 d-flex justify-content-center">
-        <div class="d-flex align-items-center gap-2">
-            <!-- Page jump input -->
-            <div class="d-flex align-items-center gap-1 page-jump-container">
-                <span class="text-muted small">Go to:</span>
-                <input type="number" id="salesPageJumpInput" class="form-control form-control-sm" style="width: 70px;" min="1" max="{{ paginator.num_pages }}" placeholder="Page">
-                <button class="btn btn-sm btn-outline-primary" onclick="jumpToSalesPage()">Go</button>
-            </div>
-            
-            <!-- Pagination controls -->
-            <ul class="pagination pagination-sm mb-0">
-                <!-- First page -->
-                {% if page_obj.number > 1 %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page=1{% if type_filter != 'all' %}&type={{ type_filter }}{% endif %}{% if user_filter != 'all' %}&user={{ user_filter }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}" aria-label="First">
-                            <span aria-hidden="true">&laquo;&laquo;</span>
-                        </a>
-                    </li>
-                {% endif %}
-                
-                <!-- Previous page -->
-                {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if type_filter != 'all' %}&type={{ type_filter }}{% endif %}{% if user_filter != 'all' %}&user={{ user_filter }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}" aria-label="Previous">
-                            <span aria-hidden="true">&laquo;</span>
-                        </a>
-                    </li>
-                {% endif %}
-                
-                <!-- Page numbers with smart range -->
-                {% for num in page_obj.paginator.page_range %}
-                    {% if num == page_obj.number %}
-                        <li class="page-item active">
-                            <span class="page-link">{{ num }}</span>
-                        </li>
-                    {% elif num > page_obj.number|add:'-4' and num < page_obj.number|add:'4' %}
-                        <li class="page-item">
-                            <a class="page-link" href="?page={{ num }}{% if type_filter != 'all' %}&type={{ type_filter }}{% endif %}{% if user_filter != 'all' %}&user={{ user_filter }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}">{{ num }}</a>
-                        </li>
-                    {% elif num == page_obj.number|add:'-4' or num == page_obj.number|add:'4' %}
-                        <li class="page-item disabled">
-                            <span class="page-link">...</span>
-                        </li>
-                    {% endif %}
-                {% endfor %}
-                
-                <!-- Next page -->
-                {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if type_filter != 'all' %}&type={{ type_filter }}{% endif %}{% if user_filter != 'all' %}&user={{ user_filter }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}" aria-label="Next">
-                            <span aria-hidden="true">&raquo;</span>
-                        </a>
-                    </li>
-                {% endif %}
-                
-                <!-- Last page -->
-                {% if page_obj.number < page_obj.paginator.num_pages %}
-                    <li class="page-item">
-                        <a class="page-link" href="?page={{ paginator.num_pages }}{% if type_filter != 'all' %}&type={{ type_filter }}{% endif %}{% if user_filter != 'all' %}&user={{ user_filter }}{% endif %}{% if start_date %}&start_date={{ start_date }}{% endif %}{% if end_date %}&end_date={{ end_date }}{% endif %}{% if search_query %}&search={{ search_query|urlencode }}{% endif %}" aria-label="Last">
-                            <span aria-hidden="true">&raquo;&raquo;</span>
-                        </a>
-                    </li>
-                {% endif %}
-            </ul>
-            
-            <!-- Page info -->
-            <span class="text-muted small ms-2">
-                Page {{ page_obj.number }} of {{ paginator.num_pages }}
-            </span>
-        </div>
-    </nav>
-    {% endif %}
 </div>
-
-<script>
-function jumpToSalesPage() {
-    const input = document.getElementById('salesPageJumpInput');
-    if (!input) {
-        return;
-    }
-    
-    const rawValue = parseInt(input.value, 10);
-    if (isNaN(rawValue) || rawValue < 1) {
-        return;
-    }
-    
-    const maxPages = parseInt(input.getAttribute('max'), 10) || 1;
-    const targetPage = Math.min(Math.max(rawValue, 1), maxPages);
-    
-    const url = new URL(window.location.href);
-    url.searchParams.set('page', targetPage);
-    // Preserve type filter if it exists
-    const typeFilter = document.getElementById('typeFilter');
-    if (typeFilter && typeFilter.value !== 'all') {
-        url.searchParams.set('type', typeFilter.value);
-    } else {
-        url.searchParams.delete('type');
-    }
-    // Preserve user filter if it exists
-    const userFilter = document.getElementById('userFilter');
-    if (userFilter && userFilter.value !== 'all') {
-        url.searchParams.set('user', userFilter.value);
-    } else {
-        url.searchParams.delete('user');
-    }
-    // Preserve date filters if they exist
-    const startDate = document.getElementById('startDate');
-    if (startDate && startDate.value) {
-        url.searchParams.set('start_date', startDate.value);
-    } else {
-        url.searchParams.delete('start_date');
-    }
-    const endDate = document.getElementById('endDate');
-    if (endDate && endDate.value) {
-        url.searchParams.set('end_date', endDate.value);
-    } else {
-        url.searchParams.delete('end_date');
-    }
-    
-    // Preserve search query if it exists
-    const searchInput = document.getElementById('jobCodeSearch');
-    if (searchInput && searchInput.value.trim()) {
-        url.searchParams.set('search', searchInput.value.trim());
-    } else {
-        url.searchParams.delete('search');
-    }
-    
-    window.location.href = url.toString();
-}
-
-// AJAX search functionality
-document.addEventListener('DOMContentLoaded', function() {
-    const searchInput = document.getElementById('jobCodeSearch');
-    const clearButton = document.getElementById('clearSearch');
-    const tableBody = document.getElementById('sales-table-body');
-    let searchTimeout;
-    
-    if (searchInput) {
-        // Debounced search - wait 500ms after user stops typing
-        searchInput.addEventListener('input', function() {
-            clearTimeout(searchTimeout);
-            const searchValue = this.value.trim();
-            
-            // Show/hide clear button
-            if (clearButton) {
-                clearButton.style.display = searchValue ? 'inline-block' : 'none';
-            }
-            
-            searchTimeout = setTimeout(function() {
-                performSearch(searchValue);
-            }, 500);
-        });
-        
-        // Also search on Enter key
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                clearTimeout(searchTimeout);
-                performSearch(this.value.trim());
-            }
-        });
-    }
-    
-    if (clearButton) {
-        clearButton.addEventListener('click', function() {
-            if (searchInput) {
-                searchInput.value = '';
-                clearButton.style.display = 'none';
-                performSearch('');
-            }
-        });
-    }
-    
-    function performSearch(searchValue) {
-        // Build URL with all current filters
-        const url = new URL(window.location.origin + '{% url "job:sales_list" %}');
-        
-        // Preserve type filter
-        const typeFilter = document.getElementById('typeFilter');
-        if (typeFilter && typeFilter.value !== 'all') {
-            url.searchParams.set('type', typeFilter.value);
-        }
-        
-        // Preserve user filter
-        const userFilter = document.getElementById('userFilter');
-        if (userFilter && userFilter.value !== 'all') {
-            url.searchParams.set('user', userFilter.value);
-        }
-        
-        // Preserve date filters
-        const startDate = document.getElementById('startDate');
-        if (startDate && startDate.value) {
-            url.searchParams.set('start_date', startDate.value);
-        }
-        
-        const endDate = document.getElementById('endDate');
-        if (endDate && endDate.value) {
-            url.searchParams.set('end_date', endDate.value);
-        }
-        
-        // Add search query
-        if (searchValue) {
-            url.searchParams.set('search', searchValue);
-        }
-        
-        // Reload page with new filters
-        window.location.href = url.toString();
-    }
-});
-</script>
 {% endblock %}
-

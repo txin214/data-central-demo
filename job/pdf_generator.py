@@ -2305,3 +2305,224 @@ def lien_waiver_pdf_generate(request, job_id, payment_id):
         print(f"Lien Waiver PDF Generation Error: {str(e)}")
         print(f"Traceback: {traceback.format_exc()}")
         return HttpResponseRedirect(reverse('job:job_payments', args=[job_id]))
+
+
+def sales_orders_pdf_generate(request):
+    """Generate Sales Orders PDF report with job-contract header/footer."""
+    from datetime import datetime
+    from io import BytesIO
+    import os
+
+    from django.conf import settings
+    from reportlab.lib import colors
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import mm
+    from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+
+    from job.sales_orders_report import build_sales_orders_report
+
+    report = build_sales_orders_report(request)
+    rows = report['flat_rows']
+    grand_total = report['grand_total']
+    start_date_obj = report['start_date_obj']
+    end_date_obj = report['end_date_obj']
+
+    def fmt_short_date(d):
+        if not d:
+            return ''
+        return f'{d.month}/{d.day}/{d.year}'
+
+    if start_date_obj and end_date_obj:
+        title_text = (
+            f"Sales Orders - Alpha {fmt_short_date(start_date_obj)} - "
+            f"{fmt_short_date(end_date_obj)}"
+        )
+    elif start_date_obj:
+        title_text = f"Sales Orders - Alpha {fmt_short_date(start_date_obj)} -"
+    elif end_date_obj:
+        title_text = f"Sales Orders - Alpha - {fmt_short_date(end_date_obj)}"
+    else:
+        title_text = "Sales Orders - Alpha"
+
+    try:
+        pdf_buffer = BytesIO()
+        # Header contact ends ~34–36mm from top; keep a small gap before title.
+        doc = SimpleDocTemplate(
+            pdf_buffer,
+            pagesize=A4,
+            leftMargin=20 * mm,
+            rightMargin=20 * mm,
+            topMargin=40 * mm,
+            bottomMargin=25 * mm,
+        )
+        styles = getSampleStyleSheet()
+        page_width, page_height = A4
+
+        def draw_header_footer(canvas, doc_obj):
+            """Same header/footer style as job contract PDF."""
+            try:
+                canvas.saveState()
+                logo_path = os.path.join(settings.BASE_DIR, 'crm', 'static', 'crm', 'nologo.png')
+                if os.path.exists(logo_path):
+                    try:
+                        logo_width = 140
+                        logo_height = 52
+                        logo_x = 20 * mm
+                        logo_y = (page_height - 14 * mm) - logo_height
+                        canvas.drawImage(logo_path, logo_x, logo_y, width=logo_width, height=logo_height)
+                    except Exception:
+                        pass
+
+                canvas.setFont("Helvetica-Bold", 10)
+                canvas.setFillColor(colors.black)
+                canvas.drawRightString(page_width - 20 * mm, page_height - 18 * mm, "800-227-8575")
+                canvas.drawRightString(
+                    page_width - 20 * mm,
+                    page_height - 24 * mm,
+                    "2219 S. Stoughton Rd, Madison WI 53716    608-274-9933",
+                )
+                canvas.drawRightString(
+                    page_width - 20 * mm,
+                    page_height - 30 * mm,
+                    "18525 W. Bluemound Rd,Brookfield WI 53045    262-395-7100",
+                )
+                canvas.restoreState()
+
+                canvas.saveState()
+                canvas.setFont("Helvetica", 9)
+                canvas.setFillColor(colors.black)
+                footer_y = 12 * mm
+                canvas.drawString(20 * mm, footer_y, "Div. Allen Construction Services, Inc.")
+                canvas.drawCentredString(page_width / 2, footer_y, f"{canvas.getPageNumber()}")
+                current_date = datetime.now().strftime("%m/%d/%Y")
+                canvas.drawRightString(page_width - 20 * mm, footer_y, f"Date: {current_date}")
+                canvas.restoreState()
+            except Exception:
+                pass
+
+        story = []
+        available_width = page_width - 40 * mm
+
+        title_style = ParagraphStyle(
+            'SalesOrdersTitle',
+            parent=styles['Normal'],
+            fontSize=12,
+            textColor=colors.white,
+            alignment=TA_CENTER,
+            fontName='Helvetica-Bold',
+            leading=14,
+        )
+        title_table = Table(
+            [[Paragraph(title_text, title_style)]],
+            colWidths=[available_width],
+        )
+        title_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.Color(0.35, 0.35, 0.35)),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        story.append(title_table)
+        story.append(Spacer(1, 4 * mm))
+
+        header_style = ParagraphStyle(
+            'SalesOrdersHeader',
+            parent=styles['Normal'],
+            fontSize=9,
+            fontName='Helvetica-Bold',
+            alignment=TA_LEFT,
+        )
+        header_right_style = ParagraphStyle(
+            'SalesOrdersHeaderRight',
+            parent=styles['Normal'],
+            fontSize=9,
+            fontName='Helvetica-Bold',
+            alignment=TA_RIGHT,
+        )
+        cell_style = ParagraphStyle(
+            'SalesOrdersCell',
+            parent=styles['Normal'],
+            fontSize=9,
+            fontName='Helvetica',
+            alignment=TA_LEFT,
+        )
+        total_label_style = ParagraphStyle(
+            'SalesOrdersTotalLabel',
+            parent=styles['Normal'],
+            fontSize=9,
+            fontName='Helvetica-Bold',
+            alignment=TA_LEFT,
+        )
+
+        col_widths = [
+            available_width * 0.18,
+            available_width * 0.14,
+            available_width * 0.30,
+            available_width * 0.22,
+            available_width * 0.16,
+        ]
+
+        # Use plain strings for Sold so right-edge aligns consistently.
+        table_data = [[
+            Paragraph('Job', header_style),
+            Paragraph('Last Paid', header_style),
+            Paragraph('Customer', header_style),
+            Paragraph('Sales Person', header_style),
+            Paragraph('Sold', header_right_style),
+        ]]
+
+        for row in rows:
+            last_paid = fmt_short_date(row['last_paid']) if row['last_paid'] else ''
+            sold_str = f"{row['sold_amount']:,.2f}"
+            table_data.append([
+                Paragraph(row['job_code'], cell_style),
+                Paragraph(last_paid, cell_style),
+                Paragraph((row['customer_name'] or '-').upper(), cell_style),
+                Paragraph(row['sales_person_name'], cell_style),
+                sold_str,
+            ])
+
+        table_data.append([
+            '',
+            '',
+            '',
+            Paragraph('Grand Total:', total_label_style),
+            f"${grand_total:,.2f}",
+        ])
+
+        data_table = Table(table_data, colWidths=col_widths, repeatRows=1)
+        data_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('LEFTPADDING', (0, 0), (3, -1), 2),
+            ('RIGHTPADDING', (0, 0), (3, -1), 2),
+            ('LEFTPADDING', (4, 0), (4, -1), 0),
+            ('RIGHTPADDING', (4, 0), (4, -1), 0),
+            ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
+            ('LINEABOVE', (0, -1), (-1, -1), 1, colors.black),
+            ('ALIGN', (4, 0), (4, -1), 'RIGHT'),
+            ('FONTNAME', (4, 1), (4, -2), 'Helvetica'),
+            ('FONTSIZE', (4, 1), (4, -2), 9),
+            ('FONTNAME', (4, -1), (4, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (4, -1), (4, -1), 9),
+        ]))
+        story.append(data_table)
+
+        doc.build(story, onFirstPage=draw_header_footer, onLaterPages=draw_header_footer)
+
+        pdf_bytes = pdf_buffer.getvalue()
+        pdf_buffer.close()
+
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = 'inline; filename="sales_orders.pdf"'
+        return response
+    except Exception as e:
+        import traceback
+        print(f"Sales Orders PDF Generation Error: {str(e)}")
+        print(f"Traceback: {traceback.format_exc()}")
+        return HttpResponseRedirect(reverse('job:sales_list'))

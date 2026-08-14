@@ -43,10 +43,6 @@
 .job-accounting-layout .clickable-edit-row {
     cursor: pointer;
 }
-.accounting-chart-wrap {
-    position: relative;
-    height: 320px;
-}
 </style>
 
 <div class="job-accounting-layout mt-3">
@@ -201,7 +197,7 @@
                 </tr>
                 <tr>
                     <td colspan="6" class="summary-label">Total:</td>
-                    <td class="col-amount">{{ grand_total|format_accounting_amount }}</td>
+                    <td class="col-amount">{{ total_billing_amount|format_accounting_amount }}</td>
                     <td></td>
                 </tr>
             </tfoot>
@@ -274,65 +270,11 @@
     </div>
 </div>
 
-<div class="card mt-4">
-    <div class="card-header py-2">
-        <strong class="small">Accounting Breakdown</strong>
-    </div>
-    <div class="card-body">
-        {% if has_chart_data %}
-        <div class="accounting-chart-wrap">
-            <canvas id="accountingTrendChart"></canvas>
-        </div>
-        {% else %}
-        <div class="text-muted small">No accounting activity yet to chart.</div>
-        {% endif %}
-    </div>
-</div>
-
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const totalSales = Number('{{ total_sales_amount|floatformat:2 }}');
-    const totalChangeOrders = Number('{{ total_change_amount|floatformat:2 }}');
-    const totalPaid = Number('{{ payment_total|floatformat:2 }}');
-    const chartCanvas = document.getElementById('accountingTrendChart');
-    if (chartCanvas) {
-        new Chart(chartCanvas, {
-            type: 'doughnut',
-            data: {
-                labels: ['Sales', 'Change Orders', 'Payments'],
-                datasets: [{
-                    data: [
-                        Math.abs(totalSales),
-                        Math.abs(totalChangeOrders),
-                        Math.abs(totalPaid),
-                    ],
-                    backgroundColor: [
-                        'rgba(37, 99, 235, 0.70)',
-                        'rgba(147, 51, 234, 0.70)',
-                        'rgba(22, 163, 74, 0.70)',
-                    ],
-                    borderColor: [
-                        'rgba(37, 99, 235, 1)',
-                        'rgba(147, 51, 234, 1)',
-                        'rgba(22, 163, 74, 1)',
-                    ],
-                    borderWidth: 1,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom' }
-                }
-            }
-        });
-    }
-
     document.querySelectorAll('.job-accounting-layout').forEach(function(layout) {
         layout.addEventListener('click', function(e) {
             const row = e.target.closest('tr.clickable-edit-row');

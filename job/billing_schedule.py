@@ -10,8 +10,10 @@ from django.db.models import Q, Sum
 from .models import Job, Sale
 
 BILLING_SCHEDULE_MARKER = 'REVERSE WIP'
+CHANGE_ORDER_COMMENT = 'CHANGE ORDER'
 SLW_CODE = 'SLW'
 UNDER_10K_THRESHOLD = Decimal('10000')
+CHANGE_ORDER_NOTES_PREFIX = 'change_order:'
 
 
 def _quantize(amount: Decimal) -> Decimal:
@@ -123,11 +125,19 @@ def ensure_reverse_wip_amount(job: Job) -> bool:
     """
     REVERSE WIP must be negative and equal to the contract total (non-SLW sales).
     Corrects legacy rows that were stored as positive. Returns True if updated.
+
+    Only adjusts the original sold-job REVERSE WIP (no change_order notes).
+    Change-order REVERSE WIP rows are left alone.
     """
-    rw = job.sales.filter(
-        product_code__code=SLW_CODE,
-        comment__iexact=BILLING_SCHEDULE_MARKER,
-    ).first()
+    rw = (
+        job.sales.filter(
+            product_code__code=SLW_CODE,
+            comment__iexact=BILLING_SCHEDULE_MARKER,
+        )
+        .exclude(notes__startswith=CHANGE_ORDER_NOTES_PREFIX)
+        .order_by('created_at', 'id')
+        .first()
+    )
     if not rw:
         return False
 
@@ -142,3 +152,64 @@ def ensure_reverse_wip_amount(job: Job) -> bool:
     rw.sale_amount = target
     rw.save(update_fields=['sale_amount', 'updated_at'])
     return True
+
+
+def create_change_order_billing_sales(change_order, *, created_by=None) -> dict:
+    """
+    When a change order is created, add SLW billing rows:
+    - CHANGE ORDER for +amount
+    - REVERSE WIP for -amount
+
+    Prior REVERSE WIP rows (original sold schedule and earlier COs) stay unchanged.
+    Skips non-monetary / zero-amount change orders. Idempotent per change order.
+    """
+    from product.models import ProductCode
+
+    if change_order.amount is None:
+        return {'created': 0, 'reason': 'no_amount'}
+
+    amount = _quantize(Decimal(change_order.amount))
+    if amount == 0:
+        return {'created': 0, 'reason': 'zero_amount'}
+
+    notes_marker = f'{CHANGE_ORDER_NOTES_PREFIX}{change_order.id}'
+    if Sale.objects.filter(job=change_order.job, notes=notes_marker).exists():
+        return {'created': 0, 'reason': 'already_exists'}
+
+    slw = ProductCode.objects.filter(code=SLW_CODE).first()
+    if not slw:
+        return {'created': 0, 'reason': 'missing_slw_product_code'}
+
+    sale_date = change_order.order_date or date.today()
+    tax = change_order.tax or 'UT'
+    user = None
+    if created_by is not None and getattr(created_by, 'is_authenticated', False):
+        user = created_by
+    elif getattr(change_order, 'created_by', None):
+        user = change_order.created_by
+
+    co_sale = Sale.objects.create(
+        job=change_order.job,
+        product_code=slw,
+        sale_amount=amount,
+        comment=CHANGE_ORDER_COMMENT,
+        sale_date=sale_date,
+        tax=tax,
+        notes=notes_marker,
+        created_by=user,
+    )
+    rw_sale = Sale.objects.create(
+        job=change_order.job,
+        product_code=slw,
+        sale_amount=-amount,
+        comment=BILLING_SCHEDULE_MARKER,
+        sale_date=sale_date,
+        tax='UT',
+        notes=notes_marker,
+        created_by=user,
+    )
+    return {
+        'created': 2,
+        'sale_ids': [co_sale.id, rw_sale.id],
+        'amount': str(amount),
+    }

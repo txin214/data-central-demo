@@ -4,15 +4,19 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from crm.models import County, Customer
+from datetime import date
+
 from job.billing_schedule import (
     BILLING_SCHEDULE_MARKER,
+    CHANGE_ORDER_COMMENT,
     build_billing_schedule_lines,
     contract_total_for_job,
+    create_change_order_billing_sales,
     ensure_reverse_wip_amount,
     has_billing_schedule,
     sync_billing_schedule_sales,
 )
-from job.models import Job, Sale
+from job.models import ChangeOrder, Job, Sale
 from product.models import ProductCode
 
 User = get_user_model()
@@ -113,3 +117,61 @@ class BillingScheduleTests(TestCase):
         self.assertTrue(ensure_reverse_wip_amount(self.job))
         rw = Sale.objects.get(job=self.job, comment=BILLING_SCHEDULE_MARKER)
         self.assertEqual(rw.sale_amount, Decimal('-50000.00'))
+
+    def test_change_order_creates_billing_and_reverse_wip(self):
+        Sale.objects.create(job=self.job, product_code=self.fl, sale_amount=Decimal('50000.00'))
+        sync_billing_schedule_sales(self.job)
+        original_rw = Sale.objects.get(
+            job=self.job,
+            comment=BILLING_SCHEDULE_MARKER,
+            notes='',
+        )
+        self.assertEqual(original_rw.sale_amount, Decimal('-50000.00'))
+
+        co = ChangeOrder.objects.create(
+            job=self.job,
+            description='Add island',
+            amount=Decimal('2500.00'),
+            order_date=date.today(),
+            tax='UT',
+        )
+        result = create_change_order_billing_sales(co)
+        self.assertEqual(result['created'], 2)
+
+        co_sale = Sale.objects.get(job=self.job, comment=CHANGE_ORDER_COMMENT)
+        self.assertEqual(co_sale.sale_amount, Decimal('2500.00'))
+        self.assertEqual(co_sale.product_code, self.slw)
+
+        co_rw = Sale.objects.get(
+            job=self.job,
+            comment=BILLING_SCHEDULE_MARKER,
+            notes=f'change_order:{co.id}',
+        )
+        self.assertEqual(co_rw.sale_amount, Decimal('-2500.00'))
+
+        original_rw.refresh_from_db()
+        self.assertEqual(original_rw.sale_amount, Decimal('-50000.00'))
+
+        # Idempotent
+        again = create_change_order_billing_sales(co)
+        self.assertEqual(again['created'], 0)
+        self.assertEqual(again['reason'], 'already_exists')
+
+        # ensure_reverse_wip must not rewrite CO reverse wip or original
+        self.assertFalse(ensure_reverse_wip_amount(self.job))
+        original_rw.refresh_from_db()
+        co_rw.refresh_from_db()
+        self.assertEqual(original_rw.sale_amount, Decimal('-50000.00'))
+        self.assertEqual(co_rw.sale_amount, Decimal('-2500.00'))
+
+    def test_change_order_without_amount_skips_billing(self):
+        co = ChangeOrder.objects.create(
+            job=self.job,
+            description='Non-monetary note',
+            amount=None,
+            order_date=date.today(),
+        )
+        result = create_change_order_billing_sales(co)
+        self.assertEqual(result['created'], 0)
+        self.assertEqual(result['reason'], 'no_amount')
+        self.assertFalse(Sale.objects.filter(job=self.job, comment=CHANGE_ORDER_COMMENT).exists())

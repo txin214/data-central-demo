@@ -319,10 +319,9 @@
             <!-- <a class="nav-link" href="#" onclick="collapseProductSubmenu(); collapseCustomerSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu();"><i class="fa fa-folder me-2"></i> Files</a> -->
             <a class="nav-link submenu-parent" href="#" onclick="toggleReportsSubmenu(this)"><i class="fa fa-chart-bar me-2"></i> Reports</a>
             <div class="submenu" id="reports-submenu">
-                <a class="nav-link submenu-parent submenu-nested-parent" href="#" onclick="toggleSalesSubmenu(this)"><i class="fa fa-dollar-sign me-2"></i> Sales</a>
+                <a class="nav-link submenu-parent submenu-nested-parent" href="#" onclick="toggleSalesSubmenu(this)">Sales</a>
                 <div class="submenu submenu-nested" id="sales-submenu">
-                    <a class="nav-link" href="{% url 'job:sales_list' %}" onclick="expandReportsSubmenu(); expandSalesSubmenu(); return true;">Sales List</a>
-                    <a class="nav-link" href="{% url 'job:sales_by_person' %}" onclick="expandReportsSubmenu(); expandSalesSubmenu(); return true;">Sales by Person</a>
+                    <a class="nav-link" href="{% url 'job:sales_list' %}" onclick="expandReportsSubmenu(); expandSalesSubmenu(); return true;">Sales order</a>
                 </div>
             </div>
             <a class="nav-link" href="/admin/" onclick="collapseProductSubmenu(); collapseCustomerSubmenu(); collapseSiteworkSubmenu(); collapseJobSubmenu(); collapseCompanySubmenu(); collapseReportsSubmenu(); collapseBatchEntrySubmenu();"><i class="fa fa-user-shield me-2"></i> Admin</a>

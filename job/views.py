@@ -22,7 +22,7 @@ from django.utils import timezone
 from django.db import transaction
 
 import mimetypes
-from .models import Job, JobType, JobNotes, JobQuoteProductNotes, SiteworkLineProgress, JobAttachment, PurchaseOrder, PurchaseOrderItem, Sale, ChangeOrder
+from .models import Job, JobType, JobNotes, JobQuoteProductNotes, SiteworkLineProgress, JobAttachment, PurchaseOrder, PurchaseOrderItem, Sale, ChangeOrder, Payment
 from .forms import JobForm, JobCreateForm, JobProductQuoteForm, JobSearchForm, JobProductQuoteCreateForm, VendorForm, PurchaseOrderForm, PurchaseOrderItemForm, PurchaseOrderItemInlineFormSet
 from product.models import Vendor, ProductQuote, ProductQuoteLine
 from crm.models import Customer, StoreLocation, County, Referral
@@ -4469,147 +4469,28 @@ def vendor_delete(request, vendor_id):
 
 @login_required
 def sales_list(request):
-    """Display list of all sales and change orders"""
-    from decimal import Decimal
-    from datetime import date
-    
-    # Get filter parameters from request
-    type_filter = request.GET.get('type', 'all')  # 'all', 'sale', 'change_order'
-    user_filter = request.GET.get('user', 'all')  # 'all' or user ID
-    start_date = request.GET.get('start_date', '')  # Start date filter
-    end_date = request.GET.get('end_date', '')  # End date filter
-    search_query = request.GET.get('search', '').strip()  # Job code search
-    
-    # Get all sales with related data
-    sales = Sale.objects.select_related('job', 'job__customer', 'job__soldby', 'product_code', 'created_by').order_by('-sale_date', '-created_at')
-    
-    # Get all change orders with related data
-    change_orders = ChangeOrder.objects.select_related('job', 'job__customer', 'job__soldby', 'product_code', 'created_by').order_by('-order_date', '-created_at')
-        
-    # Get all users, excluding specific users, ordered by first_name, last_name, or username as fallback
-    excluded_usernames = ['bill', 'billy', 'txin214', 'admin', 'myname']
-    all_users = User.objects.exclude(
-        username__in=excluded_usernames
-    ).exclude(
-        Q(first_name__iexact='mu') & Q(last_name__iexact='name')
-    ).order_by('first_name', 'last_name', 'username')
-    
-    # Parse date filters
-    start_date_obj = None
-    end_date_obj = None
-    if start_date:
-        try:
-            from datetime import datetime
-            start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
-        except ValueError:
-            pass
-    if end_date:
-        try:
-            from datetime import datetime
-            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
-        except ValueError:
-            pass
-                
-    # Combine sales and change orders into a single list with type indicator
-    combined_list = []
-    
-    # Add sales to combined list (only if filter allows)
-    if type_filter in ['all', 'sale']:
-        for sale in sales:
-            sales_person = sale.created_by if sale.created_by else sale.job.soldby
-            sale_date_obj = sale.sale_date or sale.created_at.date() if sale.created_at else date.today()
-            
-            # Filter by user if specified
-            user_match = user_filter == 'all' or (user_filter and sales_person and str(sales_person.id) == user_filter)
-            
-            # Filter by date range if specified
-            date_match = True
-            if start_date_obj and sale_date_obj < start_date_obj:
-                date_match = False
-            if end_date_obj and sale_date_obj > end_date_obj:
-                date_match = False
-            
-            # Filter by job code search if specified
-            job_code_match = True
-            if search_query:
-                job_code = sale.job.job_code or ''
-                if search_query.lower() not in job_code.lower():
-                    job_code_match = False
-            
-            if user_match and date_match and job_code_match:
-                combined_list.append({
-                    'type': 'Sale',
-                    'obj': sale,
-                    'date': sale_date_obj,
-                    'job': sale.job,
-                    'customer': sale.job.customer,
-                    'sales_person': sales_person,
-                    'amount': sale.sale_amount,
-                    'product_code': sale.product_code,
-                    'description': sale.comment or (sale.product_code.description if sale.product_code else ''),
-                })
-    
-    # Add change orders to combined list (only if filter allows)
-    if type_filter in ['all', 'change_order']:
-        for change_order in change_orders:
-            sales_person = change_order.created_by if change_order.created_by else change_order.job.soldby
-            change_order_date = change_order.order_date
-            
-            # Filter by user if specified
-            user_match = user_filter == 'all' or (user_filter and sales_person and str(sales_person.id) == user_filter)
-            
-            # Filter by date range if specified
-            date_match = True
-            if start_date_obj and change_order_date < start_date_obj:
-                date_match = False
-            if end_date_obj and change_order_date > end_date_obj:
-                date_match = False
-            
-            # Filter by job code search if specified
-            job_code_match = True
-            if search_query:
-                job_code = change_order.job.job_code or ''
-                if search_query.lower() not in job_code.lower():
-                    job_code_match = False
-            
-            if user_match and date_match and job_code_match:
-                combined_list.append({
-                    'type': 'Change Order',
-                    'obj': change_order,
-                    'date': change_order_date,
-                    'job': change_order.job,
-                    'customer': change_order.job.customer,
-                    'sales_person': sales_person,
-                    'amount': change_order.amount or Decimal('0'),
-                    'product_code': change_order.product_code,
-                    'description': change_order.description,
-                })
-    
-    # Sort by date (newest first)
-    combined_list.sort(key=lambda x: x['date'], reverse=True)
-    
-    # Pagination
-    paginator = Paginator(combined_list, 16)  # 16 items per page
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    # Get total count
-    total_items = len(combined_list)
-    
+    """Display sold jobs grouped by salesperson (Job / Last Paid / Customer / Sold)."""
+    from .sales_orders_report import build_sales_orders_report
+
+    report = build_sales_orders_report(request)
     context = {
-        'items': page_obj,
-        'page_obj': page_obj,
-        'paginator': paginator,
-        'total_items': total_items,
-        'type_filter': type_filter,
-        'user_filter': user_filter,
-        'users': all_users,
-        'start_date': start_date,
-        'end_date': end_date,
-        'search_query': search_query,
+        'grouped_by_user': report['grouped_by_user'],
+        'grand_total': report['grand_total'],
+        'total_jobs': report['total_jobs'],
+        'user_filter': report['user_filter'],
+        'users': report['users'],
+        'start_date': report['start_date'],
+        'end_date': report['end_date'],
+        'search_query': report['search_query'],
     }
-    
     return render(request, 'job/sales_list.html', context)
+
+
+@login_required
+def sales_orders_pdf(request):
+    """Generate Sales Orders PDF using current list filters."""
+    from job.pdf_generator import sales_orders_pdf_generate
+    return sales_orders_pdf_generate(request)
 
 
 @login_required
@@ -4812,6 +4693,11 @@ def batch_entry_change_orders(request):
                     )
                     try:
                         change_order.save()
+                        from .billing_schedule import create_change_order_billing_sales
+                        create_change_order_billing_sales(
+                            change_order,
+                            created_by=request.user if request.user.is_authenticated else None,
+                        )
                         messages.success(request, f'Change order created for {job.job_code}.')
                         return redirect('job:batch_entry_change_orders')
                     except ValidationError as exc:
@@ -4825,153 +4711,6 @@ def batch_entry_change_orders(request):
         'initial_date': date.today().strftime('%Y-%m-%d'),
     }
     return render(request, 'job/batch_entry_form.html', context)
-
-
-@login_required
-def sales_by_person(request):
-    """Sales and change orders by person, aggregated per job (one row per user per job)."""
-    from decimal import Decimal
-    from datetime import date
-    from collections import defaultdict
-
-    start_date = request.GET.get('start_date', '')
-    end_date = request.GET.get('end_date', '')
-
-    start_date_obj = None
-    end_date_obj = None
-    if start_date:
-        try:
-            from datetime import datetime
-            start_date_obj = datetime.strptime(start_date, '%Y-%m-%d').date()
-        except ValueError:
-            pass
-    if end_date:
-        try:
-            from datetime import datetime
-            end_date_obj = datetime.strptime(end_date, '%Y-%m-%d').date()
-        except ValueError:
-            pass
-
-    sales = Sale.objects.select_related('job', 'job__customer', 'job__soldby', 'created_by').order_by('-sale_date', '-created_at')
-    change_orders = ChangeOrder.objects.select_related('job', 'job__customer', 'job__soldby', 'created_by').order_by('-order_date', '-created_at')
-
-    # user_id -> { user, job_id -> per-job aggregates }
-    grouped_by_user = defaultdict(lambda: {
-        'user': None,
-        'by_job': {},
-    })
-
-    def job_slot():
-        return {
-            'job': None,
-            'customer': None,
-            'total_sales': Decimal('0'),
-            'total_change_orders': Decimal('0'),
-            'last_activity': None,
-        }
-
-    # Process sales -> aggregate (user, job)
-    for sale in sales:
-        sales_person = sale.created_by if sale.created_by else sale.job.soldby
-        sale_date_obj = sale.sale_date or (sale.created_at.date() if sale.created_at else date.today())
-
-        date_match = True
-        if start_date_obj and sale_date_obj < start_date_obj:
-            date_match = False
-        if end_date_obj and sale_date_obj > end_date_obj:
-            date_match = False
-
-        if not date_match or not sales_person:
-            continue
-
-        user_key = sales_person.id
-        if grouped_by_user[user_key]['user'] is None:
-            grouped_by_user[user_key]['user'] = sales_person
-
-        jid = sale.job_id
-        if jid not in grouped_by_user[user_key]['by_job']:
-            grouped_by_user[user_key]['by_job'][jid] = job_slot()
-        slot = grouped_by_user[user_key]['by_job'][jid]
-        if slot['job'] is None:
-            slot['job'] = sale.job
-            slot['customer'] = sale.job.customer
-
-        amt = sale.sale_amount or Decimal('0')
-        slot['total_sales'] += amt
-        if slot['last_activity'] is None or sale_date_obj > slot['last_activity']:
-            slot['last_activity'] = sale_date_obj
-
-    # Process change orders -> same buckets
-    for change_order in change_orders:
-        sales_person = change_order.created_by if change_order.created_by else change_order.job.soldby
-        change_order_date = change_order.order_date
-
-        date_match = True
-        if start_date_obj and change_order_date < start_date_obj:
-            date_match = False
-        if end_date_obj and change_order_date > end_date_obj:
-            date_match = False
-
-        if not date_match or not sales_person:
-            continue
-
-        user_key = sales_person.id
-        if grouped_by_user[user_key]['user'] is None:
-            grouped_by_user[user_key]['user'] = sales_person
-
-        jid = change_order.job_id
-        if jid not in grouped_by_user[user_key]['by_job']:
-            grouped_by_user[user_key]['by_job'][jid] = job_slot()
-        slot = grouped_by_user[user_key]['by_job'][jid]
-        if slot['job'] is None:
-            slot['job'] = change_order.job
-            slot['customer'] = change_order.job.customer
-
-        amount = change_order.amount or Decimal('0')
-        slot['total_change_orders'] += amount
-        if slot['last_activity'] is None or change_order_date > slot['last_activity']:
-            slot['last_activity'] = change_order_date
-
-    grouped_list = []
-    for user_key, group_data in grouped_by_user.items():
-        if not group_data['user']:
-            continue
-        job_rows = []
-        for _jid, jdata in group_data['by_job'].items():
-            jdata['grand_total'] = jdata['total_sales'] + jdata['total_change_orders']
-            job_rows.append(jdata)
-        job_rows.sort(key=lambda x: ((x['job'].job_code or '').lower(), x['job'].pk))
-
-        total_sales = sum(j['total_sales'] for j in job_rows)
-        total_change_orders = sum(j['total_change_orders'] for j in job_rows)
-        grouped_list.append({
-            'user': group_data['user'],
-            'job_rows': job_rows,
-            'total_sales': total_sales,
-            'total_change_orders': total_change_orders,
-            'grand_total': total_sales + total_change_orders,
-        })
-
-    grouped_list.sort(key=lambda x: (
-        x['user'].first_name or '',
-        x['user'].last_name or '',
-        x['user'].username or ''
-    ))
-
-    total_sales_all = sum(g['total_sales'] for g in grouped_list)
-    total_change_orders_all = sum(g['total_change_orders'] for g in grouped_list)
-    grand_total_all = total_sales_all + total_change_orders_all
-
-    context = {
-        'grouped_by_user': grouped_list,
-        'total_sales_all': total_sales_all,
-        'total_change_orders_all': total_change_orders_all,
-        'grand_total_all': grand_total_all,
-        'start_date': start_date,
-        'end_date': end_date,
-    }
-
-    return render(request, 'job/sales_by_person.html', context)
 
 
 # ============== Change Order Views ==============
@@ -5014,6 +4753,11 @@ def job_change_order_create(request, job_id):
             change_order.created_by = request.user if request.user.is_authenticated else None
             try:
                 change_order.save()
+                from .billing_schedule import create_change_order_billing_sales
+                create_change_order_billing_sales(
+                    change_order,
+                    created_by=request.user if request.user.is_authenticated else None,
+                )
                 messages.success(request, 'Change order created successfully.')
                 return redirect('job:job_change_orders', job_id=job.id)
             except Exception as e:
@@ -5181,7 +4925,6 @@ def job_payment_lien_waiver_pdf(request, job_id, payment_id):
 
 def job_accounting(request, job_id):
     """Display combined sales and change orders for accounting view"""
-    from collections import OrderedDict
     from decimal import Decimal
     from datetime import date
     
@@ -5195,15 +4938,19 @@ def job_accounting(request, job_id):
             request.user if request.user.is_authenticated else None,
         )
     
+    from .billing_schedule import SLW_CODE
+
     # Individual sales/change orders for accounting tables (chronological)
     sales = job.sales.all().select_related('product_code', 'created_by').order_by('sale_date', 'created_at')
     change_orders = job.change_orders.all().select_related('product_code', 'created_by').order_by('order_date', 'created_at')
+    slw_sales = [s for s in sales if s.product_code and s.product_code.code == SLW_CODE]
 
     total_sales_amount = sum((s.sale_amount or Decimal('0.00')) for s in sales)
     total_sales_tax = sum((s.tax_amount or Decimal('0.00')) for s in sales)
 
+    # Billings: SLW sales + change orders only (exclude non-SLW product sales).
     billing_lines = []
-    for sale in sales:
+    for sale in slw_sales:
         billing_lines.append({
             'date': sale.sale_date,
             'product_code': sale.product_code.code if sale.product_code else '',
@@ -5226,7 +4973,10 @@ def job_accounting(request, job_id):
             'edit_id': change_order.id,
         })
     billing_lines.sort(key=lambda row: (row['date'] or date.min, row['product_code'] or ''))
-    total_billing_tax = total_sales_tax
+    total_billing_tax = sum((s.tax_amount or Decimal('0.00')) for s in slw_sales)
+    total_billing_amount = sum(
+        (line['amount'] or Decimal('0.00')) for line in billing_lines
+    )
     
     # Calculate total change order amount (only include change orders with amounts)
     total_change_amount = sum(co.amount for co in change_orders if co.amount is not None) if change_orders else Decimal('0.00')
@@ -5245,52 +4995,6 @@ def job_accounting(request, job_id):
     # Calculate Due Now (grand total - payment total)
     due_now = grand_total - payment_total
 
-    # Build accounting timeline datasets for charts (ordered by transaction date).
-    timeline = OrderedDict()
-
-    def _ensure_day(day):
-        if day not in timeline:
-            timeline[day] = {
-                'sales': Decimal('0.00'),
-                'change_orders': Decimal('0.00'),
-                'payments': Decimal('0.00'),
-            }
-
-    for sale in sales:
-        day = sale.sale_date or (sale.created_at.date() if sale.created_at else date.today())
-        _ensure_day(day)
-        timeline[day]['sales'] += (sale.sale_amount or Decimal('0.00'))
-
-    for co in change_orders:
-        day = co.order_date or (co.created_at.date() if co.created_at else date.today())
-        _ensure_day(day)
-        timeline[day]['change_orders'] += (co.amount or Decimal('0.00'))
-
-    for payment in payments:
-        day = payment.date or (payment.created_at.date() if payment.created_at else date.today())
-        _ensure_day(day)
-        # Payment total uses amount minus discount; mirror that in chart impact.
-        timeline[day]['payments'] += (payment.amount or Decimal('0.00')) - (payment.discount or Decimal('0.00'))
-
-    chart_labels = []
-    chart_sales = []
-    chart_change_orders = []
-    chart_payments = []
-    chart_running_balance = []
-    running_balance = Decimal('0.00')
-    for day in sorted(timeline.keys()):
-        day_data = timeline[day]
-        day_sales = day_data['sales']
-        day_change = day_data['change_orders']
-        day_payments = day_data['payments']
-        running_balance += day_sales + day_change - day_payments
-
-        chart_labels.append(day.strftime('%Y-%m-%d'))
-        chart_sales.append(float(day_sales))
-        chart_change_orders.append(float(day_change))
-        chart_payments.append(float(day_payments))
-        chart_running_balance.append(float(running_balance))
-    
     context = {
         'job': job,
         'sales': sales,
@@ -5300,18 +5004,13 @@ def job_accounting(request, job_id):
         'total_change_amount': total_change_amount,
         'billing_lines': billing_lines,
         'total_billing_tax': total_billing_tax,
+        'total_billing_amount': total_billing_amount,
         'grand_total': grand_total,
         'payments': payments,
         'total_payment_amount': total_payment_amount,
         'total_discount': total_discount,
         'payment_total': payment_total,
         'due_now': due_now,
-        'chart_labels': chart_labels,
-        'chart_sales': chart_sales,
-        'chart_change_orders': chart_change_orders,
-        'chart_payments': chart_payments,
-        'chart_running_balance': chart_running_balance,
-        'has_chart_data': bool(chart_labels),
     }
     
     return render(request, 'job/job_accounting.html', context)
