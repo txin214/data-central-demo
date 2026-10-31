@@ -52,10 +52,15 @@ Then open `http://127.0.0.1:8000/` and sign in with the superuser you created.
 | `accounts/` | Auth |
 | `templates/` / `static/` | Shared UI |
 
+## CI
+
+GitHub Actions runs billing-schedule unit tests on every push/PR to `main` (SQLite in-memory via `allenkit1.settings_ci` — no database server or secrets required).
+
 ## Notes
 
 - Data and branding are for **demonstration** of features and UX.  
 - Do not treat this README as production ops docs (secrets, scaling, backups, etc.).  
+- Local SQLite backups and `.env` are gitignored and never pushed.  
 - Sample data may be incomplete or reset between demos.
 
 ## License
