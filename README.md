@@ -1,84 +1,63 @@
-# Allen Kitchen & Bath Data Central
+# Data Central (Demo)
 
-A Django-based web application for managing kitchen and bath products, customer relationships, site work, and job management.
-MARCH 2026 Changed to use PostgreSQL instead of SQLite.
+A **demo** Django web app that shows how a kitchen & bath contractor might manage products, customers, quotes, jobs, and billing in one place.
 
-## Features
+This is a portfolio / learning showcase—not a production deployment guide. Screens and workflows are representative of real shop operations (jobs, sales orders, change orders, contracts, accounting).
 
-- Product Management
-- Customer Relationship Management (CRM)
-- Site Work Management
-- Job Management
-- Dynamic Product Categories
-- Image Management
-- Quote Generation
+## What you can explore
 
-## Tech Stack
-- Python 3.14.3
-- Django 6.0.4
-- PostgreSQL 17.9
-- HTMX for dynamic interactions
-- Bootstrap for UI
-- Dynamic Breadcrumbs
-- Import/Export functionality
+- **Jobs** — sold jobs, quotes, schedules, contracts, and print/PDF previews  
+- **Sales & billing** — sales orders report, payments, change orders, SLW billing milestones  
+- **CRM** — customers and related contact info  
+- **Products** — catalog, quotes, and line items  
+- **Sitework** — sitework quotes and progress  
+- **Admin** — Django admin for supporting data  
 
-## Installation
+## Tech stack (demo environment)
 
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/allenkit.git
-cd allenkit
-```
+- Python / Django  
+- PostgreSQL (local demo may also use SQLite for quick tryouts)  
+- HTMX + Bootstrap  
+- ReportLab for PDF contracts and sales-order reports  
+- Optional Celery worker in fuller setups  
 
-2. Create a virtual environment and activate it:
+## Quick start (local demo)
+
 ```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
+# Windows
+venv\Scripts\activate
+# macOS / Linux
+source venv/bin/activate
 
-3. Install dependencies:
-```bash
 pip install -r requirements.txt
-```
-
-4. Run migrations:
-```bash
 python manage.py migrate
-```
-
-5. Create a superuser:
-```bash
 python manage.py createsuperuser
-```
-
-6. Run the development server:
-```bash
 python manage.py runserver
 ```
 
-## Deployment
+Then open `http://127.0.0.1:8000/` and sign in with the superuser you created.
 
-See deployment documentation in `docs/deployment.md` for detailed instructions on deploying to a production server.
+> Tip: For a fast local demo without Postgres, some environments use `allenkit1.settings_sqlite`—use whatever settings your machine already has working.
 
-## Project Structure
+## Project layout
 
-- `allenkit1/` - Main project configuration
-- `crm/` - Customer Relationship Management app
-- `job/` - Job Management app
-- `product/` - Product Management app
-- `sitework/` - Site Work Management app
-- `templates/` - Global templates
-- `static/` - Static files
-- `media/` - User-uploaded files
+| Path | Role |
+|------|------|
+| `allenkit1/` | Django project settings |
+| `job/` | Jobs, sales, accounting, PDFs |
+| `crm/` | Customers |
+| `product/` | Products & quotes |
+| `sitework/` | Sitework quotes |
+| `accounts/` | Auth |
+| `templates/` / `static/` | Shared UI |
 
-## Contributing
+## Notes
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+- Data and branding are for **demonstration** of features and UX.  
+- Do not treat this README as production ops docs (secrets, scaling, backups, etc.).  
+- Sample data may be incomplete or reset between demos.
 
 ## License
 
-This project is proprietary and confidential. All rights reserved.
+Demo / portfolio use. Not offered as a commercial product.

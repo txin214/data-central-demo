@@ -25,6 +25,7 @@ wheels/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+backup.sqlite3
 allenkit_db.dump
 
 # Media and static files
